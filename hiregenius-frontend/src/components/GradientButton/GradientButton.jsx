@@ -52,12 +52,12 @@ const GradientButton = ({
     opacity: disabled || isLoading ? 0.6 : 1,
     textDecoration: 'none',
     letterSpacing: '-0.01em',
-    boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
+    boxShadow: '0 4px 20px rgba(61,80,22,0.20)',
     whiteSpace: 'nowrap',
   };
 
   const motionProps = {
-    whileHover: disabled || isLoading ? {} : { scale: 1.02, boxShadow: '0 6px 28px rgba(99,102,241,0.4)' },
+    whileHover: disabled || isLoading ? {} : { scale: 1.02, boxShadow: '0 6px 28px rgba(61,80,22,0.30)' },
     whileTap: disabled || isLoading ? {} : { scale: 0.98 },
     transition: { duration: 0.15, ease: 'easeOut' },
   };

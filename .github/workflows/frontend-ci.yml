@@ -1,0 +1,112 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths: [ 'hiregenius-frontend/**' ]
+  pull_request:
+    branches: [ main, dev ]
+    paths: [ 'hiregenius-frontend/**' ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-frontend
+
+jobs:
+  build-and-test:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./hiregenius-frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './hiregenius-frontend/package-lock.json'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run linter
+        run: npm run lint --if-present
+        
+      - name: Build
+        run: npm run build
+
+  deploy-preview:
+    name: Deploy Preview (Vercel)
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Preview to Vercel
+        uses: amondnet/vercel-action@v35
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./hiregenius-frontend
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-comment: true
+
+  deploy-production:
+    name: Deploy Production (Vercel)
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Production to Vercel
+        uses: amondnet/vercel-action@v35
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./hiregenius-frontend
+          vercel-args: '--prod'
+
+  build-and-push-image:
+    name: Build & Push Docker Image (GHCR)
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest
+            
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hiregenius-frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
