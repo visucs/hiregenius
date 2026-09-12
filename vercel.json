@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "installCommand": "cd hiregenius-frontend && npm install",
   "buildCommand": "cd hiregenius-frontend && npm run build",
   "outputDirectory": "hiregenius-frontend/dist",
   "rewrites": [
