@@ -7,39 +7,65 @@ import LandingPage from './pages/Landing/LandingPage';
 import LoginPage from './pages/Login/LoginPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
-
-// ── Role dashboards ───────────────────────────────────────────────
-import RecruiterDashboard from './pages/Dashboard/RecruiterDashboard';
-import AdminDashboard from './pages/Dashboard/AdminDashboard';
-import CandidateDashboard from './pages/Dashboard/CandidateDashboard';
+import ResumeScreeningPage    from './pages/products/ResumeScreening/ResumeScreeningPage';
+import AIInterviewPage        from './pages/products/AIInterview/AIInterviewPage';
+import AnalyticsProductPage   from './pages/products/Analytics/AnalyticsProductPage';
 
 // ── Error / utility pages ─────────────────────────────────────────
 import UnauthorizedPage from './pages/Unauthorized/UnauthorizedPage';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
 
-// ── Layout & route guards ─────────────────────────────────────────
+// ── Layout shells & route guards ──────────────────────────────────
 import AppShell from './layouts/AppShell';
+import RecruiterShell from './layouts/RecruiterShell';
+import AdminShell from './layouts/AdminShell';
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleRedirect from './routes/RoleRedirect';
+
+// ── Candidate pages ───────────────────────────────────────────────
+import CandidateDashboard    from './pages/Dashboard/CandidateDashboard';
+import ApplicationsPage      from './pages/candidate/ApplicationsPage';
+import InterviewsPage        from './pages/candidate/InterviewsPage';
+import ResumeScorePage       from './pages/candidate/ResumeScorePage';
+import ScanHistoryPage       from './pages/candidate/ScanHistoryPage';
+import CandidateSettingsPage from './pages/candidate/CandidateSettingsPage';
+
+// ── Recruiter pages ───────────────────────────────────────────────
+import RecruiterDashboardHome        from './pages/recruiter/RecruiterDashboardHome';
+import RecruiterJobsPage             from './pages/recruiter/RecruiterJobsPage';
+import RecruiterCandidatesPage       from './pages/recruiter/RecruiterCandidatesPage';
+import RecruiterResumeScreeningPage  from './pages/recruiter/RecruiterResumeScreeningPage';
+import RecruiterAIInterviewPage      from './pages/recruiter/RecruiterAIInterviewPage';
+import RecruiterCandidateRankingPage from './pages/recruiter/RecruiterCandidateRankingPage';
+import RecruiterSchedulerPage        from './pages/recruiter/RecruiterSchedulerPage';
+import RecruiterProfilePage          from './pages/recruiter/RecruiterProfilePage';
+import RecruiterSettingsPage         from './pages/recruiter/RecruiterSettingsPage';
+// Recruiter analytics re-uses the rich existing AnalyticsPage
+import AnalyticsPage from './pages/Analytics/AnalyticsPage';
+
+// ── Admin pages ───────────────────────────────────────────────────
+import AdminDashboardHome         from './pages/admin/AdminDashboardHome';
+import AdminUserManagementPage    from './pages/admin/AdminUserManagementPage';
+import AdminPlatformAnalyticsPage from './pages/admin/AdminPlatformAnalyticsPage';
+import AdminApiKeysPage           from './pages/admin/AdminApiKeysPage';
+import AdminSystemSettingsPage    from './pages/admin/AdminSystemSettingsPage';
+import AdminProfilePage           from './pages/admin/AdminProfilePage';
 
 /**
  * App — root router.
  *
  * Route structure:
- *   /                    → LandingPage (public, visible logged-out AND logged-in)
- *   /login               → LoginPage  (public — if logged in, bounced to role dashboard)
- *   /register            → RegisterPage (public — same bounce)
- *   /forgot-password     → ForgotPasswordPage (public)
- *   /unauthorized        → UnauthorizedPage (403, no role match)
+ *   /                    → LandingPage (public)
+ *   /products/*          → Public product marketing pages
+ *   /login               → LoginPage  (bounces logged-in users to role dashboard)
+ *   /register, /forgot-password → public auth pages
+ *   /unauthorized        → 403
  *
- *   /recruiter/*         → RECRUITER only, wrapped in AppShell + ProtectedRoute
- *   /admin/*             → ADMIN only, same
- *   /candidate/*         → CANDIDATE only, same
+ *   /recruiter/*         → RECRUITER only  → RecruiterShell (forest-green sidebar)
+ *   /admin/*             → ADMIN only      → AdminShell (navy-indigo sidebar)
+ *   /candidate/*         → CANDIDATE       → AppShell
  *
- *   *                    → NotFoundPage (404)
- *
- * ProtectedRoute props:
- *   allowedRoles={[...]} — role must be in the list; omit for "any authenticated"
+ *   *                    → 404
  */
 const App = () => {
   return (
@@ -80,84 +106,59 @@ const App = () => {
 
       <Routes>
 
-        {/* ── PUBLIC ROUTES ─────────────────────────────────────────── */}
-
-        {/*
-          "/" is always public — the Landing page is visible to everyone.
-          Logged-in users see it too; they can navigate to their dashboard
-          via the Navbar (we don't force-redirect them away from the homepage).
-        */}
+        {/* ── PUBLIC ───────────────────────────────────────────────── */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/products/resume-screening" element={<ResumeScreeningPage />} />
+        <Route path="/products/ai-interview"     element={<AIInterviewPage />} />
+        <Route path="/products/analytics"        element={<AnalyticsProductPage />} />
 
-        {/*
-          Auth pages — if the user is already logged in, RoleRedirect
-          bounces them to their role dashboard instead of showing the form.
-        */}
-        <Route
-          path="/login"
-          element={
-            <RoleRedirect>
-              <LoginPage />
-            </RoleRedirect>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <RoleRedirect>
-              <RegisterPage />
-            </RoleRedirect>
-          }
-        />
+        <Route path="/login"    element={<RoleRedirect><LoginPage /></RoleRedirect>} />
+        <Route path="/register" element={<RoleRedirect><RegisterPage /></RoleRedirect>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-        {/* 403 — accessible without auth so wrong-role users can see it */}
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        <Route path="/unauthorized"    element={<UnauthorizedPage />} />
 
         {/* ── PROTECTED: RECRUITER ──────────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={['RECRUITER']} />}>
-          <Route element={<AppShell />}>
-            <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
-            {/*
-              Phase 3+ recruiter routes go here:
-              <Route path="/recruiter/jobs" element={<JobsPage />} />
-              <Route path="/recruiter/candidates" element={<CandidatesPage />} />
-              <Route path="/recruiter/resume-screening" element={<ResumeScreeningPage />} />
-              <Route path="/recruiter/ai-interview" element={<AIInterviewPage />} />
-              <Route path="/recruiter/scheduler" element={<SchedulerPage />} />
-              <Route path="/recruiter/analytics" element={<AnalyticsPage />} />
-              <Route path="/recruiter/settings" element={<SettingsPage />} />
-            */}
+          <Route element={<RecruiterShell />}>
+            <Route path="/recruiter/dashboard"        element={<RecruiterDashboardHome />} />
+            <Route path="/recruiter/jobs"             element={<RecruiterJobsPage />} />
+            <Route path="/recruiter/candidates"       element={<RecruiterCandidatesPage />} />
+            <Route path="/recruiter/resume-screening" element={<RecruiterResumeScreeningPage />} />
+            <Route path="/recruiter/ai-interview"     element={<RecruiterAIInterviewPage />} />
+            <Route path="/recruiter/ranking"          element={<RecruiterCandidateRankingPage />} />
+            <Route path="/recruiter/scheduler"        element={<RecruiterSchedulerPage />} />
+            <Route path="/recruiter/analytics"        element={<AnalyticsPage />} />
+            <Route path="/recruiter/profile"          element={<RecruiterProfilePage />} />
+            <Route path="/recruiter/settings"         element={<RecruiterSettingsPage />} />
           </Route>
         </Route>
 
         {/* ── PROTECTED: ADMIN ──────────────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-          <Route element={<AppShell />}>
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            {/*
-              Phase 4+ admin routes go here:
-              <Route path="/admin/users" element={<UserManagementPage />} />
-              <Route path="/admin/api-keys" element={<ApiKeysPage />} />
-              <Route path="/admin/audit" element={<AuditLogsPage />} />
-            */}
+          <Route element={<AdminShell />}>
+            <Route path="/admin/dashboard" element={<AdminDashboardHome />} />
+            <Route path="/admin/users"     element={<AdminUserManagementPage />} />
+            <Route path="/admin/analytics" element={<AdminPlatformAnalyticsPage />} />
+            <Route path="/admin/api-keys"  element={<AdminApiKeysPage />} />
+            <Route path="/admin/settings"  element={<AdminSystemSettingsPage />} />
+            <Route path="/admin/profile"   element={<AdminProfilePage />} />
           </Route>
         </Route>
 
-        {/* ── PROTECTED: CANDIDATE ─────────────────────────────────── */}
-        {/* PRD §4.1: Candidate role is optional scope; built now for completeness */}
+        {/* ── PROTECTED: CANDIDATE ──────────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={['CANDIDATE']} />}>
           <Route element={<AppShell />}>
-            <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
-            {/*
-              Phase 5+ candidate routes go here:
-              <Route path="/candidate/applications" element={<ApplicationsPage />} />
-              <Route path="/candidate/interviews" element={<CandidateInterviewsPage />} />
-            */}
+            <Route path="/candidate/dashboard"    element={<CandidateDashboard />} />
+            <Route path="/candidate/applications" element={<ApplicationsPage />} />
+            <Route path="/candidate/interviews"   element={<InterviewsPage />} />
+            <Route path="/candidate/resume-score" element={<ResumeScorePage />} />
+            <Route path="/candidate/score"        element={<ResumeScorePage />} />
+            <Route path="/candidate/scan-history"  element={<ScanHistoryPage />} />
+            <Route path="/candidate/settings"     element={<CandidateSettingsPage />} />
           </Route>
         </Route>
 
-        {/* ── 404 catch-all ─────────────────────────────────────────── */}
+        {/* ── 404 ──────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFoundPage />} />
 
       </Routes>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,16 +20,28 @@ import GradientButton from '../../components/GradientButton/GradientButton';
 const LoginPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const role = useSelector(selectUserRole);
   const isLoading = useSelector(selectAuthLoading);
   const authError = useSelector(selectAuthError);
   const [showPassword, setShowPassword] = useState(false);
 
+  const searchParams = new URLSearchParams(location.search);
+  const redirectParam = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
+
   useEffect(() => {
-    if (isAuthenticated) navigate(ROLE_HOME[role] ?? '/recruiter/dashboard', { replace: true });
+    if (isAuthenticated) {
+      navigate(redirectParam || (ROLE_HOME[role] ?? '/recruiter/dashboard'), { replace: true });
+    }
     return () => dispatch(clearError());
-  }, [isAuthenticated, role, navigate, dispatch]);
+  }, [isAuthenticated, role, navigate, dispatch, redirectParam]);
+
+  const devLogin = (mockRole) => {
+    const mockUser = { id: 'dev-1', name: `Dev ${mockRole}`, email: 'dev@test.com', role: mockRole };
+    dispatch(setCredentials({ token: 'mock-token', user: mockUser }));
+    navigate(redirectParam || (ROLE_HOME[mockRole] ?? '/recruiter/dashboard'));
+  };
 
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(loginSchema) });
 
@@ -41,7 +53,7 @@ const LoginPage = () => {
       const { token, user } = res.data;
       dispatch(setCredentials({ token, user }));
       toast.success(`Welcome back, ${user?.name || 'there'}!`);
-      navigate(ROLE_HOME[user?.role] ?? '/recruiter/dashboard');
+      navigate(redirectParam || (ROLE_HOME[user?.role] ?? '/recruiter/dashboard'));
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));
@@ -213,6 +225,17 @@ const LoginPage = () => {
               Create one
             </Link>
           </p>
+
+          {import.meta.env.DEV && (
+            <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>DEV Quick Login</p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="button" onClick={() => devLogin('CANDIDATE')} id="dev-login-candidate" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Candidate</button>
+                <button type="button" onClick={() => devLogin('RECRUITER')} id="dev-login-recruiter" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Recruiter</button>
+                <button type="button" onClick={() => devLogin('ADMIN')} id="dev-login-admin" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Admin</button>
+              </div>
+            </div>
+          )}
         </div>
 
         <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>

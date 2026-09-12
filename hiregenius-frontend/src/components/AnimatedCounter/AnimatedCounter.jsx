@@ -44,14 +44,16 @@ const AnimatedCounter = ({
       <div
         style={{
           fontSize: 'clamp(2.5rem, 5vw, 3.5rem)',
-          fontWeight: 800,
-          letterSpacing: '-0.03em',
+          fontWeight: 900,
+          letterSpacing: '-0.04em',
           lineHeight: 1,
-          background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))',
+          background: 'linear-gradient(135deg, #F0EDE4 0%, rgba(163,197,90,0.90) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
           marginBottom: '8px',
+          animation: 'shimmer 3s linear infinite',
+          backgroundSize: '200% auto',
         }}
       >
         {prefix}{display}{suffix}
@@ -60,7 +62,7 @@ const AnimatedCounter = ({
         <p
           style={{
             fontSize: '14px',
-            color: 'var(--text-secondary)',
+            color: 'rgba(240,237,228,0.50)',
             fontWeight: 500,
           }}
         >

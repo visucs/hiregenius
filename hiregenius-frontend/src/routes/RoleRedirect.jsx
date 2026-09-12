@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   selectIsAuthenticated,
@@ -15,16 +15,19 @@ export const ROLE_HOME = {
 /**
  * RoleRedirect — used on public-only routes (/, /login, /register).
  * If the user is already authenticated, send them to their role dashboard
- * so they don't see the login/landing page again.
+ * or post-login redirect destination so they don't see the login/landing page again.
  *
  * @param {{ children: React.ReactNode }} props
  */
 const RoleRedirect = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const role = useSelector(selectUserRole);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTarget = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
 
   if (isAuthenticated) {
-    const home = ROLE_HOME[role] ?? '/recruiter/dashboard';
+    const home = redirectTarget || ROLE_HOME[role] || '/recruiter/dashboard';
     return <Navigate to={home} replace />;
   }
 

@@ -2,25 +2,26 @@ import { useEffect, useState } from 'react';
 
 /**
  * useTheme — manages dark/light theme.
- * Design.md §2: Dark is the baseline (:root). Light mode uses .light class on <html>.
- * Default theme is 'dark'. Persisted in localStorage.
+ * Design system: :root = warm beige/olive (light, default).
+ * Dark mode adds .dark class on <html>.
+ * Default theme is 'light'. Persisted in localStorage.
  */
 const THEME_KEY = 'hg_theme';
 
 const applyTheme = (theme) => {
   localStorage.setItem(THEME_KEY, theme);
-  if (theme === 'light') {
-    document.documentElement.classList.add('light');
-    document.documentElement.classList.remove('dark');
-  } else {
-    document.documentElement.classList.remove('light');
+  if (theme === 'dark') {
     document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove('light');
   }
 };
 
 const useTheme = () => {
   const [theme, setThemeState] = useState(
-    () => localStorage.getItem(THEME_KEY) || 'dark'
+    () => localStorage.getItem(THEME_KEY) || 'light'
   );
 
   useEffect(() => {

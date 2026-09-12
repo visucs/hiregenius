@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, UserPlus, Sparkles, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, Sparkles, ArrowLeft, Briefcase, Users } from 'lucide-react';
 
 import { registerSchema } from '../../utils/validationSchemas';
 import { authService } from '../../services/authService';
@@ -30,10 +30,12 @@ const RegisterPage = () => {
     return () => dispatch(clearError());
   }, [isAuthenticated, navigate, dispatch]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: 'RECRUITER' },
+    defaultValues: { role: 'CANDIDATE' },
   });
+
+  const selectedRole = watch('role');
 
   const onSubmit = async (data) => {
     dispatch(setLoading(true));
@@ -122,7 +124,7 @@ const RegisterPage = () => {
               Create your account
             </h1>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Start hiring smarter with AI.
+              Join thousands using AI to hire smarter and land better jobs.
             </p>
           </div>
 
@@ -157,14 +159,76 @@ const RegisterPage = () => {
               <FieldError message={errors.email?.message} />
             </div>
 
-            {/* Role */}
+            {/* Role — two card-style options only: Candidate or Recruiter.
+                Admin accounts are never self-created via the public form.
+                Zod schema also enforces this at the validation layer. */}
             <div>
-              <label htmlFor="register-role" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Role</label>
-              <select id="register-role" {...register('role')} style={{ ...inputStyle(errors.role), cursor: 'pointer' }}>
-                <option value="RECRUITER">Recruiter</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              <FieldError message={errors.role?.message} />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>
+                I am…
+              </label>
+              {/* Hidden input keeps react-hook-form + Zod wired */}
+              <input type="hidden" {...register('role')} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  {
+                    value: 'CANDIDATE',
+                    icon: Briefcase,
+                    title: "I'm looking for a job",
+                    sub: 'Score resumes, prep for interviews',
+                  },
+                  {
+                    value: 'RECRUITER',
+                    icon: Users,
+                    title: "I'm hiring",
+                    sub: 'Screen candidates with AI',
+                  },
+                ].map(({ value, icon: Icon, title, sub }) => {
+                  const isSelected = selectedRole === value;
+                  return (
+                    <motion.button
+                      key={value}
+                      type="button"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setValue('role', value, { shouldValidate: true })}
+                      style={{
+                        padding: '14px 16px', borderRadius: 14, textAlign: 'left',
+                        cursor: 'pointer', border: 'none', transition: 'all 0.18s',
+                        background: isSelected
+                          ? 'rgba(99,102,241,0.1)'
+                          : 'rgba(255,255,255,0.03)',
+                        outline: isSelected
+                          ? '1.5px solid rgba(99,102,241,0.6)'
+                          : '1.5px solid var(--border)',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(99,102,241,0.08)' : 'none',
+                      }}
+                      id={`register-role-${value.toLowerCase()}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                        <div style={{
+                          width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                          background: isSelected ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.05)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Icon size={15} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
+                        </div>
+                        <span style={{
+                          fontSize: 13, fontWeight: 600,
+                          color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        }}>
+                          {title}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 40, lineHeight: 1.4 }}>
+                        {sub}
+                      </p>
+                    </motion.button>
+                  );
+                })}
+              </div>
+              {errors.role && (
+                <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 6 }}>{errors.role.message}</p>
+              )}
             </div>
 
             {/* Password */}
