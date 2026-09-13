@@ -481,3 +481,14 @@ pm run build build command, and dist output directory for monorepo configuration
     - **Admin**: Marcus Vance (dmin@hiregenius.ai) -> /admin/dashboard
   - Added responsive $\ge 44 touch-target 1-click login cards with role-specific accent colors and persona badges.
   - Implemented graceful offline fallback in onSubmit: If backend API is unreachable/offline and a user enters any demo email, they are seamlessly authenticated to the corresponding demo dashboard.
+
+### 2026-09-14 - Responsive Sidebar & Topbar Complete Overhaul
+
+**Changes Implemented:**
+- **Candidate Portal (AppShell.jsx)**: Decoupled mobile drawer from desktop sidebar collapsed state using renderSidebarContent(collapsed, isMobile). Drawer always expands full labels and brand header on mobile. Added dedicated 44px close button. Added mobile search toggle and drawer. Added fixed viewport positioning for notifs and user dropdowns on <= 480px.
+- **Recruiter Portal (RecruiterShell.jsx)**: Decoupled mobile drawer from desktop collapsed state with renderContent(collapsed, isMobile). Added 44px close button. Added mobile search toggle and drawer. Fixed dropdown viewport overflow on <= 480px.
+- **Admin Portal (AdminShell.jsx)**: Decoupled mobile drawer from desktop collapsed state with renderSidebarContent(collapsed, isMobile). Hid 'Admin Console' badge text on small screens (< 420px) to prevent horizontal width crunch. Added mobile search toggle and drawer. Fixed dropdown overflow on <= 480px.
+- **Landing Navbar (LandingNavbar.jsx)**: Replaced fixed 4-col products grid with auto-fit minmax(min(100%, 145px), 1fr). Ensured mobile menu links and auth CTA buttons satisfy >= 44px touch targets.
+- **Generic Sidebar (Sidebar.jsx)**: Decoupled desktop sidebar and mobile drawer; drawer always receives isCollapsed=false on mobile.
+- **Build & Verification**: npm run build passed with 0 errors (2,935 modules in 910ms). npm run lint passed with 0 errors.
+
