@@ -17,6 +17,7 @@ const RSHero = () => {
 
   return (
     <section
+      className="hero-section rs-hero-section"
       style={{
         paddingTop: 140,
         paddingBottom: 96,
@@ -45,8 +46,8 @@ const RSHero = () => {
           {/* ── Left column ── */}
           <div>
             {/* Breadcrumb */}
-            <motion.div variants={fade} style={{ marginBottom: 24 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
+            <motion.div variants={fade} style={{ marginBottom: 20 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px, 2.8vw, 13px)', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                 <Link to="/" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
                   onMouseEnter={e => e.target.style.color = 'var(--primary)'}
                   onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
@@ -64,13 +65,14 @@ const RSHero = () => {
             <motion.div variants={fade} style={{ marginBottom: 20 }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '5px 14px', borderRadius: 999,
+                padding: '5px clamp(10px, 3vw, 14px)', borderRadius: 999,
                 background: 'var(--pill-badge-bg)', border: '1px solid var(--pill-badge-border)',
-                fontSize: 12, fontWeight: 600, color: 'var(--primary)',
-                textTransform: 'uppercase', letterSpacing: '0.06em',
+                fontSize: 'clamp(10px, 2.7vw, 12px)', fontWeight: 600, color: 'var(--primary)',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+                maxWidth: '100%', boxSizing: 'border-box',
               }}>
-                <Zap size={12} />
-                AI-Powered · ML Scored · Instant
+                <Zap size={12} style={{ flexShrink: 0 }} />
+                <span>AI-Powered · ML Scored · Instant</span>
               </div>
             </motion.div>
 
@@ -327,6 +329,12 @@ const RSHero = () => {
       <style>{`
         @media (max-width: 900px) {
           .hero-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+        }
+        @media (max-width: 768px) {
+          .rs-hero-section {
+            padding-top: clamp(108px, 16vw, 136px) !important;
+            padding-bottom: clamp(48px, 6vw, 80px) !important;
+          }
         }
       `}</style>
     </section>

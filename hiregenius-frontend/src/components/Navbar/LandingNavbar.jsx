@@ -37,7 +37,8 @@ const LandingNavbar = () => {
   const isLanding =
     location.pathname === '/' ||
     location.pathname.startsWith('/products/resume-screening') ||
-    location.pathname.startsWith('/products/ai-interview');
+    location.pathname.startsWith('/products/ai-interview') ||
+    location.pathname.startsWith('/products/analytics');
 
   const dropRef = useRef(null);
   const hoverTimer = useRef(null);
