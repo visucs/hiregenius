@@ -36,13 +36,14 @@ const RSAnalyzed = () => (
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.4, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -6, boxShadow: '0 16px 48px rgba(61,80,22,0.14)' }}
+              whileHover={{ y: -6, scale: 1.02 }}
               style={{
                 background: 'var(--card-float-bg)',
                 border: '1px solid var(--card-float-border)',
                 borderRadius: 20, padding: '24px 22px',
+                boxShadow: 'var(--card-float-shadow)',
                 display: 'flex', flexDirection: 'column', gap: 12,
-                transition: 'border-color 0.2s',
+                transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
                 cursor: 'default',
               }}
             >

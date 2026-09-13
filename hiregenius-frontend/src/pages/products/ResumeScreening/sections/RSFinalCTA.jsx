@@ -27,7 +27,9 @@ const RSFinalCTA = () => (
         {/* Background fill */}
         <div style={{
           background: 'var(--card-float-bg)',
-          backdropFilter: 'blur(20px)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          boxShadow: 'var(--card-float-shadow)',
           borderRadius: 28,
           padding: '64px 48px',
           textAlign: 'center',

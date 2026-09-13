@@ -96,6 +96,7 @@ const RSFAQ = () => {
             background: 'var(--card-float-bg)',
             border: '1px solid var(--card-float-border)',
             borderRadius: 24, padding: '8px 32px 8px',
+            boxShadow: 'var(--card-float-shadow)',
           }}
         >
           {FAQS.map((item, i) => (

@@ -40,11 +40,13 @@ const AICrossLinks = () => (
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.4, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -6 }}
+              whileHover={{ y: -6, scale: 1.02 }}
               style={{
                 background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)',
                 borderRadius: 22, padding: '28px 24px',
+                boxShadow: 'var(--card-float-shadow)',
                 display: 'flex', flexDirection: 'column', gap: 14, position: 'relative', overflow: 'hidden',
+                transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
               }}
             >
               <div style={{ width: 48, height: 48, borderRadius: 16, background: 'var(--icon-circle-bg)', border: '1px solid var(--step-active-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
