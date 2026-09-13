@@ -469,3 +469,15 @@ pm run build build command, and dist output directory for monorepo configuration
    - Admin user table collapses to cards below 768px (.admin-user-table vs .admin-user-cards).
    - Charts reflow to single column on tablet/mobile screens.
    - 44px toggle buttons, password show/hide buttons, and wrapped action rows.
+
+### 2026-09-13 — Production 1-Click Demo Portals & Graceful Offline Login
+
+**Changes Implemented:**
+- **LoginPage.jsx**:
+  - Removed import.meta.env.DEV restriction so Demo 1-Click logins are available in production deployments (Vercel, GitHub Pages).
+  - Configured realistic demo personas:
+    - **Candidate**: Alex Morgan (candidate@hiregenius.ai) -> /candidate/dashboard
+    - **Recruiter**: Sarah Chen (ecruiter@hiregenius.ai) -> /recruiter/dashboard
+    - **Admin**: Marcus Vance (dmin@hiregenius.ai) -> /admin/dashboard
+  - Added responsive $\ge 44 touch-target 1-click login cards with role-specific accent colors and persona badges.
+  - Implemented graceful offline fallback in onSubmit: If backend API is unreachable/offline and a user enters any demo email, they are seamlessly authenticated to the corresponding demo dashboard.
