@@ -67,29 +67,29 @@ const AdminPlatformAnalyticsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Dark Indigo Hero ───────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: '32px 36px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', width: '100%' }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(129,140,248,0.95)', background: 'rgba(99,102,241,0.18)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.30)' }}>
                     <BarChart3 size={11} /> Platform Analytics
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Platform Analytics</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Platform Analytics</h1>
                 <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>Aggregated hiring intelligence across all recruiters</p>
               </div>
 
               {/* Range tabs */}
-              <div style={{ display: 'flex', gap: 3, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(99,102,241,0.25)', alignSelf: 'flex-start', marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 3, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(99,102,241,0.25)', alignSelf: 'flex-start', marginTop: 4, flexWrap: 'wrap' }}>
                 {RANGES.map(r => (
                   <button key={r.value} id={`admin-analytics-range-${r.value}`} onClick={() => setRange(r.value)}
-                    style={{ padding: '7px 16px', borderRadius: 9, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                    style={{ minHeight: 40, padding: '7px 16px', borderRadius: 9, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                       background: range === r.value ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'transparent',
                       color: range === r.value ? '#fff' : 'rgba(255,255,255,0.50)',
                       boxShadow: range === r.value ? '0 3px 12px rgba(79,70,229,0.45)' : 'none',
@@ -99,13 +99,14 @@ const AdminPlatformAnalyticsPage = () => {
               </div>
             </div>
 
-            {/* Snapshot stat chips — on hero boundary */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            {/* Snapshot stat chips */}
+            <div className="admin-analytics-snapshots" style={{ display: 'grid', gap: 10 }}>
               {SNAPSHOT.map(({ label, value, color, icon: Icon }, i) => (
                 <motion.div key={label}
                   initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
-                  style={{ background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '16px 16px 0 0', padding: '18px 20px 22px', position: 'relative', overflow: 'hidden', transition: 'background 0.18s' }}
+                  className="admin-snap-chip"
+                  style={{ background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)', padding: '18px 20px 22px', position: 'relative', overflow: 'hidden', transition: 'background 0.18s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
                 >
@@ -123,7 +124,7 @@ const AdminPlatformAnalyticsPage = () => {
       </div>
 
       {/* ── Charts grid ───────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+      <div className="admin-analytics-charts" style={{ padding: 'clamp(20px, 3vw, 24px) clamp(16px, 4vw, 36px) 60px', display: 'grid', gap: 18, maxWidth: 1280, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
         {/* Hiring Trend */}
         <ChartCard
@@ -214,6 +215,35 @@ const AdminPlatformAnalyticsPage = () => {
           </div>
         </ChartCard>
       </div>
+
+      <style>{`
+        .admin-analytics-snapshots {
+          grid-template-columns: repeat(4, 1fr);
+        }
+        .admin-snap-chip {
+          border-radius: 16px 16px 0 0;
+        }
+        .admin-analytics-charts {
+          grid-template-columns: 1fr 1fr;
+        }
+        @media (max-width: 900px) {
+          .admin-analytics-snapshots {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .admin-snap-chip {
+            border-radius: 16px !important;
+            margin-bottom: 4px;
+          }
+          .admin-analytics-charts {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 480px) {
+          .admin-analytics-snapshots {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 };

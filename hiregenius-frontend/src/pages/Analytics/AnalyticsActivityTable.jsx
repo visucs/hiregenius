@@ -96,14 +96,14 @@ const AnalyticsActivityTable = ({ data, loading, error, onRetry }) => {
       }}
     >
       {/* Table header bar */}
-      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: 'clamp(14px, 2.5vw, 20px) clamp(16px, 2.5vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid var(--border)' }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Recent Activity</h3>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>Latest resume screenings and AI interviews</p>
         </div>
         {/* Search */}
-        <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <div style={{ position: 'relative', width: 'min(280px, 100%)' }}>
+          <Search size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             id="activity-search"
             type="text"
@@ -111,16 +111,16 @@ const AnalyticsActivityTable = ({ data, loading, error, onRetry }) => {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             style={{
-              paddingLeft: 34, paddingRight: 14, height: 36, borderRadius: 10,
+              paddingLeft: 38, paddingRight: 14, height: 44, borderRadius: 12,
               background: 'var(--bg-surface)', border: '1px solid var(--border)',
-              color: 'var(--text-primary)', fontSize: 13, outline: 'none', minWidth: 240,
+              color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
             }}
           />
         </div>
       </div>
 
-      {/* Scrollable table */}
-      <div style={{ overflowX: 'auto' }}>
+      {/* Desktop table view (>= 768px) */}
+      <div className="activity-table-desktop" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
           <thead>
             <tr style={{ background: 'var(--bg-surface)' }}>
@@ -188,36 +188,93 @@ const AnalyticsActivityTable = ({ data, loading, error, onRetry }) => {
         </table>
       </div>
 
+      {/* Mobile stacked cards view (< 768px) */}
+      <div className="activity-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: 12, padding: '14px 16px' }}>
+        {loading ? (
+          [1,2,3].map(i => (
+            <div key={i} style={{ padding: 16, borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--border)' }}>
+              <div style={{ height: 16, width: '60%', borderRadius: 6, background: 'var(--bg-surface)', marginBottom: 8 }} />
+              <div style={{ height: 12, width: '40%', borderRadius: 6, background: 'var(--bg-surface)' }} />
+            </div>
+          ))
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+            <AlertCircle size={24} color="var(--danger)" style={{ margin: '0 auto 8px', display: 'block' }} />
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 8px' }}>Failed to load activity.</p>
+            <button onClick={onRetry} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+              Retry
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: 13 }}>
+            No activity found{search ? ` matching "${search}"` : ' for this period'}.
+          </div>
+        ) : (
+          rows.map((row) => (
+            <div key={row.id} style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{row.candidate}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, margin: 0 }}>{row.job}</p>
+                </div>
+                <TypeBadge type={row.type} />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingTop: 4, borderTop: '1px solid var(--card-row-border)' }}>
+                <ScoreBar score={row.score} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <RecommendationBadge rec={row.recommendation} />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{row.date}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Pagination */}
       {!loading && !error && filtered.length > PAGE_SIZE && (
-        <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)' }}>
+        <div style={{ padding: 'clamp(12px, 2vw, 16px) clamp(16px, 2.5vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: 12 }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: page === 0 ? 'default' : 'pointer', opacity: page === 0 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
+              aria-label="Previous page"
+              style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: page === 0 ? 'default' : 'pointer', opacity: page === 0 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={16} />
             </button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button key={i} onClick={() => setPage(i)}
-                style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid', borderColor: page === i ? 'var(--primary)' : 'var(--border)', background: page === i ? 'var(--primary)' : 'var(--bg-surface)', color: page === i ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 10, border: '1px solid', borderColor: page === i ? 'var(--primary)' : 'var(--border)', background: page === i ? 'var(--primary)' : 'var(--bg-surface)', color: page === i ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 {i + 1}
               </button>
             ))}
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: page >= totalPages - 1 ? 'default' : 'pointer', opacity: page >= totalPages - 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
+              aria-label="Next page"
+              style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: page >= totalPages - 1 ? 'default' : 'pointer', opacity: page >= totalPages - 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 767px) {
+          .activity-table-desktop {
+            display: none !important;
+          }
+          .activity-cards-mobile {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </motion.div>
   );
 };

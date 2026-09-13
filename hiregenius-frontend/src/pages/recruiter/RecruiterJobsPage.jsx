@@ -78,7 +78,7 @@ const Field = ({ label, error, children }) => (
   </div>
 );
 
-const IS = { width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
+const IS = { width: '100%', minHeight: 44, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
 
 /* ════════════════════════════════════════════════════════════
    JOBS PAGE
@@ -106,25 +106,25 @@ const RecruiterJobsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Hero band ─────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
                     <Briefcase size={11} /> Job Listings
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>My Jobs</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>My Jobs</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>{jobs.length} listing{jobs.length !== 1 ? 's' : ''} · {openCount} open · {totalApps} total applicants</p>
               </div>
               <motion.button whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setShowForm(true)} id="jobs-post-new"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 22px', borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: '0 6px 28px rgba(61,80,22,0.60)', border: '1px solid rgba(107,138,58,0.35)', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 9, padding: '12px 22px', borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: '0 6px 28px rgba(61,80,22,0.60)', border: '1px solid rgba(107,138,58,0.35)', cursor: 'pointer', letterSpacing: '-0.01em' }}
               >
                 <PlusCircle size={16} strokeWidth={2.5} /> Post New Job <ArrowUpRight size={14} />
               </motion.button>
@@ -148,18 +148,18 @@ const RecruiterJobsPage = () => {
       </div>
 
       {/* ── Job cards grid ────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
         {jobs.length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
             <Briefcase size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 12px', display: 'block' }} />
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>No jobs yet</p>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Post your first job to start receiving applications.</p>
             <button onClick={() => setShowForm(true)} id="jobs-empty-cta"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.40)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', minHeight: 44, borderRadius: 12, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.40)' }}
             ><PlusCircle size={15} /> Post First Job</button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 16 }}>
             {jobs.map((job, i) => (
               <motion.div key={job.id}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -203,19 +203,19 @@ const RecruiterJobsPage = () => {
                   </div>
 
                   {/* Action row */}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button id={`jobs-edit-${job.id}`}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 11, fontSize: 12, fontWeight: 700, background: 'rgba(107,138,58,0.08)', color: 'var(--primary)', border: '1px solid rgba(107,138,58,0.20)', cursor: 'pointer', transition: 'all 0.15s' }}
+                      style={{ flex: '1 1 80px', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 11, fontSize: 12, fontWeight: 700, background: 'rgba(107,138,58,0.08)', color: 'var(--primary)', border: '1px solid rgba(107,138,58,0.20)', cursor: 'pointer', transition: 'all 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.15)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'rgba(107,138,58,0.08)'}
                     ><Edit2 size={13} /> Edit</button>
                     <button id={`jobs-close-${job.id}`}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 11, fontSize: 12, fontWeight: 700, background: 'rgba(239,68,68,0.07)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.20)', cursor: 'pointer', transition: 'all 0.15s' }}
+                      style={{ flex: '1 1 80px', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 11, fontSize: 12, fontWeight: 700, background: 'rgba(239,68,68,0.07)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.20)', cursor: 'pointer', transition: 'all 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.13)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.07)'}
                     ><Lock size={13} /> {job.status === 'CLOSED' ? 'Reopen' : 'Close'}</button>
                     <button id={`jobs-view-${job.id}`}
-                      style={{ width: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 11, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s' }}
+                      style={{ width: 40, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 11, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                     ><Eye size={14} /></button>
@@ -237,11 +237,11 @@ const RecruiterJobsPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 20px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', borderRadius: 24, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 32px 96px rgba(0,0,0,0.30)', pointerEvents: 'auto' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10, backdropFilter: 'blur(20px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px clamp(16px, 4vw, 24px) 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10, backdropFilter: 'blur(20px)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(107,138,58,0.14)', border: '1px solid rgba(107,138,58,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Briefcase size={16} style={{ color: 'var(--primary)' }} />
@@ -252,19 +252,19 @@ const RecruiterJobsPage = () => {
                     </div>
                   </div>
                   <button onClick={() => setShowForm(false)} id="jobs-form-close"
-                    style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                    style={{ width: 44, height: 44, minWidth: 44, borderRadius: 9, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
                   ><X size={16} /></button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '18px clamp(16px, 4vw, 24px) 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <Field label="Job Title *" error={errors.title?.message}>
                     <input {...register('title')} id="jobs-form-title" placeholder="e.g. Senior Backend Developer" style={IS} />
                   </Field>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 14 }}>
                     <Field label="Company *" error={errors.company?.message}><input {...register('company')} id="jobs-form-company" style={IS} /></Field>
                     <Field label="Location *" error={errors.location?.message}><input {...register('location')} id="jobs-form-location" placeholder="City / Remote" style={IS} /></Field>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 14 }}>
                     <Field label="Min Salary (₹)" error={errors.salaryMin?.message}><input {...register('salaryMin')} type="number" id="jobs-form-smin" style={IS} /></Field>
                     <Field label="Max Salary (₹)" error={errors.salaryMax?.message}><input {...register('salaryMax')} type="number" id="jobs-form-smax" style={IS} /></Field>
                     <Field label="Exp (yrs)" error={errors.experienceYears?.message}><input {...register('experienceYears')} type="number" id="jobs-form-exp" style={IS} /></Field>
@@ -275,12 +275,12 @@ const RecruiterJobsPage = () => {
                   <Field label="Description *" error={errors.description?.message}>
                     <textarea {...register('description')} rows={4} id="jobs-form-desc" placeholder="Describe the role, responsibilities…" style={{ ...IS, resize: 'vertical', lineHeight: 1.6 }} />
                   </Field>
-                  <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+                  <div style={{ display: 'flex', gap: 10, paddingTop: 4, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => setShowForm(false)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                      style={{ flex: '1 1 120px', minHeight: 44, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                     >Cancel</button>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={isSubmitting} id="jobs-form-submit"
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: isSubmitting ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: isSubmitting ? 'none' : '0 4px 18px rgba(61,80,22,0.40)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      style={{ flex: '1 1 140px', minHeight: 44, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: isSubmitting ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: isSubmitting ? 'none' : '0 4px 18px rgba(61,80,22,0.40)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
                     >
                       {isSubmitting ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Posting…</> : <><CheckCircle2 size={14} />Post Job</>}
                     </motion.button>

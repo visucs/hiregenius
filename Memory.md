@@ -433,3 +433,39 @@ pm run build build command, and dist output directory for monorepo configuration
 - **Deployment Action**: Uses official ctions/upload-pages-artifact@v3 and ctions/deploy-pages@v4.
 - **Target URL**: https://visucs.github.io/hiregenius/
 - **Documentation**: Updated DevOps.md with GitHub Pages settings instructions.
+
+### 2026-09-13 — Comprehensive Platform-Wide Responsiveness Hardening
+
+**Scope & Rules Followed:**
+- Strictly RESPONSIVENESS-ONLY: No new features, pages, components, copy, animations, or functional alterations.
+- Strict adherence to Design.md spacing scale (4 / 8 / 16 / 24 / 32 / 48 / 64 / 96 / 128 px) and typography scale via CSS clamp().
+- Verified and optimized across all 11 breakpoints: 320px, 375px, 390px, 428px, 600px, 768px, 1024px, 1280px, 1440px, 1920px, 2560px.
+- Minimum touch tap target size >= 44x44px with >= 8px gap for all interactive elements across mobile and tablet viewports.
+- Zero horizontal viewport overflow (overflow-x: hidden / zero horizontal scrollbars).
+
+**Completed Responsive Hardening:**
+1. **Global Styles (src/index.css)**:
+   - Clamped padding on .dash-page (clamp(16px, 3vw, 32px) clamp(16px, 4vw, 36px)).
+   - Container max-width constraints (1280px) for 4K displays.
+   - Touch targets >= 44px on primary buttons, action rows, and inputs.
+2. **Navigation & Shells (AppShell.jsx, RecruiterShell.jsx, AdminShell.jsx, LandingNavbar.jsx)**:
+   - Mobile navigation overlays and responsive drawers with tap-friendly links.
+   - Fluid topbars with wrapped controls and mobile search toggles.
+3. **Public & Auth Pages**:
+   - LandingPage.jsx, AIHero.jsx, RSHero.jsx, APHero.jsx: Responsive heroes and typography.
+   - LoginPage.jsx, RegisterPage.jsx, ForgotPasswordPage.jsx: Responsive centered auth cards with 44px input and button touch targets.
+4. **Candidate Portal (CandidateDashboard.jsx, ApplicationsPage.jsx, InterviewsPage.jsx, ResumeScorePage.jsx, ScanHistoryPage.jsx, CandidateSettingsPage.jsx)**:
+   - Clamped heroes and responsive metric cards.
+   - Modals constrained to maxWidth: min(Npx, 100%) and maxHeight: 90vh.
+5. **Recruiter Portal (RecruiterDashboardHome.jsx, RecruiterCandidatesPage.jsx, RecruiterJobsPage.jsx, RecruiterResumeScreeningPage.jsx, RecruiterAIInterviewPage.jsx, RecruiterCandidateRankingPage.jsx, RecruiterSchedulerPage.jsx, RecruiterProfilePage.jsx, RecruiterSettingsPage.jsx)**:
+   - Tables collapse cleanly to stacked cards below 768px (.rec-candidate-table vs .rec-candidate-cards).
+   - Drawers constrained to min(440px, 100vw).
+   - Form controls, date/time pickers, and modals optimized with auto-fit grids.
+6. **Analytics Portal (AnalyticsPage.jsx, AnalyticsActivityTable.jsx)**:
+   - Range tabs wrap gracefully; search input and action buttons touch-hardened.
+   - Activity table collapses cleanly to stacked cards on mobile screens (.activity-cards-mobile).
+7. **Admin Portal (AdminDashboardHome.jsx, AdminUserManagementPage.jsx, AdminPlatformAnalyticsPage.jsx, AdminApiKeysPage.jsx, AdminSystemSettingsPage.jsx, AdminProfilePage.jsx)**:
+   - Responsive stats grids (4-col desktop, 2-col tablet, 1-col mobile).
+   - Admin user table collapses to cards below 768px (.admin-user-table vs .admin-user-cards).
+   - Charts reflow to single column on tablet/mobile screens.
+   - 44px toggle buttons, password show/hide buttons, and wrapped action rows.

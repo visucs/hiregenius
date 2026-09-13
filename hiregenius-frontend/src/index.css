@@ -672,19 +672,22 @@ body {
 
 /* ── Dashboard page container ─────────────────────────────── */
 .dash-page {
-  padding: 28px 28px 56px;
-  max-width: 1320px;
+  padding: clamp(16px, 3vw, 28px) clamp(12px, 3vw, 28px) 56px;
+  max-width: 1280px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Section header (card title row) ─────────────────────── */
 .dash-card-header {
-  padding: 20px 24px 16px;
+  padding: 16px clamp(14px, 3vw, 24px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* ── Icon badge — used inside card headers ────────────────── */
@@ -712,6 +715,7 @@ body {
   text-decoration: none;
   transition: all 0.16s ease;
   cursor: pointer;
+  min-height: 44px;
 }
 .dash-action-row:hover {
   border-color: var(--border-hover);
@@ -729,6 +733,7 @@ body {
   background: var(--card-row-bg);
   border: 1px solid var(--card-row-border);
   transition: background 0.14s;
+  min-height: 44px;
 }
 .dash-health-row:hover {
   background: var(--step-inactive-bg);
@@ -750,9 +755,9 @@ body {
 
 /* ── Stat number gradient ─────────────────────────────────── */
 .stat-number {
-  font-size: 34px;
+  font-size: clamp(24px, 4vw, 34px);
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -0.05em;
   background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
   -webkit-background-clip: text;
@@ -830,8 +835,10 @@ body {
 .btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 11px 22px;
+  min-height: 44px;
   border-radius: 14px;
   border: none;
   cursor: pointer;
@@ -857,17 +864,31 @@ body {
 /* ── Dashboard 2-col grid ─────────────────────────────────── */
 .dash-grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 20px;
   align-items: start;
+}
+
+@media (max-width: 768px) {
+  .dash-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 /* ── Stat card grid ───────────────────────────────────────── */
 .dash-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 16px;
   margin-bottom: 24px;
+}
+
+@media (max-width: 480px) {
+  .dash-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 /* Dark mode overrides for new utilities */

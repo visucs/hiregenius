@@ -162,7 +162,7 @@ const CandidateDashboard = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 50%, #0f1e06 100%)',
-        padding: '36px 36px 0',
+        padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 36px) 0',
       }}>
         {/* Dot grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
@@ -218,7 +218,7 @@ const CandidateDashboard = () => {
           </motion.div>
 
           {/* Stat cards — on dark band */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div className="cand-dash-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {MOCK_STATS.map((stat, i) => (
               <motion.div
                 key={stat.key}
@@ -256,10 +256,10 @@ const CandidateDashboard = () => {
       {/* ════════════════════════════════════════════════════
           CONTENT AREA
       ════════════════════════════════════════════════════ */}
-      <div style={{ padding: '24px 36px 60px' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
 
         {/* ── Row A: Resume Score Card + App Tracker + Quick Actions ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr 0.8fr', gap: 18, marginBottom: 18 }}>
+        <div className="cand-dash-row-a" style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr 0.8fr', gap: 18, marginBottom: 18 }}>
 
           {/* Resume Score Card */}
           <Card delay={0.08}>
@@ -404,7 +404,7 @@ const CandidateDashboard = () => {
         </div>
 
         {/* ── Row B: Recommended Jobs + Activity ─────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 18, marginBottom: 18 }}>
+        <div className="cand-dash-row-b" style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 18, marginBottom: 18 }}>
 
           {/* Recommended Jobs */}
           <Card delay={0.23}>
@@ -559,6 +559,26 @@ const CandidateDashboard = () => {
           </div>
         </Card>
       </div>
+      <style>{`
+        @media (max-width: 1024px) {
+          .cand-dash-stats {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .cand-dash-row-a {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .cand-dash-row-b {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .cand-dash-stats {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

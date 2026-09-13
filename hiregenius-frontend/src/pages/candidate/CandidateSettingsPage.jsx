@@ -33,7 +33,7 @@ const Field = ({ label, error, children, hint }) => (
 
 /* ─── Input style ─────────────────────────────────────────── */
 const inputStyle = (hasError) => ({
-  width: '100%', padding: '11px 14px', borderRadius: 12, fontSize: 13,
+  width: '100%', minHeight: 44, padding: '11px 14px', borderRadius: 12, fontSize: 13,
   background: 'var(--card-row-bg)', border: `1px solid ${hasError ? 'rgba(248,113,113,0.60)' : 'var(--border)'}`,
   color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.15s',
 });
@@ -44,13 +44,13 @@ const Section = ({ icon: Icon, iconColor, title, children, delay = 0, stripe, da
     style={{ background: danger ? 'rgba(248,113,113,0.03)' : 'var(--bg-elevated)', border: danger ? '1px solid rgba(248,113,113,0.25)' : '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}
   >
     {stripe && <div style={{ height: 3, background: stripe, borderRadius: '20px 20px 0 0' }} />}
-    <div style={{ padding: '16px 24px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ padding: '16px clamp(14px, 3vw, 24px) 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 36, height: 36, borderRadius: 11, background: `${iconColor}14`, border: `1px solid ${iconColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon size={16} style={{ color: iconColor }} />
       </div>
       <h2 style={{ fontSize: 15, fontWeight: 800, color: danger ? '#f87171' : 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>{title}</h2>
     </div>
-    <div style={{ padding: '20px 24px 24px' }}>{children}</div>
+    <div style={{ padding: 'clamp(16px, 3vw, 20px) clamp(14px, 3vw, 24px) 24px' }}>{children}</div>
   </motion.div>
 );
 
@@ -72,7 +72,7 @@ const PasswordInput = ({ hasError, ...rest }) => {
     <div style={{ position: 'relative' }}>
       <input type={show ? 'text' : 'password'} {...rest} style={{ ...inputStyle(hasError), paddingRight: 42 }} />
       <button type="button" onClick={() => setShow(v => !v)}
-        style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 34, height: 34, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >{show ? <EyeOff size={15} /> : <Eye size={15} />}</button>
     </div>
   );
@@ -126,7 +126,7 @@ const CandidateSettingsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Olive/Forest Hero ─────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) clamp(24px, 4vw, 36px)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '12%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
@@ -137,14 +137,14 @@ const CandidateSettingsPage = () => {
                 <Settings size={11} /> Account
               </span>
             </div>
-            <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Candidate Settings</h1>
+            <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Candidate Settings</h1>
             <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Manage your account profile, security credentials, and notification preferences.</p>
           </motion.div>
         </div>
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 860, margin: '0 auto' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 860, margin: '0 auto' }}>
 
         {/* A. Profile Details */}
         <Section icon={User} iconColor="#60a5fa" title="Profile Details" delay={0.04} stripe="linear-gradient(90deg, #1e3a5f, #3b82f6)">
@@ -171,8 +171,8 @@ const CandidateSettingsPage = () => {
               </div>
             </div>
 
-            {/* Name + Email in 2 cols on wider screens */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {/* Name + Email in responsive auto-fit */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 14 }}>
               <Field label="Full Name">
                 <input type="text" id="settings-name" value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} style={inputStyle(false)} />
               </Field>
@@ -198,7 +198,7 @@ const CandidateSettingsPage = () => {
 
             <div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={savingProfile}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 13, background: savingProfile ? 'rgba(61,80,22,0.40)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: savingProfile ? 'wait' : 'pointer', boxShadow: savingProfile ? 'none' : '0 4px 16px rgba(61,80,22,0.40)', letterSpacing: '-0.01em', transition: 'all 0.18s' }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '10px 22px', borderRadius: 13, background: savingProfile ? 'rgba(61,80,22,0.40)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: savingProfile ? 'wait' : 'pointer', boxShadow: savingProfile ? 'none' : '0 4px 16px rgba(61,80,22,0.40)', letterSpacing: '-0.01em', transition: 'all 0.18s' }}
                 id="save-profile-btn"
               >
                 {savingProfile
@@ -216,7 +216,7 @@ const CandidateSettingsPage = () => {
             <Field label="Current Password" error={errors.currentPassword?.message}>
               <PasswordInput hasError={!!errors.currentPassword} {...register('currentPassword')} id="current-password" />
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 14 }}>
               <Field label="New Password" error={errors.newPassword?.message}>
                 <PasswordInput hasError={!!errors.newPassword} {...register('newPassword')} id="new-password" />
               </Field>
@@ -226,7 +226,7 @@ const CandidateSettingsPage = () => {
             </div>
             <div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={isSubmitting}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 800, cursor: isSubmitting ? 'wait' : 'pointer', letterSpacing: '-0.01em', transition: 'all 0.18s' }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '10px 22px', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 800, cursor: isSubmitting ? 'wait' : 'pointer', letterSpacing: '-0.01em', transition: 'all 0.18s' }}
                 id="update-password-btn"
               >
                 {isSubmitting
@@ -261,13 +261,13 @@ const CandidateSettingsPage = () => {
 
         {/* D. Appearance */}
         <Section icon={theme === 'dark' ? Moon : Sun} iconColor="#34d399" title="Appearance Theme" delay={0.16} stripe="linear-gradient(90deg, #052e1a, #34d399)">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
-            <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 'min(100%, 240px)' }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Current theme: <span style={{ color: 'var(--primary)', textTransform: 'capitalize' }}>{theme} mode</span></p>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>Switch between light and dark UI themes. Your preference is saved automatically.</p>
             </div>
             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} onClick={toggleTheme}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontWeight: 800, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '10px 18px', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontWeight: 800, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
               id="toggle-theme-btn"
             >
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
@@ -280,25 +280,25 @@ const CandidateSettingsPage = () => {
         <Section icon={AlertTriangle} iconColor="#f87171" title="Account & Danger Zone" delay={0.20} danger>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Sign out */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 3 }}>Sign Out</p>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Log out of your current session on this device.</p>
               </div>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleLogout}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 7, padding: '9px 16px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
                 id="logout-btn"
               ><LogOut size={14} />Log Out</motion.button>
             </div>
 
             {/* Delete account */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 16px', borderRadius: 14, background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.22)' }}>
-              <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '14px 16px', borderRadius: 14, background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.22)' }}>
+              <div style={{ flex: 1, minWidth: 'min(100%, 200px)' }}>
                 <p style={{ fontSize: 13, fontWeight: 800, color: '#f87171', marginBottom: 3 }}>Delete Candidate Account</p>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Permanently remove all your application data and interview scorecards. This cannot be undone.</p>
               </div>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setDeleteModalOpen(true)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.30)', color: '#f87171', fontSize: 13, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 7, padding: '9px 16px', borderRadius: 12, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.30)', color: '#f87171', fontSize: 13, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
                 id="delete-account-trigger-btn"
               ><Trash2 size={14} />Delete Account</motion.button>
             </div>
@@ -316,11 +316,11 @@ const CandidateSettingsPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 420, background: 'var(--bg-elevated)', border: '1px solid rgba(248,113,113,0.35)', borderRadius: 24, boxShadow: '0 32px 96px rgba(0,0,0,0.40)', textAlign: 'center', pointerEvents: 'auto', overflow: 'hidden' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #7f1d1d, #ef4444, #f87171)', borderRadius: '24px 24px 0 0' }} />
-                <div style={{ padding: '28px 28px 24px' }}>
+                <div style={{ padding: '28px clamp(16px, 4vw, 28px) 24px' }}>
                   <motion.div animate={{ rotate: [0, -8, 8, -6, 6, 0] }} transition={{ duration: 0.5, delay: 0.2 }}
                     style={{ width: 58, height: 58, borderRadius: 18, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}
                   ><Trash2 size={24} style={{ color: '#f87171' }} /></motion.div>
@@ -334,13 +334,13 @@ const CandidateSettingsPage = () => {
                     style={{ ...inputStyle(false), textAlign: 'center', fontWeight: 800, color: '#f87171', marginBottom: 18, border: '1px solid rgba(248,113,113,0.35)' }}
                     id="delete-account-confirm-input"
                   />
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button onClick={() => { setDeleteModalOpen(false); setDeleteConfirmText(''); }}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                      style={{ flex: '1 1 100px', minHeight: 44, padding: '11px 0', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                     >Cancel</button>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                       onClick={handleDeleteAccount}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, background: 'linear-gradient(135deg, #7f1d1d, #ef4444)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(239,68,68,0.40)' }}
+                      style={{ flex: '1 1 140px', minHeight: 44, padding: '11px 0', borderRadius: 13, background: 'linear-gradient(135deg, #7f1d1d, #ef4444)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(239,68,68,0.40)' }}
                       id="delete-account-confirm-btn"
                     >Confirm Delete</motion.button>
                   </div>

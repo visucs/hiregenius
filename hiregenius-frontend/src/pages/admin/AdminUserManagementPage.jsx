@@ -45,7 +45,7 @@ const AdminUserManagementPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Hero band ─────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 36px' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '10%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
@@ -55,7 +55,7 @@ const AdminUserManagementPage = () => {
                 <Users size={11} /> User Management
               </span>
             </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>User Management</h1>
+            <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>User Management</h1>
             <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>{users.length} registered accounts across the platform</p>
 
             {/* Role filter chips */}
@@ -67,7 +67,7 @@ const AdminUserManagementPage = () => {
                   <motion.button key={r} whileTap={{ scale: 0.96 }}
                     onClick={() => setRoleFilter(r)}
                     id={`admin-users-filter-${r.toLowerCase()}`}
-                    style={{ padding: '7px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                    style={{ padding: '8px 16px', minHeight: 40, borderRadius: 10, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                       background: active ? (rc ? rc.grad : 'rgba(255,255,255,0.18)') : 'rgba(255,255,255,0.07)',
                       color: active ? '#fff' : 'rgba(255,255,255,0.50)',
                       boxShadow: active && rc ? `0 3px 12px ${rc.color}40` : 'none',
@@ -83,7 +83,7 @@ const AdminUserManagementPage = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '20px 36px 60px' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 20px) clamp(12px, 3vw, 36px) 60px' }}>
         {/* Search bar */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
           style={{ position: 'relative', marginBottom: 16, maxWidth: 440 }}
@@ -91,7 +91,7 @@ const AdminUserManagementPage = () => {
           <Search size={15} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
             id="admin-users-search"
-            style={{ width: '100%', paddingLeft: 42, paddingRight: 16, paddingTop: 11, paddingBottom: 11, borderRadius: 13, fontSize: 13, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            style={{ width: '100%', minHeight: 44, paddingLeft: 42, paddingRight: 16, paddingTop: 11, paddingBottom: 11, borderRadius: 13, fontSize: 13, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
           />
         </motion.div>
 
@@ -106,68 +106,141 @@ const AdminUserManagementPage = () => {
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>No users match your filters</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--card-row-bg)' }}>
-                    {['User', 'Role', 'Status', 'Joined', 'Last Login', 'Actions'].map(h => (
-                      <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((u, i) => {
-                    const rc = ROLE_CFG[u.role];
-                    return (
-                      <motion.tr key={u.id}
-                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.26, delay: i * 0.04 }}
-                        style={{ borderBottom: '1px solid var(--border)', opacity: u.status === 'DISABLED' ? 0.60 : 1, transition: 'background 0.12s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--card-row-bg)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        {/* User */}
-                        <td style={{ padding: '13px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: rc?.grad ?? 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: rc ? `0 2px 10px ${rc.color}30` : 'none' }}>
-                              {u.name.charAt(0)}
+            <>
+              {/* Desktop Table View (>= 768px) */}
+              <div className="admin-user-table" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--card-row-bg)' }}>
+                      {['User', 'Role', 'Status', 'Joined', 'Last Login', 'Actions'].map(h => (
+                        <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((u, i) => {
+                      const rc = ROLE_CFG[u.role];
+                      return (
+                        <motion.tr key={u.id}
+                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.26, delay: i * 0.04 }}
+                          style={{ borderBottom: '1px solid var(--border)', opacity: u.status === 'DISABLED' ? 0.60 : 1, transition: 'background 0.12s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--card-row-bg)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {/* User */}
+                          <td style={{ padding: '13px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: rc?.grad ?? 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: rc ? `0 2px 10px ${rc.color}30` : 'none' }}>
+                                {u.name.charAt(0)}
+                              </div>
+                              <div>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{u.name}</p>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{u.name}</p>
-                              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</p>
-                            </div>
+                          </td>
+                          <td style={{ padding: '13px 20px' }}><Pill cfg={ROLE_CFG} value={u.role} /></td>
+                          <td style={{ padding: '13px 20px' }}><Pill cfg={STATUS_CFG} value={u.status} /></td>
+                          <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
+                          <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}</td>
+                          <td style={{ padding: '13px 20px' }}>
+                            {u.role !== 'ADMIN' && (
+                              <motion.button whileTap={{ scale: 0.95 }}
+                                onClick={() => toggleStatus(u.id)}
+                                id={`admin-users-toggle-${u.id}`}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', minHeight: 36, borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                                  background: u.status === 'ACTIVE' ? 'rgba(239,68,68,0.10)' : 'rgba(74,222,128,0.10)',
+                                  color: u.status === 'ACTIVE' ? '#ef4444' : '#4ade80',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = u.status === 'ACTIVE' ? 'rgba(239,68,68,0.20)' : 'rgba(74,222,128,0.20)'}
+                                onMouseLeave={e => e.currentTarget.style.background = u.status === 'ACTIVE' ? 'rgba(239,68,68,0.10)' : 'rgba(74,222,128,0.10)'}
+                              >
+                                {u.status === 'ACTIVE' ? <><UserX size={13} />Disable</> : <><UserCheck size={13} />Enable</>}
+                              </motion.button>
+                            )}
+                            {u.role === 'ADMIN' && <Shield size={16} style={{ color: '#f59e0b', display: 'block', margin: '0 auto' }} />}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Stacked Cards View (< 768px) */}
+              <div className="admin-user-cards" style={{ display: 'none', flexDirection: 'column', gap: 12, padding: '14px 16px' }}>
+                {filtered.map((u) => {
+                  const rc = ROLE_CFG[u.role];
+                  return (
+                    <div key={u.id}
+                      style={{
+                        padding: '16px', borderRadius: 16, background: 'var(--card-row-bg)', border: '1px solid var(--border)',
+                        opacity: u.status === 'DISABLED' ? 0.60 : 1, display: 'flex', flexDirection: 'column', gap: 12,
+                      }}
+                    >
+                      {/* Top: Avatar, Name, Email, Action */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                          <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: rc?.grad ?? 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 800 }}>
+                            {u.name.charAt(0)}
                           </div>
-                        </td>
-                        <td style={{ padding: '13px 20px' }}><Pill cfg={ROLE_CFG} value={u.role} /></td>
-                        <td style={{ padding: '13px 20px' }}><Pill cfg={STATUS_CFG} value={u.status} /></td>
-                        <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
-                        <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}</td>
-                        <td style={{ padding: '13px 20px' }}>
-                          {u.role !== 'ADMIN' && (
-                            <motion.button whileTap={{ scale: 0.95 }}
-                              onClick={() => toggleStatus(u.id)}
-                              id={`admin-users-toggle-${u.id}`}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s',
-                                background: u.status === 'ACTIVE' ? 'rgba(239,68,68,0.10)' : 'rgba(74,222,128,0.10)',
-                                color: u.status === 'ACTIVE' ? '#ef4444' : '#4ade80',
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = u.status === 'ACTIVE' ? 'rgba(239,68,68,0.20)' : 'rgba(74,222,128,0.20)'}
-                              onMouseLeave={e => e.currentTarget.style.background = u.status === 'ACTIVE' ? 'rgba(239,68,68,0.10)' : 'rgba(74,222,128,0.10)'}
-                            >
-                              {u.status === 'ACTIVE' ? <><UserX size={13} />Disable</> : <><UserCheck size={13} />Enable</>}
-                            </motion.button>
-                          )}
-                          {u.role === 'ADMIN' && <Shield size={16} style={{ color: '#f59e0b', display: 'block', margin: '0 auto' }} />}
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</p>
+                          </div>
+                        </div>
+
+                        {u.role === 'ADMIN' ? (
+                          <Shield size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                        ) : null}
+                      </div>
+
+                      {/* Middle: Role & Status pills */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <Pill cfg={ROLE_CFG} value={u.role} />
+                        <Pill cfg={STATUS_CFG} value={u.status} />
+                      </div>
+
+                      {/* Bottom: Dates & Action */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--card-row-border)', flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <span>Joined: {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                          {u.lastLoginAt && <span style={{ marginLeft: 8 }}>· Login: {new Date(u.lastLoginAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
+                        </div>
+
+                        {u.role !== 'ADMIN' && (
+                          <motion.button whileTap={{ scale: 0.95 }}
+                            onClick={() => toggleStatus(u.id)}
+                            id={`admin-users-mobile-toggle-${u.id}`}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', minHeight: 44, borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                              background: u.status === 'ACTIVE' ? 'rgba(239,68,68,0.10)' : 'rgba(74,222,128,0.10)',
+                              color: u.status === 'ACTIVE' ? '#ef4444' : '#4ade80',
+                            }}
+                          >
+                            {u.status === 'ACTIVE' ? <><UserX size={14} />Disable Account</> : <><UserCheck size={14} />Enable Account</>}
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </motion.div>
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .admin-user-table {
+            display: none !important;
+          }
+          .admin-user-cards {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

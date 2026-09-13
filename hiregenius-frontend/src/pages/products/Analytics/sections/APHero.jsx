@@ -181,7 +181,7 @@ const APHero = () => (
 
           {/* Floating badge */}
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, duration: 0.4 }}
-            style={{ position: 'absolute', top: '6%', right: '-2%', zIndex: 5, background: 'var(--bg-elevated)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: '8px 14px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ position: 'absolute', top: '6%', right: 0, zIndex: 5, background: 'var(--bg-elevated)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: '8px 14px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <TrendingUp size={13} color="#22C55E" /> +12% this month
           </motion.div>
         </motion.div>

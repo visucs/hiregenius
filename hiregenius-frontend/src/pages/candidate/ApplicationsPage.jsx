@@ -48,24 +48,26 @@ const SkillBar = ({ label, pct }) => (
 
 /* ─── Timeline step ───────────────────────────────────────── */
 const TimelineTrack = ({ steps }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
-    {steps.map((step, idx) => {
-      const isLast    = idx === steps.length - 1;
-      const dotColor  = step.current ? '#6B8A3A' : step.completed ? '#34d399' : 'var(--border)';
-      const lineColor = step.completed ? '#34d399' : 'var(--border)';
-      return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', flex: isLast ? 0 : 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60 }}>
-            <div style={{ width: 24, height: 24, borderRadius: '50%', background: dotColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700, boxShadow: step.current ? '0 0 0 3px rgba(107,138,58,0.28)' : 'none', transition: 'all 0.3s', marginBottom: 6 }}>
-              {step.completed ? '✓' : idx + 1}
+  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 6 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, minWidth: 260 }}>
+      {steps.map((step, idx) => {
+        const isLast    = idx === steps.length - 1;
+        const dotColor  = step.current ? '#6B8A3A' : step.completed ? '#34d399' : 'var(--border)';
+        const lineColor = step.completed ? '#34d399' : 'var(--border)';
+        return (
+          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', flex: isLast ? 0 : 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 54 }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: dotColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700, boxShadow: step.current ? '0 0 0 3px rgba(107,138,58,0.28)' : 'none', transition: 'all 0.3s', marginBottom: 6 }}>
+                {step.completed ? '✓' : idx + 1}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: step.current ? 700 : 600, color: step.current ? 'var(--text-primary)' : 'var(--text-muted)', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>{step.stage}</div>
+              {step.date && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{step.date}</div>}
             </div>
-            <div style={{ fontSize: 11, fontWeight: step.current ? 700 : 600, color: step.current ? 'var(--text-primary)' : 'var(--text-muted)', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>{step.stage}</div>
-            {step.date && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{step.date}</div>}
+            {!isLast && <div style={{ flex: 1, height: 2, background: lineColor, marginTop: 11, minWidth: 12, transition: 'background 0.3s' }} />}
           </div>
-          {!isLast && <div style={{ flex: 1, height: 2, background: lineColor, marginTop: 11, minWidth: 16, transition: 'background 0.3s' }} />}
-        </div>
-      );
-    })}
+        );
+      })}
+    </div>
   </div>
 );
 
@@ -106,7 +108,7 @@ const ApplicationsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Olive/Forest Hero ─────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(14px, 4vw, 36px) 0' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '12%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
@@ -171,7 +173,7 @@ const ApplicationsPage = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {/* Loading skeleton */}
         {loading && [1,2,3].map(i => (
@@ -227,10 +229,10 @@ const ApplicationsPage = () => {
                   <div style={{ height: 2.5, background: `linear-gradient(90deg, ${chip.color}00, ${chip.color}88, ${chip.color}00)` }} />
 
                   {/* Main row */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '18px 22px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 240 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '16px clamp(12px, 3vw, 22px)', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 160 }}>
                       {/* Company logo placeholder */}
-                      <div style={{ width: 46, height: 46, borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                         <Building2 size={20} style={{ color: 'var(--primary)' }} />
                       </div>
                       <div>
@@ -243,7 +245,7 @@ const ApplicationsPage = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       {/* Date */}
                       <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
                         <Calendar size={12} />{app.appliedDate}
@@ -273,7 +275,7 @@ const ApplicationsPage = () => {
                         style={{ overflow: 'hidden' }}
                         onClick={e => e.stopPropagation()}
                       >
-                        <div style={{ margin: '0 22px 22px', paddingTop: 18, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+                        <div style={{ margin: '0 clamp(10px, 3vw, 22px) clamp(10px, 3vw, 22px)', paddingTop: 18, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: 24 }}>
 
                           {/* Left: Job overview + Interview Status */}
                           <div>

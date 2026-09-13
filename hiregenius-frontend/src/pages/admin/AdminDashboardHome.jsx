@@ -55,7 +55,7 @@ const AdminDashboardHome = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)',
-        padding: '36px 36px 0',
+        padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 36px) 0',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -80, right: '20%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -74,7 +74,7 @@ const AdminDashboardHome = () => {
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Live
                   </span>
                 </div>
-                <h1 style={{ fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
+                <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 34px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
                   Platform Overview{user?.name ? ` — ${user.name.split(' ')[0]}` : ''}
                 </h1>
                 <p style={{ fontSize: 14, color: 'rgba(196,200,255,0.60)', lineHeight: 1.6 }}>
@@ -95,7 +95,7 @@ const AdminDashboardHome = () => {
             </div>
 
             {/* Stat cards on hero boundary */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div className="admin-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {STAT_DEFS.map((stat, i) => (
                 <motion.div key={stat.key}
                   initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
@@ -105,7 +105,7 @@ const AdminDashboardHome = () => {
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
                 >
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${stat.color}00, ${stat.color}88, ${stat.color}00)` }} />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 6 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 13, background: `${stat.color}18`, border: `1px solid ${stat.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <stat.icon size={18} style={{ color: stat.color }} />
                     </div>
@@ -113,7 +113,7 @@ const AdminDashboardHome = () => {
                       <ChevronUp size={9} /> {stat.delta}
                     </span>
                   </div>
-                  <p style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
+                  <p style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
                     <Counter to={summary[stat.key]} />
                   </p>
                   <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(196,200,255,0.55)' }}>{stat.label}</p>
@@ -125,7 +125,7 @@ const AdminDashboardHome = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
         {/* Quick Actions */}
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, delay: 0.10, ease: [0.22, 1, 0.36, 1] }}
@@ -136,12 +136,12 @@ const AdminDashboardHome = () => {
             <Zap size={16} style={{ color: '#818cf8' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Admin Quick Actions</p>
           </div>
-          <div style={{ padding: '14px 14px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="admin-quick-grid" style={{ padding: '14px 14px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {QUICK_ACTIONS.map(({ label, sub, to, icon: Icon, color, bg }, i) => (
               <motion.div key={to} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.05 }}>
                 <Link to={to}
                   id={`admin-home-quick-${label.toLowerCase().replace(/\s+/g, '-')}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 16, textDecoration: 'none', background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', transition: 'all 0.16s ease' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', minHeight: 44, borderRadius: 16, textDecoration: 'none', background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', transition: 'all 0.16s ease', boxSizing: 'border-box' }}
                   onMouseEnter={e => { e.currentTarget.style.background = bg; e.currentTarget.style.borderColor = `${color}30`; e.currentTarget.style.transform = 'translateX(4px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.transform = 'translateX(0)'; }}
                 >
@@ -168,7 +168,7 @@ const AdminDashboardHome = () => {
             <Activity size={16} style={{ color: '#4ade80' }} />
             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Platform Health</p>
           </div>
-          <div style={{ padding: '16px 22px 22px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div className="admin-health-grid" style={{ padding: '16px 22px 22px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
               { label: 'AI Screening',   status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
               { label: 'AI Interviews',  status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
@@ -188,6 +188,28 @@ const AdminDashboardHome = () => {
           </div>
         </motion.div>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .admin-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .admin-health-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .admin-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .admin-quick-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .admin-health-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -84,7 +84,7 @@ const InterviewsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Olive/Forest Hero ─────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '12%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 0, left: '5%', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -92,14 +92,14 @@ const InterviewsPage = () => {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             {/* Title + stat chips */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 22 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
                     <MessageSquare size={11} /> My Career
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>My Interviews</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>My Interviews</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Your scheduled AI interview sessions and past evaluation scorecards.</p>
               </div>
 
@@ -124,7 +124,7 @@ const InterviewsPage = () => {
                 const active = activeTab === t.key;
                 return (
                   <motion.button key={t.key} whileTap={{ scale: 0.95 }} onClick={() => setActiveTab(t.key)}
-                    style={{ padding: '7px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                    style={{ padding: '8px 16px', minHeight: 38, borderRadius: 10, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                       background: active ? 'linear-gradient(135deg, #3D5016, #6B8A3A)' : 'rgba(255,255,255,0.07)',
                       color: active ? '#fff' : 'rgba(255,255,255,0.50)',
                       boxShadow: active ? '0 3px 12px rgba(61,80,22,0.50)' : 'none',
@@ -138,7 +138,7 @@ const InterviewsPage = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
         {/* Loading */}
         {loading && [1,2].map(i => (
@@ -162,14 +162,14 @@ const InterviewsPage = () => {
                   <motion.div key={item.id}
                     initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: '20px 24px', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden', position: 'relative', transition: 'all 0.18s ease' }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: 'clamp(14px, 3vw, 20px) clamp(14px, 3vw, 24px)', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden', position: 'relative', transition: 'all 0.18s ease' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(0,0,0,0.07)'; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; }}
                   >
                     {/* Left accent */}
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(to bottom, #3D5016, #6B8A3A)' }} />
 
-                    <div style={{ paddingLeft: 10, flex: 1 }}>
+                    <div style={{ paddingLeft: 6, flex: 1, minWidth: 'min(100%, 200px)' }}>
                       {/* Format badge */}
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', background: 'rgba(107,138,58,0.10)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.22)', marginBottom: 8 }}>
                         <Video size={10} /> {item.format}
@@ -184,7 +184,7 @@ const InterviewsPage = () => {
 
                     <motion.button whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                       onClick={() => setStartSessionModal(item)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '11px 22px', borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.45)', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: '11px 22px', minHeight: 44, borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.45)', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}
                     >
                       <Play size={13} fill="#fff" /> Start Interview <ArrowUpRight size={13} />
                     </motion.button>
@@ -213,14 +213,14 @@ const InterviewsPage = () => {
                       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.32, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
                       onClick={() => setSelectedInterview(item)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: '20px 24px', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'all 0.18s ease' }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: 'clamp(14px, 3vw, 20px) clamp(14px, 3vw, 24px)', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'all 0.18s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(0,0,0,0.07)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; }}
                     >
                       {/* Left accent */}
                       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(to bottom, #34d399, #6B8A3A)' }} />
 
-                      <div style={{ paddingLeft: 10, flex: 1, minWidth: 200 }}>
+                      <div style={{ paddingLeft: 6, flex: 1, minWidth: 'min(100%, 200px)' }}>
                         <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                           <Calendar size={11} /> Taken on {item.dateTaken}
                         </p>
@@ -230,14 +230,14 @@ const InterviewsPage = () => {
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         {/* Score chips */}
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <ScoreChip label="Comm."   value={item.scores.communication} />
                           <ScoreChip label="Conf."   value={item.scores.confidence} />
                           <ScoreChip label="Tech"    value={item.scores.technical} />
                         </div>
 
                         {/* Recommendation badge */}
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, background: rec.bg, color: rec.color, fontSize: 12, fontWeight: 800, border: rec.border ?? 'none', boxShadow: rec.shadow ?? 'none', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 12, background: rec.bg, color: rec.color, fontSize: 12, fontWeight: 800, border: rec.border ?? 'none', boxShadow: rec.shadow ?? 'none', whiteSpace: 'nowrap' }}>
                           {rec.label}
                         </span>
 
@@ -262,31 +262,31 @@ const InterviewsPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 720, maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 24, boxShadow: '0 32px 96px rgba(0,0,0,0.40)', pointerEvents: 'auto' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
 
                 {/* Modal header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 26px 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10, backdropFilter: 'blur(20px)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px clamp(14px, 3vw, 26px) 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10, backdropFilter: 'blur(20px)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(61,80,22,0.40)' }}>
+                    <div style={{ width: 44, height: 44, minWidth: 44, borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(61,80,22,0.40)' }}>
                       <Award size={20} color="#fff" />
                     </div>
                     <div>
                       <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', marginBottom: 3 }}>AI Interview Scorecard</p>
-                      <h2 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 2 }}>{selectedInterview.jobTitle}</h2>
+                      <h2 style={{ fontSize: 'clamp(15px, 3vw, 18px)', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 2 }}>{selectedInterview.jobTitle}</h2>
                       <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedInterview.company} · {selectedInterview.dateTaken}</p>
                     </div>
                   </div>
                   <button onClick={() => setSelectedInterview(null)}
-                    style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}
+                    style={{ width: 44, height: 44, minWidth: 44, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}
                   ><X size={16} /></button>
                 </div>
 
-                <div style={{ padding: '22px 26px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ padding: 'clamp(16px, 3vw, 22px) clamp(14px, 3vw, 26px) 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {/* Score bars */}
-                  <div style={{ padding: '18px 20px', borderRadius: 16, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
+                  <div style={{ padding: '16px 18px', borderRadius: 16, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
                     <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', marginBottom: 14 }}>Performance Evaluation</p>
                     <ScoreBar label="Communication"  value={selectedInterview.scores.communication} />
                     <ScoreBar label="Confidence"     value={selectedInterview.scores.confidence} />
@@ -310,7 +310,7 @@ const InterviewsPage = () => {
                         const sc = scoreColor(q.score);
                         return (
                           <div key={idx} style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
                               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>{q.num}: {q.question}</span>
                               <span style={{ fontSize: 12, fontWeight: 800, color: sc, background: `${sc}14`, padding: '3px 10px', borderRadius: 999, border: `1px solid ${sc}22`, whiteSpace: 'nowrap', flexShrink: 0 }}>
                                 {q.score}%
@@ -343,11 +343,11 @@ const InterviewsPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 460, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 24, boxShadow: '0 32px 96px rgba(0,0,0,0.40)', textAlign: 'center', pointerEvents: 'auto', overflow: 'hidden' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
-                <div style={{ padding: '32px 28px 28px' }}>
+                <div style={{ padding: '28px clamp(16px, 4vw, 28px) 24px' }}>
                   <motion.div animate={{ rotate: [0, -10, 10, -8, 8, 0] }} transition={{ duration: 0.6, delay: 0.2 }}
                     style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 28px rgba(61,80,22,0.55)' }}
                   >
@@ -358,13 +358,13 @@ const InterviewsPage = () => {
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: 24 }}>
                     You're about to start your interactive AI interview session ({startSessionModal.duration}). Make sure your camera/microphone or text environment is ready.
                   </p>
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button onClick={() => setStartSessionModal(null)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                      style={{ flex: '1 1 120px', padding: '11px 0', minHeight: 44, borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                     >Cancel</button>
                     <motion.a whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                       href="/candidate/ai-interview"
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 18px rgba(61,80,22,0.45)' }}
+                      style={{ flex: '1 1 140px', padding: '11px 0', minHeight: 44, borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 18px rgba(61,80,22,0.45)' }}
                     ><Zap size={14} />Begin Now</motion.a>
                   </div>
                 </div>
