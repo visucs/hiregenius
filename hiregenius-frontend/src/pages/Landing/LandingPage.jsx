@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import LandingNavbar from '../../components/Navbar/LandingNavbar';
 import AnimatedCounter from '../../components/AnimatedCounter/AnimatedCounter';
-import robotHead from '../../assets/robot-head.png';
 import useTheme from '../../hooks/useTheme';
 
 /* ── Animation variants ─────────────────────────────────────── */
@@ -404,18 +403,6 @@ const LandingPage = () => {
               ))}
             </motion.div>
           </motion.div>
-
-          {/* Robot */}
-          <motion.img
-            src={robotHead} alt="AI Helper"
-            className="hero-robot"
-            animate={{ y: [0, -12, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute', bottom: -40, right: 0, width: 110, height: 110,
-              objectFit: 'contain', zIndex: 20, filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.35))',
-              pointerEvents: 'none',
-            }}
-          />
         </div>
 
         {/* Trusted by strip */}
@@ -937,12 +924,6 @@ const LandingPage = () => {
           .footer-grid {
             grid-template-columns: 1fr 1fr !important;
             gap: 32px !important;
-          }
-          .hero-robot {
-            width: 70px !important;
-            height: 70px !important;
-            right: 8px !important;
-            bottom: -24px !important;
           }
         }
 
