@@ -448,25 +448,22 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, role }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 bg-black/50 md:hidden"
+            className="fixed inset-0 z-40 bg-black/60 md:hidden"
+            style={{ backdropFilter: 'blur(4px)' }}
             onClick={onClose}
             aria-hidden="true"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar panel */}
+      {/* Desktop sidebar */}
       <motion.aside
-        variants={sidebarVariants}
-        initial="closed"
-        animate={isOpen ? 'open' : 'closed'}
-        className="fixed top-0 left-0 z-40 h-full flex flex-col md:relative md:translate-x-0 md:z-auto"
+        className="hidden md:flex flex-col flex-shrink-0 h-screen sticky top-0 z-30 overflow-hidden"
         style={{
           width: isCollapsed ? '64px' : 'var(--sidebar-width, 260px)',
           backgroundColor: 'var(--surface)',
           borderRight: '1px solid var(--border)',
           transition: 'width 0.25s ease',
-          overflow: 'hidden',
         }}
         aria-label="Main navigation"
       >
@@ -476,6 +473,31 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, role }) => {
           <GenericSidebarBody isCollapsed={isCollapsed} onClose={onClose} role={role} />
         )}
       </motion.aside>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.aside
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed top-0 left-0 z-50 h-full w-[280px] max-w-[85vw] flex flex-col md:hidden overflow-hidden"
+            style={{
+              backgroundColor: 'var(--surface)',
+              borderRight: '1px solid var(--border)',
+              boxShadow: '8px 0 36px rgba(0,0,0,0.65)',
+            }}
+            aria-label="Main navigation"
+          >
+            {role === 'CANDIDATE' ? (
+              <CandidateSidebarBody isCollapsed={false} onClose={onClose} />
+            ) : (
+              <GenericSidebarBody isCollapsed={false} onClose={onClose} role={role} />
+            )}
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </>
   );
 };

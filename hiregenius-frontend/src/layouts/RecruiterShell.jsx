@@ -68,240 +68,258 @@ const RecruiterSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
 
   const handleLogout = () => { dispatch(logout()); navigate('/'); };
 
-  const navItem = (to, label, Icon) => (
-    <NavLink
-      key={to}
-      to={to}
-      onClick={onClose}
-      title={isCollapsed ? label : undefined}
-      id={`rec-nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      style={({ isActive }) => ({
-        display: 'flex', alignItems: 'center',
-        gap: isCollapsed ? 0 : 10,
-        padding: isCollapsed ? '10px 0' : '9px 12px',
-        justifyContent: isCollapsed ? 'center' : 'flex-start',
-        borderRadius: 11, fontSize: 13, fontWeight: isActive ? 700 : 500,
-        textDecoration: 'none', cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        background: isActive
-          ? 'linear-gradient(135deg, rgba(61,80,22,0.90), rgba(107,138,58,0.55))'
-          : 'transparent',
-        color: isActive ? '#fff' : 'rgba(180,210,130,0.65)',
-        boxShadow: isActive ? '0 2px 14px rgba(61,80,22,0.45)' : 'none',
-        position: 'relative',
-      })}
-      onMouseEnter={e => {
-        if (!window.location.pathname.startsWith(to.split('?')[0])) {
-          e.currentTarget.style.background = 'rgba(107,138,58,0.13)';
-          e.currentTarget.style.color = '#fff';
-        }
-      }}
-      onMouseLeave={e => {
-        if (!window.location.pathname.startsWith(to.split('?')[0])) {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = 'rgba(180,210,130,0.65)';
-        }
-      }}
-    >
-      {({ isActive }) => (
-        <>
-          <div style={{
-            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isActive ? 'rgba(255,255,255,0.14)' : 'transparent',
-            transition: 'background 0.15s',
-          }}>
-            <Icon size={16} strokeWidth={isActive ? 2.2 : 1.75} />
-          </div>
-          {!isCollapsed && <span style={{ flex: 1, lineHeight: 1 }}>{label}</span>}
-          {!isCollapsed && isActive && (
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', flexShrink: 0 }} />
-          )}
-        </>
-      )}
-    </NavLink>
-  );
-
-  const content = (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-
-      {/* ── Logo row ─────────────────────────────────────────── */}
-      <div style={{
-        height: 62, display: 'flex', alignItems: 'center',
-        justifyContent: isCollapsed ? 'center' : 'space-between',
-        padding: isCollapsed ? '0 10px' : '0 16px',
-        borderBottom: '1px solid rgba(107,138,58,0.15)', flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Glow icon */}
-          <div style={{
-            width: 34, height: 34, borderRadius: 11, flexShrink: 0,
-            background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 0 1px rgba(107,138,58,0.35), 0 4px 18px rgba(61,80,22,0.6)',
-          }}>
-            <Sparkles size={16} color="#fff" strokeWidth={2} />
-          </div>
-          {!isCollapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
-              <p style={{ fontSize: 15, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>HireGenius</p>
-              <p style={{ fontSize: 9, color: 'rgba(107,138,58,0.85)', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', marginTop: 2 }}>
-                Recruiter Portal
-              </p>
-            </motion.div>
-          )}
-        </div>
-        <button onClick={onClose} className="md:hidden" style={{ background: 'none', border: 'none', color: 'rgba(107,138,58,0.7)', cursor: 'pointer', padding: 4 }}>
-          <X size={18} />
-        </button>
-      </div>
-
-      {/* ── Post Job CTA ─────────────────────────────────────── */}
-      <div style={{ padding: isCollapsed ? '10px 8px' : '12px 10px', flexShrink: 0 }}>
-        <motion.button
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-          title="Post a New Job"
-          id="rec-sidebar-post-job"
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: isCollapsed ? 'center' : 'flex-start',
-            gap: 8, padding: isCollapsed ? '10px 0' : '10px 14px',
-            borderRadius: 12, border: '1px solid rgba(107,138,58,0.30)', cursor: 'pointer',
-            background: 'linear-gradient(135deg, rgba(61,80,22,0.85), rgba(107,138,58,0.65))',
-            color: '#fff', fontSize: 13, fontWeight: 700,
-            boxShadow: '0 2px 12px rgba(61,80,22,0.40)',
-            transition: 'box-shadow 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 20px rgba(61,80,22,0.6)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(61,80,22,0.40)'}
-          onClick={() => navigate('/recruiter/jobs')}
-        >
-          <div style={{ width: 22, height: 22, borderRadius: 7, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Plus size={14} strokeWidth={2.5} />
-          </div>
-          {!isCollapsed && <span>Post a New Job</span>}
-        </motion.button>
-      </div>
-
-      {/* ── Nav groups ───────────────────────────────────────── */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 8px', scrollbarWidth: 'none' }}>
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={group.label} style={{ marginBottom: 4 }}>
-            {!isCollapsed && (
-              <p style={{
-                fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-                letterSpacing: '0.1em', color: 'rgba(107,138,58,0.45)',
-                padding: gi === 0 ? '4px 10px 4px' : '10px 10px 4px',
-              }}>
-                {group.label}
-              </p>
-            )}
-            {isCollapsed && gi > 0 && (
-              <div style={{ height: 1, background: 'rgba(107,138,58,0.12)', margin: '8px 4px 6px' }} />
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {group.items.map(({ to, label, icon: Icon }) => navItem(to, label, Icon))}
-            </div>
-          </div>
-        ))}
-
-        {/* Bottom nav */}
-        <div style={{ height: 1, background: 'rgba(107,138,58,0.12)', margin: '8px 4px' }} />
-        {!isCollapsed && (
-          <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(107,138,58,0.45)', padding: '2px 10px 4px' }}>Account</p>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {BOTTOM_ITEMS.map(({ to, label, icon: Icon }) => navItem(to, label, Icon))}
-        </div>
-      </nav>
-
-      {/* ── User card ─────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(107,138,58,0.14)', padding: isCollapsed ? '10px 8px' : '10px 10px', flexShrink: 0 }}>
-        {isCollapsed ? (
-          <div style={{
-            width: 38, height: 38, borderRadius: '50%', margin: '0 auto',
-            background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 13, fontWeight: 800,
-            boxShadow: '0 2px 10px rgba(61,80,22,0.4)',
-          }} title={user?.name}>{initials}</div>
-        ) : (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-            borderRadius: 13, background: 'rgba(107,138,58,0.09)', border: '1px solid rgba(107,138,58,0.18)',
-          }}>
+  const renderContent = (collapsed, isMobile) => {
+    const navItem = (to, label, Icon) => (
+      <NavLink
+        key={to}
+        to={to}
+        onClick={onClose}
+        title={collapsed ? label : undefined}
+        id={`rec-nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
+        style={({ isActive }) => ({
+          display: 'flex', alignItems: 'center',
+          gap: collapsed ? 0 : 10,
+          padding: collapsed ? '10px 0' : '9px 12px',
+          minHeight: isMobile ? 44 : 38,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderRadius: 11, fontSize: 13, fontWeight: isActive ? 700 : 500,
+          textDecoration: 'none', cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          background: isActive
+            ? 'linear-gradient(135deg, rgba(61,80,22,0.90), rgba(107,138,58,0.55))'
+            : 'transparent',
+          color: isActive ? '#fff' : 'rgba(180,210,130,0.65)',
+          boxShadow: isActive ? '0 2px 14px rgba(61,80,22,0.45)' : 'none',
+          position: 'relative',
+        })}
+        onMouseEnter={e => {
+          if (!window.location.pathname.startsWith(to.split('?')[0])) {
+            e.currentTarget.style.background = 'rgba(107,138,58,0.13)';
+            e.currentTarget.style.color = '#fff';
+          }
+        }}
+        onMouseLeave={e => {
+          if (!window.location.pathname.startsWith(to.split('?')[0])) {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'rgba(180,210,130,0.65)';
+          }
+        }}
+      >
+        {({ isActive }) => (
+          <>
             <div style={{
-              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: isActive ? 'rgba(255,255,255,0.14)' : 'transparent',
+              transition: 'background 0.15s',
+            }}>
+              <Icon size={16} strokeWidth={isActive ? 2.2 : 1.75} />
+            </div>
+            {!collapsed && <span style={{ flex: 1, lineHeight: 1 }}>{label}</span>}
+            {!collapsed && isActive && (
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', flexShrink: 0 }} />
+            )}
+          </>
+        )}
+      </NavLink>
+    );
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+        {/* ── Logo row ─────────────────────────────────────────── */}
+        <div style={{
+          height: 62, display: 'flex', alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          padding: collapsed ? '0 10px' : '0 16px',
+          borderBottom: '1px solid rgba(107,138,58,0.15)', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Glow icon */}
+            <div style={{
+              width: 34, height: 34, borderRadius: 11, flexShrink: 0,
+              background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 0 1px rgba(107,138,58,0.35), 0 4px 18px rgba(61,80,22,0.6)',
+            }}>
+              <Sparkles size={16} color="#fff" strokeWidth={2} />
+            </div>
+            {!collapsed && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+                <p style={{ fontSize: 15, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>HireGenius</p>
+                <p style={{ fontSize: 9, color: 'rgba(107,138,58,0.85)', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', marginTop: 2 }}>
+                  Recruiter Portal
+                </p>
+              </motion.div>
+            )}
+          </div>
+          {isMobile && (
+            <button
+              onClick={onClose}
+              style={{
+                width: 44, height: 44, borderRadius: 10,
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(107,138,58,0.25)',
+                color: 'rgba(240,237,228,0.85)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              aria-label="Close menu"
+              id="rec-sidebar-close-btn"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* ── Post Job CTA ─────────────────────────────────────── */}
+        <div style={{ padding: collapsed ? '10px 8px' : '12px 10px', flexShrink: 0 }}>
+          <motion.button
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            title="Post a New Job"
+            id="rec-sidebar-post-job"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              minHeight: isMobile ? 44 : 38,
+              gap: 8, padding: collapsed ? '10px 0' : '10px 14px',
+              borderRadius: 12, border: '1px solid rgba(107,138,58,0.30)', cursor: 'pointer',
+              background: 'linear-gradient(135deg, rgba(61,80,22,0.85), rgba(107,138,58,0.65))',
+              color: '#fff', fontSize: 13, fontWeight: 700,
+              boxShadow: '0 2px 12px rgba(61,80,22,0.40)',
+              transition: 'box-shadow 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 20px rgba(61,80,22,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(61,80,22,0.40)'}
+            onClick={() => { onClose?.(); navigate('/recruiter/jobs'); }}
+          >
+            <div style={{ width: 22, height: 22, borderRadius: 7, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Plus size={14} strokeWidth={2.5} />
+            </div>
+            {!collapsed && <span>Post a New Job</span>}
+          </motion.button>
+        </div>
+
+        {/* ── Nav groups ───────────────────────────────────────── */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 8px', scrollbarWidth: 'none' }}>
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} style={{ marginBottom: 4 }}>
+              {!collapsed && (
+                <p style={{
+                  fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                  letterSpacing: '0.1em', color: 'rgba(107,138,58,0.45)',
+                  padding: gi === 0 ? '4px 10px 4px' : '10px 10px 4px',
+                }}>
+                  {group.label}
+                </p>
+              )}
+              {collapsed && gi > 0 && (
+                <div style={{ height: 1, background: 'rgba(107,138,58,0.12)', margin: '8px 4px 6px' }} />
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {group.items.map(({ to, label, icon: Icon }) => navItem(to, label, Icon))}
+              </div>
+            </div>
+          ))}
+
+          {/* Bottom nav */}
+          <div style={{ height: 1, background: 'rgba(107,138,58,0.12)', margin: '8px 4px' }} />
+          {!collapsed && (
+            <p style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(107,138,58,0.45)', padding: '2px 10px 4px' }}>Account</p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {BOTTOM_ITEMS.map(({ to, label, icon: Icon }) => navItem(to, label, Icon))}
+          </div>
+        </nav>
+
+        {/* ── User card ─────────────────────────────────────────── */}
+        <div style={{ borderTop: '1px solid rgba(107,138,58,0.14)', padding: collapsed ? '10px 8px' : '10px 10px', flexShrink: 0 }}>
+          {collapsed ? (
+            <div style={{
+              width: 38, height: 38, borderRadius: '50%', margin: '0 auto',
               background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: 13, fontWeight: 800,
               boxShadow: '0 2px 10px rgba(61,80,22,0.4)',
-            }}>{initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.name ?? 'Recruiter'}
-              </p>
-              <span style={{
-                display: 'inline-block', marginTop: 3,
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', padding: '1px 7px', borderRadius: 999,
-                background: 'rgba(107,138,58,0.25)', color: 'rgba(163,230,53,0.90)',
-              }}>Recruiter</span>
+            }} title={user?.name}>{initials}</div>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+              borderRadius: 13, background: 'rgba(107,138,58,0.09)', border: '1px solid rgba(107,138,58,0.18)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 13, fontWeight: 800,
+                boxShadow: '0 2px 10px rgba(61,80,22,0.4)',
+              }}>{initials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name ?? 'Recruiter'}
+                </p>
+                <span style={{
+                  display: 'inline-block', marginTop: 3,
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                  textTransform: 'uppercase', padding: '1px 7px', borderRadius: 999,
+                  background: 'rgba(107,138,58,0.25)', color: 'rgba(163,230,53,0.90)',
+                }}>Recruiter</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                id="rec-sidebar-logout"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.6)', padding: 6, borderRadius: 8, flexShrink: 0, display: 'flex', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(239,68,68,0.6)'; e.currentTarget.style.background = 'none'; }}
+              >
+                <LogOut size={15} />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              id="rec-sidebar-logout"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.6)', padding: 6, borderRadius: 8, flexShrink: 0, display: 'flex', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(239,68,68,0.6)'; e.currentTarget.style.background = 'none'; }}
-            >
-              <LogOut size={15} />
-            </button>
-          </div>
+          )}
+        </div>
+
+        {/* ── Collapse toggle ── desktop only ── */}
+        {!isMobile && (
+          <motion.button
+            className="hidden md:flex"
+            whileTap={{ scale: 0.96 }}
+            onClick={onToggleCollapse}
+            id="rec-sidebar-collapse-btn"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 10,
+              width: '100%', padding: collapsed ? '12px 0' : '11px 20px',
+              background: 'transparent',
+              border: 'none',
+              borderTop: '1px solid rgba(107,138,58,0.14)',
+              color: 'rgba(107,138,58,0.45)',
+              cursor: 'pointer',
+              fontSize: 12, fontWeight: 600,
+              transition: 'all 0.15s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(107,138,58,0.08)'; e.currentTarget.style.color = 'rgba(163,230,53,0.80)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(107,138,58,0.45)'; }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={collapsed ? 'open' : 'close'}
+                initial={{ rotate: -20, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 20, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
+              >
+                {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+              </motion.div>
+            </AnimatePresence>
+            {!collapsed && <span>Collapse sidebar</span>}
+          </motion.button>
         )}
       </div>
-
-      {/* ── Collapse toggle ── desktop only ── */}
-      <motion.button
-        className="hidden md:flex"
-        whileTap={{ scale: 0.96 }}
-        onClick={onToggleCollapse}
-        id="rec-sidebar-collapse-btn"
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        style={{
-          alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'flex-start',
-          gap: 10,
-          width: '100%', padding: isCollapsed ? '12px 0' : '11px 20px',
-          background: 'transparent',
-          border: 'none',
-          borderTop: '1px solid rgba(107,138,58,0.14)',
-          color: 'rgba(107,138,58,0.45)',
-          cursor: 'pointer',
-          fontSize: 12, fontWeight: 600,
-          transition: 'all 0.15s ease',
-          flexShrink: 0,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(107,138,58,0.08)'; e.currentTarget.style.color = 'rgba(163,230,53,0.80)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(107,138,58,0.45)'; }}
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={isCollapsed ? 'open' : 'close'}
-            initial={{ rotate: -20, opacity: 0 }}
-            animate={{ rotate: 0, opacity: 1 }}
-            exit={{ rotate: 20, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
-          >
-            {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-          </motion.div>
-        </AnimatePresence>
-        {!isCollapsed && <span>Collapse sidebar</span>}
-      </motion.button>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -310,7 +328,7 @@ const RecruiterSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 md:hidden"
+            className="fixed inset-0 z-40 md:hidden"
             style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
             onClick={onClose}
           />
@@ -330,7 +348,7 @@ const RecruiterSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
         }}
         aria-label="Recruiter navigation"
       >
-        {content}
+        {renderContent(isCollapsed, false)}
       </motion.aside>
 
       {/* Mobile drawer */}
@@ -339,13 +357,14 @@ const RecruiterSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
           <motion.aside
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="fixed top-0 left-0 z-40 h-full w-64 max-w-[85vw] flex flex-col md:hidden overflow-hidden"
+            className="fixed top-0 left-0 z-50 h-full w-[280px] max-w-[85vw] flex flex-col md:hidden overflow-hidden"
             style={{
               background: 'linear-gradient(175deg, #18280a 0%, #0e1804 100%)',
               borderRight: '1px solid rgba(107,138,58,0.20)',
+              boxShadow: '8px 0 36px rgba(0,0,0,0.65)',
             }}
           >
-            {content}
+            {renderContent(false, true)}
           </motion.aside>
         )}
       </AnimatePresence>
@@ -364,6 +383,7 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
   const [showNotifs,   setShowNotifs]   = useState(false);
   const [showUser,     setShowUser]     = useState(false);
   const [searchFocus,  setSearchFocus]  = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const notifRef = useRef(null);
   const userRef  = useRef(null);
   const initials = getInitials(user?.name);
@@ -402,259 +422,333 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
   };
 
   return (
-    <header
-      id="rec-topbar"
-      style={{
-        height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 clamp(12px, 3vw, 24px)', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
-        background: TB.bg,
-        backdropFilter: 'blur(20px) saturate(160%)',
-        borderBottom: `1px solid ${TB.border}`,
-        boxShadow: '0 1px 0 rgba(107,138,58,0.10), 0 4px 24px rgba(0,0,0,0.30)',
-      }}
-    >
-      {/* Left */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Mobile menu button */}
-        <motion.button
-          whileTap={{ scale: 0.90 }}
-          onClick={onMenuToggle}
-          className="md:hidden flex items-center justify-center"
-          style={{
-            ...iconBtnStyle,
-            minWidth: 44,
-            minHeight: 44,
-            color: TB.textPri,
-          }}
-          aria-label="Open navigation menu"
-          id="rec-topbar-menu-toggle"
-        >
-          <Menu size={18} />
-        </motion.button>
-
-        {/* Search */}
-        <div style={{ position: 'relative' }} className="hidden sm:block">
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: TB.textMuted, pointerEvents: 'none', zIndex: 1 }} />
-          <input
-            placeholder="Search jobs, candidates…"
-            onFocus={e => { setSearchFocus(true); e.target.style.borderColor = 'rgba(107,138,58,0.55)'; e.target.style.boxShadow = '0 0 0 3px rgba(61,80,22,0.25)'; e.target.style.background = 'rgba(255,255,255,0.08)'; }}
-            onBlur={e => { setSearchFocus(false); e.target.style.borderColor = TB.inputBorder; e.target.style.boxShadow = 'none'; e.target.style.background = TB.inputBg; }}
-            id="rec-topbar-search"
-            style={{
-              paddingLeft: 34, paddingRight: 70, height: 38, fontSize: 13,
-              borderRadius: 12, width: 250,
-              background: TB.inputBg,
-              border: `1px solid ${TB.inputBorder}`,
-              color: TB.textPri, outline: 'none',
-              transition: 'all 0.18s ease',
-              fontFamily: 'Inter, system-ui, sans-serif',
-            }}
-          />
-          <div style={{
-            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-            display: 'flex', alignItems: 'center', gap: 2,
-            fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-            color: TB.textMuted, background: 'rgba(255,255,255,0.06)',
-            border: `1px solid ${TB.iconBorder}`, borderRadius: 5, padding: '1px 5px',
-          }}>
-            <Command size={8} />K
-          </div>
-        </div>
-      </div>
-
-      {/* Right */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {/* Theme */}
-        <motion.button
-          whileTap={{ scale: 0.88, rotate: 15 }}
-          onClick={toggleTheme}
-          style={iconBtnStyle}
-          aria-label="Toggle theme"
-          id="rec-topbar-theme"
-          onMouseEnter={e => { e.currentTarget.style.borderColor = TB.accent; e.currentTarget.style.color = TB.textPri; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = TB.iconBorder; e.currentTarget.style.color = TB.textMuted; }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={theme} initial={{ rotate: -20, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-
-        {/* Notifications */}
-        <div ref={notifRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowNotifs(v => !v)}
-            style={{ ...iconBtnStyle, borderColor: showNotifs ? TB.accent : TB.iconBorder, background: showNotifs ? TB.accentSoft : TB.iconBg, color: showNotifs ? '#a3e635' : TB.textMuted }}
-            aria-label="Notifications"
-            id="rec-topbar-notifications"
-          >
-            <Bell size={16} />
-            {unread > 0 && (
-              <span style={{
-                position: 'absolute', top: 6, right: 6,
-                width: 16, height: 16, borderRadius: '50%',
-                background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1.5px solid rgba(14,24,4,0.97)',
-                boxShadow: '0 0 0 2px rgba(239,68,68,0.25)',
-              }}>{unread}</span>
-            )}
-          </button>
-
-          <AnimatePresence>
-            {showNotifs && (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0,  scale: 1 }}
-                exit={{   opacity: 0, y: -6, scale: 0.96 }}
-                transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-                  width: 'min(340px, calc(100vw - 24px))', borderRadius: 18, zIndex: 100,
-                  background: '#0f1f05',
-                  border: '1px solid rgba(107,138,58,0.22)',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Notif header */}
-                <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid rgba(107,138,58,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <p style={{ fontSize: 14, fontWeight: 800, color: '#e8f5d4', letterSpacing: '-0.01em' }}>Notifications</p>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.22)' }}>
-                      {unread} new
-                    </span>
-                  </div>
-                  <button style={{ fontSize: 11, color: TB.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Mark all read</button>
-                </div>
-                {MOCK_NOTIFS.map((n, idx) => (
-                  <motion.div
-                    key={n.id}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.04 }}
-                    style={{
-                      padding: '12px 18px', display: 'flex', gap: 12, alignItems: 'flex-start',
-                      background: n.unread ? 'rgba(61,80,22,0.12)' : 'transparent',
-                      borderBottom: idx < MOCK_NOTIFS.length - 1 ? '1px solid rgba(107,138,58,0.10)' : 'none',
-                      cursor: 'pointer', transition: 'background 0.12s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.10)'}
-                    onMouseLeave={e => e.currentTarget.style.background = n.unread ? 'rgba(61,80,22,0.12)' : 'transparent'}
-                  >
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0,
-                      background: n.unread ? '#6B8A3A' : 'rgba(107,138,58,0.25)',
-                      boxShadow: n.unread ? '0 0 0 3px rgba(107,138,58,0.20)' : 'none',
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: n.unread ? 700 : 500, color: '#e8f5d4', lineHeight: 1.3 }}>{n.title}</p>
-                      <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.60)', marginTop: 2, lineHeight: 1.4 }}>{n.body}</p>
-                      <p style={{ fontSize: 10, color: 'rgba(163,210,90,0.40)', marginTop: 4 }}>{n.time} ago</p>
-                    </div>
-                  </motion.div>
-                ))}
-                <div style={{ padding: '10px 18px' }}>
-                  <button style={{ width: '100%', fontSize: 12, fontWeight: 700, color: '#6B8A3A', background: 'rgba(107,138,58,0.10)', border: '1px solid rgba(107,138,58,0.22)', borderRadius: 10, padding: '8px', cursor: 'pointer' }}>
-                    View all notifications
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div style={{ width: 1, height: 22, background: 'rgba(107,138,58,0.20)', margin: '0 2px' }} />
-
-        {/* User chip */}
-        <div ref={userRef} style={{ position: 'relative' }}>
+    <div style={{ position: 'sticky', top: 0, zIndex: 30 }}>
+      <style>{`
+        @media (max-width: 480px) {
+          .rec-dropdown-responsive {
+            position: fixed !important;
+            top: 66px !important;
+            left: 12px !important;
+            right: 12px !important;
+            width: auto !important;
+            max-width: calc(100vw - 24px) !important;
+          }
+        }
+      `}</style>
+      <header
+        id="rec-topbar"
+        style={{
+          height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 clamp(10px, 3vw, 24px)', flexShrink: 0,
+          background: TB.bg,
+          backdropFilter: 'blur(20px) saturate(160%)',
+          borderBottom: `1px solid ${TB.border}`,
+          boxShadow: '0 1px 0 rgba(107,138,58,0.10), 0 4px 24px rgba(0,0,0,0.30)',
+        }}
+      >
+        {/* Left */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Mobile menu button */}
           <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setShowUser(v => !v)}
+            whileTap={{ scale: 0.90 }}
+            onClick={onMenuToggle}
+            className="md:hidden flex items-center justify-center"
             style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '5px 10px 5px 5px', borderRadius: 12,
-              background: showUser ? TB.accentSoft : TB.iconBg,
-              border: `1px solid ${showUser ? TB.accent : TB.iconBorder}`,
-              cursor: 'pointer', transition: 'all 0.14s',
+              ...iconBtnStyle,
+              minWidth: 44,
+              minHeight: 44,
+              color: TB.textPri,
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = TB.accent; }}
-            onMouseLeave={e => { if (!showUser) e.currentTarget.style.borderColor = TB.iconBorder; }}
-            id="rec-topbar-user"
+            aria-label="Open navigation menu"
+            id="rec-topbar-menu-toggle"
           >
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: 11, fontWeight: 800,
-              boxShadow: '0 2px 8px rgba(61,80,22,0.35)',
-            }}>{initials}</div>
-            <div className="hidden md:block" style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: TB.textPri, lineHeight: 1, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.name ?? 'Recruiter'}
-              </p>
-              <p style={{ fontSize: 10, color: TB.accent, marginTop: 2, fontWeight: 500 }}>Recruiter</p>
-            </div>
-            <ChevronDown size={13} className="hidden md:block" style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showUser ? 'rotate(180deg)' : 'rotate(0)' }} />
+            <Menu size={18} />
           </motion.button>
 
-          <AnimatePresence>
-            {showUser && (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0,  scale: 1 }}
-                exit={{   opacity: 0, y: -6, scale: 0.96 }}
-                transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-                  width: 220, borderRadius: 16, zIndex: 100,
-                  background: '#0f1f05', border: '1px solid rgba(107,138,58,0.22)',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.55)', overflow: 'hidden',
-                }}
-              >
-                {/* User header */}
-                <div style={{ padding: '14px 14px 12px', background: 'rgba(107,138,58,0.08)', borderBottom: '1px solid rgba(107,138,58,0.14)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 800 }}>{initials}</div>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#e8f5d4' }}>{user?.name}</p>
-                      <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.55)', marginTop: 1 }}>{user?.email ?? 'recruiter@company.com'}</p>
+          {/* Mobile search toggle button */}
+          <motion.button
+            whileTap={{ scale: 0.90 }}
+            onClick={() => setMobileSearchOpen(v => !v)}
+            className="sm:hidden flex items-center justify-center"
+            style={{
+              ...iconBtnStyle,
+              minWidth: 38,
+              minHeight: 38,
+              color: mobileSearchOpen ? '#a3e635' : TB.textMuted,
+              borderColor: mobileSearchOpen ? TB.accent : TB.iconBorder,
+            }}
+            aria-label="Toggle search"
+            id="rec-topbar-mobile-search-toggle"
+          >
+            <Search size={16} />
+          </motion.button>
+
+          {/* Desktop Search */}
+          <div style={{ position: 'relative' }} className="hidden sm:block">
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: TB.textMuted, pointerEvents: 'none', zIndex: 1 }} />
+            <input
+              placeholder="Search jobs, candidates…"
+              onFocus={e => { setSearchFocus(true); e.target.style.borderColor = 'rgba(107,138,58,0.55)'; e.target.style.boxShadow = '0 0 0 3px rgba(61,80,22,0.25)'; e.target.style.background = 'rgba(255,255,255,0.08)'; }}
+              onBlur={e => { setSearchFocus(false); e.target.style.borderColor = TB.inputBorder; e.target.style.boxShadow = 'none'; e.target.style.background = TB.inputBg; }}
+              id="rec-topbar-search"
+              style={{
+                paddingLeft: 34, paddingRight: 70, height: 38, fontSize: 13,
+                borderRadius: 12, width: 250,
+                background: TB.inputBg,
+                border: `1px solid ${TB.inputBorder}`,
+                color: TB.textPri, outline: 'none',
+                transition: 'all 0.18s ease',
+                fontFamily: 'Inter, system-ui, sans-serif',
+              }}
+            />
+            <div style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              display: 'flex', alignItems: 'center', gap: 2,
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
+              color: TB.textMuted, background: 'rgba(255,255,255,0.06)',
+              border: `1px solid ${TB.iconBorder}`, borderRadius: 5, padding: '1px 5px',
+            }}>
+              <Command size={8} />K
+            </div>
+          </div>
+        </div>
+
+        {/* Right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Theme */}
+          <motion.button
+            whileTap={{ scale: 0.88, rotate: 15 }}
+            onClick={toggleTheme}
+            style={iconBtnStyle}
+            aria-label="Toggle theme"
+            id="rec-topbar-theme"
+            onMouseEnter={e => { e.currentTarget.style.borderColor = TB.accent; e.currentTarget.style.color = TB.textPri; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = TB.iconBorder; e.currentTarget.style.color = TB.textMuted; }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={theme} initial={{ rotate: -20, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              </motion.div>
+            </AnimatePresence>
+          </motion.button>
+
+          {/* Notifications */}
+          <div ref={notifRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowNotifs(v => !v)}
+              style={{ ...iconBtnStyle, borderColor: showNotifs ? TB.accent : TB.iconBorder, background: showNotifs ? TB.accentSoft : TB.iconBg, color: showNotifs ? '#a3e635' : TB.textMuted }}
+              aria-label="Notifications"
+              id="rec-topbar-notifications"
+            >
+              <Bell size={16} />
+              {unread > 0 && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1.5px solid rgba(14,24,4,0.97)',
+                  boxShadow: '0 0 0 2px rgba(239,68,68,0.25)',
+                }}>{unread}</span>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {showNotifs && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0,  scale: 1 }}
+                  exit={{   opacity: 0, y: -6, scale: 0.96 }}
+                  transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                  className="rec-dropdown-responsive"
+                  style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 10px)',
+                    width: 'min(340px, calc(100vw - 24px))', borderRadius: 18, zIndex: 100,
+                    background: '#0f1f05',
+                    border: '1px solid rgba(107,138,58,0.22)',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Notif header */}
+                  <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid rgba(107,138,58,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: '#e8f5d4', letterSpacing: '-0.01em' }}>Notifications</p>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.22)' }}>
+                        {unread} new
+                      </span>
+                    </div>
+                    <button style={{ fontSize: 11, color: TB.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Mark all read</button>
+                  </div>
+                  {MOCK_NOTIFS.map((n, idx) => (
+                    <motion.div
+                      key={n.id}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.04 }}
+                      style={{
+                        padding: '12px 18px', display: 'flex', gap: 12, alignItems: 'flex-start',
+                        background: n.unread ? 'rgba(61,80,22,0.12)' : 'transparent',
+                        borderBottom: idx < MOCK_NOTIFS.length - 1 ? '1px solid rgba(107,138,58,0.10)' : 'none',
+                        cursor: 'pointer', transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.10)'}
+                      onMouseLeave={e => e.currentTarget.style.background = n.unread ? 'rgba(61,80,22,0.12)' : 'transparent'}
+                    >
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0,
+                        background: n.unread ? '#6B8A3A' : 'rgba(107,138,58,0.25)',
+                        boxShadow: n.unread ? '0 0 0 3px rgba(107,138,58,0.20)' : 'none',
+                      }} />
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: n.unread ? 700 : 500, color: '#e8f5d4', lineHeight: 1.3 }}>{n.title}</p>
+                        <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.60)', marginTop: 2, lineHeight: 1.4 }}>{n.body}</p>
+                        <p style={{ fontSize: 10, color: 'rgba(163,210,90,0.40)', marginTop: 4 }}>{n.time} ago</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                  <div style={{ padding: '10px 18px' }}>
+                    <button style={{ width: '100%', fontSize: 12, fontWeight: 700, color: '#6B8A3A', background: 'rgba(107,138,58,0.10)', border: '1px solid rgba(107,138,58,0.22)', borderRadius: 10, padding: '8px', cursor: 'pointer' }}>
+                      View all notifications
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div style={{ width: 1, height: 22, background: 'rgba(107,138,58,0.20)', margin: '0 2px' }} />
+
+          {/* User chip */}
+          <div ref={userRef} style={{ position: 'relative' }}>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setShowUser(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '5px 10px 5px 5px', borderRadius: 12,
+                background: showUser ? TB.accentSoft : TB.iconBg,
+                border: `1px solid ${showUser ? TB.accent : TB.iconBorder}`,
+                cursor: 'pointer', transition: 'all 0.14s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = TB.accent; }}
+              onMouseLeave={e => { if (!showUser) e.currentTarget.style.borderColor = TB.iconBorder; }}
+              id="rec-topbar-user"
+            >
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 11, fontWeight: 800,
+                boxShadow: '0 2px 8px rgba(61,80,22,0.35)',
+              }}>{initials}</div>
+              <div className="hidden md:block" style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: TB.textPri, lineHeight: 1, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name ?? 'Recruiter'}
+                </p>
+                <p style={{ fontSize: 10, color: TB.accent, marginTop: 2, fontWeight: 500 }}>Recruiter</p>
+              </div>
+              <ChevronDown size={13} className="hidden md:block" style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showUser ? 'rotate(180deg)' : 'rotate(0)' }} />
+            </motion.button>
+
+            <AnimatePresence>
+              {showUser && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0,  scale: 1 }}
+                  exit={{   opacity: 0, y: -6, scale: 0.96 }}
+                  transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                  className="rec-dropdown-responsive"
+                  style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 10px)',
+                    width: 220, borderRadius: 16, zIndex: 100,
+                    background: '#0f1f05', border: '1px solid rgba(107,138,58,0.22)',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.55)', overflow: 'hidden',
+                  }}
+                >
+                  {/* User header */}
+                  <div style={{ padding: '14px 14px 12px', background: 'rgba(107,138,58,0.08)', borderBottom: '1px solid rgba(107,138,58,0.14)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 800 }}>{initials}</div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#e8f5d4' }}>{user?.name}</p>
+                        <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.55)', marginTop: 1 }}>{user?.email ?? 'recruiter@company.com'}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div style={{ padding: '6px' }}>
-                  {[
-                    { label: 'My Profile',  to: '/recruiter/profile',  icon: UserCircle },
-                    { label: 'Settings',    to: '/recruiter/settings', icon: Settings   },
-                  ].map(({ label, to, icon: Icon }) => (
-                    <NavLink
-                      key={to} to={to} onClick={() => setShowUser(false)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', borderRadius: 10, textDecoration: 'none', fontSize: 13, fontWeight: 500, color: '#e8f5d4', transition: 'background 0.12s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.12)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  <div style={{ padding: '6px' }}>
+                    {[
+                      { label: 'My Profile',  to: '/recruiter/profile',  icon: UserCircle },
+                      { label: 'Settings',    to: '/recruiter/settings', icon: Settings   },
+                    ].map(({ label, to, icon: Icon }) => (
+                      <NavLink
+                        key={to} to={to} onClick={() => setShowUser(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', borderRadius: 10, textDecoration: 'none', fontSize: 13, fontWeight: 500, color: '#e8f5d4', transition: 'background 0.12s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.12)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
 
+                      >
+                        <Icon size={15} style={{ color: 'var(--text-secondary)' }} /> {label}
+                      </NavLink>
+                    ))}
+                    <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                    <button
+                      onClick={handleLogout}
+                      id="rec-topbar-logout"
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ef4444', transition: 'background 0.12s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
-                      <Icon size={15} style={{ color: 'var(--text-secondary)' }} /> {label}
-                    </NavLink>
-                  ))}
-                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-                  <button
-                    onClick={handleLogout}
-                    id="rec-topbar-logout"
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '10px 12px', borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ef4444', transition: 'background 0.12s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <LogOut size={15} /> Sign out
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                      <LogOut size={15} /> Sign out
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Expandable Mobile Search */}
+      <AnimatePresence>
+        {mobileSearchOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="sm:hidden overflow-hidden"
+            style={{
+              background: TB.bg,
+              borderBottom: `1px solid ${TB.border}`,
+              padding: '8px 12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: TB.textMuted }} />
+              <input
+                autoFocus
+                placeholder="Search jobs, candidates…"
+                id="rec-topbar-mobile-search-input"
+                style={{
+                  width: '100%',
+                  height: 38,
+                  paddingLeft: 36,
+                  paddingRight: 12,
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${TB.inputBorder}`,
+                  color: TB.textPri,
+                  fontSize: 13,
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

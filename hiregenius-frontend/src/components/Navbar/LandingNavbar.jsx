@@ -128,9 +128,9 @@ const LandingNavbar = () => {
                     overflow: 'hidden', zIndex: 200,
                   }}
                 >
-                  {/* 4×2 product grid */}
+                  {/* Products grid */}
                   <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 145px), 1fr))',
                     gap: 2, padding: '14px 14px 10px',
                     borderBottom: '1px solid rgba(107,138,58,0.12)',
                   }}>
@@ -314,7 +314,7 @@ const LandingNavbar = () => {
             <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(107,138,58,0.50)', letterSpacing: '0.10em', textTransform: 'uppercase', padding: '4px 10px', marginBottom: 6 }}>Products</div>
             {PRODUCTS.slice(0, 4).map(({ icon: Icon, label, href }) => (
               <a key={label} href={href} onClick={() => setMobileOpen(false)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(240,237,228,0.70)', textDecoration: 'none', transition: 'background 0.12s' }}
+                style={{ display: 'flex', alignItems: 'center', minHeight: 44, gap: 10, padding: '10px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(240,237,228,0.70)', textDecoration: 'none', transition: 'background 0.12s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.10)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -327,12 +327,12 @@ const LandingNavbar = () => {
             <div style={{ height: 1, background: 'rgba(107,138,58,0.12)', margin: '8px 0' }} />
             {NAV_LINKS.map(({ label, href }) => (
               <a key={label} href={href} onClick={() => setMobileOpen(false)}
-                style={{ padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(240,237,228,0.65)', textDecoration: 'none', display: 'block' }}
+                style={{ padding: '10px 12px', minHeight: 44, display: 'flex', alignItems: 'center', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(240,237,228,0.65)', textDecoration: 'none' }}
               >{label}</a>
             ))}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <Link to="/login" onClick={() => setMobileOpen(false)} style={{ flex: 1, padding: '11px 0', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(107,138,58,0.22)', color: 'rgba(240,237,228,0.70)', textDecoration: 'none', fontSize: 13, fontWeight: 500, background: 'rgba(255,255,255,0.04)' }}>Log in</Link>
-              <Link to="/register" onClick={() => setMobileOpen(false)} style={{ flex: 1, padding: '11px 0', textAlign: 'center', borderRadius: 10, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 700 }}>Get Started</Link>
+              <Link to="/login" onClick={() => setMobileOpen(false)} style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 0', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(107,138,58,0.22)', color: 'rgba(240,237,228,0.70)', textDecoration: 'none', fontSize: 13, fontWeight: 500, background: 'rgba(255,255,255,0.04)' }}>Log in</Link>
+              <Link to="/register" onClick={() => setMobileOpen(false)} style={{ flex: 1, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 0', textAlign: 'center', borderRadius: 10, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 700 }}>Get Started</Link>
             </div>
           </motion.div>
         )}
