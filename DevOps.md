@@ -50,21 +50,25 @@ Frontend deployments are integrated into `.github/workflows/frontend-ci.yml` usi
   - Runs after `build-and-test` succeeds.
   - Deploys live to Vercel production (`--prod`).
 
-### Required GitHub Repo Secrets for Vercel
+#### 3. GitHub Pages (Additional Deployment Target)
+Integrated into `.github/workflows/frontend-ci.yml` as an isolated `deploy-github-pages` job:
+- **Triggers**: ONLY on `push` to `main`, after `build-and-test` succeeds (`needs: build-and-test`).
+- **Base Path**: Uses `VITE_BASE_PATH=/hiregenius/` during GitHub Pages build step so static assets load correctly from `https://visucs.github.io/hiregenius/`. Does not modify default root base path `'/'` for local dev or Vercel.
+- **SPA Fallback**: Copies `dist/index.html` to `dist/404.html` so client-side React Router navigation works cleanly on page refresh.
+- **Deployment**: Deploys via official `actions/upload-pages-artifact@v3` and `actions/deploy-pages@v4`.
 
-To enable Vercel deployment, navigate to GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions** and add:
+### Required GitHub Repo Settings & Secrets
 
-1. **`VERCEL_TOKEN`**:
-   - Go to [Vercel Account Tokens](https://vercel.com/account/tokens).
-   - Click **Create Token**, give it a name (e.g. `GitHub Actions CI`), select scope, and copy the generated token.
-2. **`VERCEL_ORG_ID`**:
-   - If using a personal Vercel account, go to **Account Settings -> General**, copy your User ID.
-   - If using a Team, go to **Team Settings -> General**, copy Team ID.
-   - Alternatively, run `npx vercel link` inside `hiregenius-frontend/` locally and inspect `.vercel/project.json` -> `orgId`.
-3. **`VERCEL_PROJECT_ID`**:
-   - Create a project on Vercel or link an existing project.
-   - Go to Vercel Dashboard -> Your Project -> **Settings -> General**, copy **Project ID**.
-   - Alternatively, check `.vercel/project.json` -> `projectId`.
+#### For Vercel Deployment (Repository Secrets):
+Navigate to GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions** and add:
+1. **`VERCEL_TOKEN`**: Generated from [Vercel Account Tokens](https://vercel.com/account/tokens).
+2. **`VERCEL_ORG_ID`**: Account/Team ID from Vercel Dashboard Settings (or `.vercel/project.json` -> `orgId`).
+3. **`VERCEL_PROJECT_ID`**: Project ID from Vercel Project Settings (or `.vercel/project.json` -> `projectId`).
+
+#### For GitHub Pages Deployment (Repository Settings):
+1. Navigate to GitHub Repository -> **Settings** -> **Pages**.
+2. Under **Build and deployment** -> **Source**, select **GitHub Actions**.
+3. Workflow permissions for `pages: write` and `id-token: write` are explicitly declared in `frontend-ci.yml`.
 
 ## Docker Image Strategy
 - **Frontend**: Nginx-served static files (`node:20-alpine` build stage -> `nginx:1.25.4-alpine` serve stage). No `node_modules` in runtime.

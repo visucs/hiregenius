@@ -423,3 +423,13 @@ pm run build build command, and dist output directory for monorepo configuration
 
 **Pushed Branch:**
 - Pushed branch eature/frontend-cicd-setup to origin https://github.com/visucs/hiregenius.git.
+
+### 2026-09-12 — GitHub Pages Deployment Target Added (Purely Additive)
+
+**Purely Additive Changes:**
+- **hiregenius-frontend/vite.config.js**: Added ase: process.env.VITE_BASE_PATH || '/'. Defaults to '/' for local dev, Docker builds, and Vercel builds. Only sets '/hiregenius/' when VITE_BASE_PATH env var is explicitly provided.
+- **.github/workflows/frontend-ci.yml**: Appended deploy-github-pages job. All existing jobs (uild-and-test, deploy-preview, deploy-production, uild-and-push-image) remain 100% byte-for-byte unchanged.
+- **Client-Side Routing Fix**: Job executes cp dist/index.html dist/404.html so direct route access and page refreshes on GitHub Pages serve index.html without 404 errors.
+- **Deployment Action**: Uses official ctions/upload-pages-artifact@v3 and ctions/deploy-pages@v4.
+- **Target URL**: https://visucs.github.io/hiregenius/
+- **Documentation**: Updated DevOps.md with GitHub Pages settings instructions.
