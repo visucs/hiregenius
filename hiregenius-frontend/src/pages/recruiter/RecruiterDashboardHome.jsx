@@ -99,7 +99,7 @@ const RecruiterDashboardHome = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)',
-        padding: '36px 36px 0',
+        padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 36px) 0',
       }}>
         {/* Dot grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
@@ -112,7 +112,7 @@ const RecruiterDashboardHome = () => {
           <motion.div
             initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}
+            style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -123,7 +123,7 @@ const RecruiterDashboardHome = () => {
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 0 3px rgba(74,222,128,0.20)', display: 'inline-block', animation: 'pulse 2s infinite' }} /> Live
                 </span>
               </div>
-              <h1 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
+              <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 36px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
                 {greet()}, {user?.name?.split(' ')[0] ?? 'Recruiter'}! 👋
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(190,220,140,0.65)', lineHeight: 1.6 }}>
@@ -137,8 +137,8 @@ const RecruiterDashboardHome = () => {
                 to="/recruiter/jobs"
                 id="rec-home-post-job"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 9,
-                  padding: '12px 24px', borderRadius: 14,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                  padding: '12px 24px', minHeight: 44, borderRadius: 14,
                   background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
                   color: '#fff', fontSize: 14, fontWeight: 800,
                   boxShadow: '0 6px 28px rgba(61,80,22,0.60)',
@@ -153,8 +153,8 @@ const RecruiterDashboardHome = () => {
             </motion.div>
           </motion.div>
 
-          {/* Stat cards — straddling hero/content boundary */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {/* Stat cards */}
+          <div className="rec-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {STAT_DEFS.map((stat, i) => (
               <motion.div
                 key={stat.key}
@@ -163,14 +163,14 @@ const RecruiterDashboardHome = () => {
                 style={{
                   background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
                   border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
+                  borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
                   cursor: 'default', transition: 'background 0.2s', position: 'relative', overflow: 'hidden',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
               >
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${stat.color}00, ${stat.color}88, ${stat.color}00)` }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 13, background: `${stat.color}18`, border: `1px solid ${stat.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <stat.icon size={18} style={{ color: stat.color }} />
                   </div>
@@ -178,7 +178,7 @@ const RecruiterDashboardHome = () => {
                     <ChevronUp size={10} /> {stat.delta} {stat.deltaLabel}
                   </span>
                 </div>
-                <p style={{ fontSize: 42, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
+                <p style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
                   <Counter to={summary[stat.key]} suffix={stat.suffix} />
                 </p>
                 <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>{stat.label}</p>
@@ -191,10 +191,10 @@ const RecruiterDashboardHome = () => {
       {/* ══════════════════════════════════════════════════════
           CONTENT AREA
       ══════════════════════════════════════════════════════ */}
-      <div style={{ padding: '24px 36px 60px' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
 
         {/* ── Row A: Activity + Quick Actions ──────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginBottom: 18 }}>
+        <div className="rec-row-a" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginBottom: 18 }}>
 
           {/* Recent Activity */}
           <Card delay={0.10}>
@@ -306,8 +306,8 @@ const RecruiterDashboardHome = () => {
               Manage <ArrowRight size={13} />
             </Link>
           </div>
-          <div style={{ padding: '20px 24px 24px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+          <div style={{ padding: 'clamp(16px, 3vw, 20px) clamp(14px, 3vw, 24px) 24px' }}>
+            <div className="rec-funnel-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
               {[
                 { label: 'Applied',      count: 148, width: 100, color: '#60a5fa', icon: Users       },
                 { label: 'Screened',     count: 86,  width: 58,  color: '#a78bfa', icon: FileSearch  },
@@ -326,7 +326,7 @@ const RecruiterDashboardHome = () => {
                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${stage.color}14`, border: `1px solid ${stage.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <stage.icon size={18} style={{ color: stage.color }} />
                   </div>
-                  <p style={{ fontSize: 28, fontWeight: 900, color: stage.color, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 4 }}>{stage.count}</p>
+                  <p style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 900, color: stage.color, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 4 }}>{stage.count}</p>
                   <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12 }}>{stage.label}</p>
                   <div style={{ height: 5, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
                     <motion.div
@@ -344,7 +344,21 @@ const RecruiterDashboardHome = () => {
         </Card>
       </div>
 
-      <style>{`@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }`}</style>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+        @media (max-width: 1023px) {
+          .rec-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .rec-row-a { grid-template-columns: 1fr !important; }
+          .rec-funnel-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 600px) {
+          .rec-funnel-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .rec-stats-grid { grid-template-columns: 1fr !important; }
+          .rec-funnel-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 };

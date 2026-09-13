@@ -7,15 +7,17 @@ import {
 
 const Toggle = ({ checked, onChange, id }) => (
   <button id={id} role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-    style={{ position: 'relative', width: 48, height: 26, borderRadius: 999, flexShrink: 0, background: checked ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'var(--border)', border: 'none', cursor: 'pointer', transition: 'background 0.22s ease', boxShadow: checked ? '0 2px 10px rgba(79,70,229,0.45)' : 'none' }}
+    style={{ position: 'relative', width: 52, height: 44, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
   >
-    <motion.div animate={{ x: checked ? 24 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-      style={{ position: 'absolute', top: 3, width: 20, height: 20, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 6px rgba(0,0,0,0.25)' }}
-    />
+    <div style={{ position: 'relative', width: 48, height: 26, borderRadius: 999, background: checked ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'var(--border)', transition: 'background 0.22s ease', boxShadow: checked ? '0 2px 10px rgba(79,70,229,0.45)' : 'none' }}>
+      <motion.div animate={{ x: checked ? 24 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        style={{ position: 'absolute', top: 3, width: 20, height: 20, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 6px rgba(0,0,0,0.25)' }}
+      />
+    </div>
   </button>
 );
 
-const IS = { width: '100%', padding: '11px 14px', borderRadius: 13, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
+const IS = { width: '100%', minHeight: 44, padding: '11px 14px', borderRadius: 13, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
 
 const Section = ({ title, subtitle, icon: Icon, iconColor, stripe, children, delay = 0 }) => (
   <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, delay, ease: [0.22, 1, 0.36, 1] }}
@@ -77,23 +79,23 @@ const AdminSystemSettingsPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Hero ──────────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) clamp(24px, 4vw, 36px)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '10%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 720, margin: '0 auto', width: '100%' }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(129,140,248,0.95)', background: 'rgba(99,102,241,0.18)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.30)' }}>
                 <Settings size={11} /> System Settings
               </span>
             </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>System Settings</h1>
+            <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 28px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>System Settings</h1>
             <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>Platform-wide configuration and feature flag controls</p>
           </motion.div>
         </div>
       </div>
 
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 720, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
+      <div style={{ padding: 'clamp(20px, 3vw, 24px) clamp(16px, 4vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 720, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
         {/* General */}
         <Section title="General" subtitle="Basic platform identity settings" icon={Globe} iconColor="#818cf8" stripe="linear-gradient(90deg, #4f46e5, #818cf8)" delay={0.06}>
@@ -111,7 +113,7 @@ const AdminSystemSettingsPage = () => {
 
         {/* Limits */}
         <Section title="Platform Limits" subtitle="Maximum usage quotas per entity" icon={Database} iconColor="#22d3ee" stripe="linear-gradient(90deg, #06b6d4, #22d3ee)" delay={0.12}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 16 }}>
             {[
               { label: 'Max Jobs / Recruiter',   key: 'maxJobsPerRecruiter', id: 'sysset-max-jobs'  },
               { label: 'Max Candidates / Job',    key: 'maxCandidatesPerJob', id: 'sysset-max-cands' },
@@ -149,9 +151,9 @@ const AdminSystemSettingsPage = () => {
         </AnimatePresence>
 
         {/* Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={isSaving} id="sysset-save"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', background: isSaving ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isSaving ? 'none' : '0 4px 18px rgba(79,70,229,0.40)', transition: 'all 0.18s', letterSpacing: '-0.01em' }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', background: isSaving ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isSaving ? 'none' : '0 4px 18px rgba(79,70,229,0.40)', transition: 'all 0.18s', letterSpacing: '-0.01em' }}
           >
             {isSaving ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving…</> : <><CheckCircle2 size={14} />Save Settings</>}
           </motion.button>

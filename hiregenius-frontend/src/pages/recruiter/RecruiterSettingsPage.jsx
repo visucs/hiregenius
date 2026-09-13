@@ -63,7 +63,7 @@ const Section = ({ title, subtitle, icon: Icon, iconColor, stripe, children, del
     style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}
   >
     {stripe && <div style={{ height: 3, background: stripe, borderRadius: '20px 20px 0 0' }} />}
-    <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ padding: 'clamp(14px, 2.5vw, 18px) clamp(16px, 2.5vw, 24px) 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 38, height: 38, borderRadius: 12, background: `${iconColor}14`, border: `1px solid ${iconColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={18} style={{ color: iconColor }} />
       </div>
@@ -72,7 +72,7 @@ const Section = ({ title, subtitle, icon: Icon, iconColor, stripe, children, del
         {subtitle && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</p>}
       </div>
     </div>
-    <div style={{ padding: '8px 24px 22px' }}>{children}</div>
+    <div style={{ padding: '8px clamp(16px, 2.5vw, 24px) 22px' }}>{children}</div>
   </motion.div>
 );
 
@@ -116,7 +116,7 @@ const RecruiterSettingsPage = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)',
-        padding: '32px 36px 36px',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 36px',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -80, right: '10%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -128,14 +128,14 @@ const RecruiterSettingsPage = () => {
                 <Settings size={11} /> Workspace Settings
               </span>
             </div>
-            <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Settings</h1>
+            <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Settings</h1>
             <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Manage your appearance, notifications, and workspace preferences</p>
           </motion.div>
         </div>
       </div>
 
       {/* ── Content ─────────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
         {/* ── Appearance ─────────────────────────────────────── */}
         <Section
@@ -145,7 +145,7 @@ const RecruiterSettingsPage = () => {
           stripe="linear-gradient(90deg, #818cf8, #a78bfa, #c084fc)"
           delay={0.06}
         >
-          <div style={{ paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 12 }}>
             {[
               { key: 'light', label: 'Light Mode', desc: 'Clean & bright', icon: Sun,  color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', activeBg: 'rgba(245,158,11,0.13)', activeBorder: 'rgba(245,158,11,0.40)' },
               { key: 'dark',  label: 'Dark Mode',  desc: 'Easy on eyes', icon: Moon, color: '#818cf8', bg: 'rgba(129,140,248,0.08)', activeBg: 'rgba(129,140,248,0.14)', activeBorder: 'rgba(129,140,248,0.40)' },
@@ -157,7 +157,7 @@ const RecruiterSettingsPage = () => {
                   id={`settings-theme-${key}`}
                   onClick={toggleTheme}
                   style={{
-                    padding: '18px 20px', borderRadius: 16, border: `2px solid ${active ? activeBorder : 'var(--border)'}`,
+                    padding: '18px 20px', minHeight: 44, borderRadius: 16, border: `2px solid ${active ? activeBorder : 'var(--border)'}`,
                     background: active ? activeBg : 'var(--card-row-bg)',
                     cursor: 'pointer', textAlign: 'left', transition: 'all 0.18s ease',
                     boxShadow: active ? `0 4px 20px ${color}22` : 'none',
@@ -210,8 +210,8 @@ const RecruiterSettingsPage = () => {
                 whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }}
                 onClick={handleSave} disabled={isSaving} id="settings-save"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '11px 22px', minHeight: 44, borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer',
                   background: isSaving ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
                   color: '#fff', fontSize: 13, fontWeight: 800,
                   boxShadow: isSaving ? 'none' : '0 4px 18px rgba(61,80,22,0.40)',

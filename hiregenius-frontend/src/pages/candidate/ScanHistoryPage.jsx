@@ -96,26 +96,26 @@ const ScanHistoryPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Olive/Forest Hero ─────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) clamp(24px, 4vw, 36px)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '12%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             {/* Title row */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
                     <History size={11} /> My Career
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Scan History</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Scan History</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Every resume check you've run and historical scorecards.</p>
               </div>
 
               {/* Quick stat chips */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start', paddingTop: 4 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', paddingTop: 4 }}>
                 {[
                   { label: 'Total Scans', value: scans.length, color: '#fff' },
                   { label: 'Avg Score',   value: scans.length ? `${Math.round(scans.reduce((a,b) => a + b.score, 0) / scans.length)}%` : '—', color: '#a3e635' },
@@ -130,7 +130,7 @@ const ScanHistoryPage = () => {
                 <motion.button whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setNewScanOpen(true)}
                   id="scan-history-new-scan-btn"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 20px', borderRadius: 13, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: '0 4px 18px rgba(61,80,22,0.55)', letterSpacing: '-0.01em' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '11px 20px', borderRadius: 13, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: '0 4px 18px rgba(61,80,22,0.55)', letterSpacing: '-0.01em' }}
                 >
                   <Plus size={16} strokeWidth={2.5} /> New Scan
                 </motion.button>
@@ -138,11 +138,11 @@ const ScanHistoryPage = () => {
             </div>
 
             {/* Search bar */}
-            <div style={{ position: 'relative', marginTop: 22, maxWidth: 360 }}>
+            <div style={{ position: 'relative', marginTop: 22, maxWidth: 360, width: '100%' }}>
               <Search size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.40)', pointerEvents: 'none' }} />
               <input type="text" placeholder="Search scans by job or company…" value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.30)', color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', minHeight: 44, paddingLeft: 38, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.30)', color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </div>
           </motion.div>
@@ -150,7 +150,7 @@ const ScanHistoryPage = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {/* Loading skeleton */}
         {loading && [1,2,3].map(i => (
@@ -188,18 +188,18 @@ const ScanHistoryPage = () => {
               initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.32, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => setSelectedScan(scan)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, padding: '18px 22px', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.18s ease', flexWrap: 'wrap' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: 'clamp(14px, 3vw, 18px) clamp(14px, 3vw, 22px)', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', overflow: 'hidden', position: 'relative', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.18s ease', flexWrap: 'wrap' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(0,0,0,0.07)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.04)'; }}
             >
               {/* Score tile */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 220 }}>
-                <div style={{ width: 52, height: 52, borderRadius: 15, background: sg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 14px ${sc}35` }}>
-                  <span style={{ fontSize: 17, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1 }}>{scan.score}%</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 'min(100%, 200px)' }}>
+                <div style={{ width: 50, height: 50, borderRadius: 15, background: sg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 14px ${sc}35` }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1 }}>{scan.score}%</span>
                 </div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginBottom: 4 }}>{scan.jobTitle}</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500, flexWrap: 'wrap' }}>
                     <Building2 size={11} />{scan.company}
                     <span style={{ opacity: 0.5 }}>·</span>
                     <Calendar size={11} />Scanned on {scan.scanDate}
@@ -208,7 +208,7 @@ const ScanHistoryPage = () => {
               </div>
 
               {/* Right: skills match + recommendation + chevron */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   Skills Match: <strong style={{ color: scoreColor(scan.skillsMatch), fontWeight: 800 }}>{scan.skillsMatch}%</strong>
                 </span>
@@ -230,38 +230,38 @@ const ScanHistoryPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 24, boxShadow: '0 32px 96px rgba(0,0,0,0.40)', pointerEvents: 'auto' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
 
                 {/* Sticky header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, padding: '20px 24px 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, padding: '16px clamp(14px, 3vw, 24px) 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-elevated)', zIndex: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: scoreGrad(selectedScan.score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 14px ${scoreColor(selectedScan.score)}40` }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 14, background: scoreGrad(selectedScan.score), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 14px ${scoreColor(selectedScan.score)}40` }}>
                       <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1 }}>{selectedScan.score}%</span>
                     </div>
                     <div>
                       <p style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', marginBottom: 3 }}>Historical Scan · {selectedScan.scanDate}</p>
-                      <h2 style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 2 }}>{selectedScan.jobTitle}</h2>
+                      <h2 style={{ fontSize: 'clamp(15px, 3vw, 18px)', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 2 }}>{selectedScan.jobTitle}</h2>
                       <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Target: {selectedScan.company}</p>
                     </div>
                   </div>
                   <button onClick={() => setSelectedScan(null)}
-                    style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}
+                    style={{ width: 44, height: 44, minWidth: 44, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}
                   ><X size={16} /></button>
                 </div>
 
-                <div style={{ padding: '20px 24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div style={{ padding: 'clamp(16px, 3vw, 20px) clamp(14px, 3vw, 24px) 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
                   {/* Stats row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 10 }}>
                     {[
                       { label: 'Overall Score',  value: `${selectedScan.score}%`,        color: scoreColor(selectedScan.score) },
                       { label: 'Skills Match',   value: `${selectedScan.skillsMatch}%`,  color: scoreColor(selectedScan.skillsMatch) },
                       { label: 'Recommendation', value: selectedScan.recommendation,     color: '#34d399' },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', textAlign: 'center' }}>
-                        <p style={{ fontSize: 22, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>{value}</p>
+                        <p style={{ fontSize: 20, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>{value}</p>
                         <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
                       </div>
                     ))}
@@ -323,13 +323,13 @@ const ScanHistoryPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)', pointerEvents: 'none' }}
             >
               <div style={{ width: '100%', maxWidth: 500, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 24, boxShadow: '0 32px 96px rgba(0,0,0,0.40)', pointerEvents: 'auto', overflow: 'hidden' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
 
                 {/* Modal header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px 14px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px clamp(16px, 4vw, 24px) 14px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(61,80,22,0.40)' }}>
                       <Zap size={18} color="#fff" />
@@ -340,20 +340,20 @@ const ScanHistoryPage = () => {
                     </div>
                   </div>
                   <button onClick={() => setNewScanOpen(false)}
-                    style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                    style={{ width: 44, height: 44, minWidth: 44, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
                   ><X size={15} /></button>
                 </div>
 
-                <form onSubmit={handleRunNewScan} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '18px 24px 22px' }}>
+                <form onSubmit={handleRunNewScan} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '18px clamp(16px, 4vw, 24px) 22px' }}>
                   <div>
                     <Label required>Target Job Title</Label>
                     <input type="text" required placeholder="e.g. Senior Frontend Engineer" value={newScanTitle}
-                      onChange={e => setNewScanTitle(e.target.value)} id="new-scan-title" style={IS} />
+                      onChange={e => setNewScanTitle(e.target.value)} id="new-scan-title" style={{ ...IS, minHeight: 44 }} />
                   </div>
                   <div>
                     <Label>Company Name</Label>
                     <input type="text" placeholder="e.g. Stripe, Vercel" value={newScanCompany}
-                      onChange={e => setNewScanCompany(e.target.value)} id="new-scan-company" style={IS} />
+                      onChange={e => setNewScanCompany(e.target.value)} id="new-scan-company" style={{ ...IS, minHeight: 44 }} />
                   </div>
                   <div>
                     <Label>Job Description / Requirements</Label>
@@ -362,13 +362,13 @@ const ScanHistoryPage = () => {
                       style={{ ...IS, resize: 'vertical', lineHeight: 1.6 }}
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+                  <div style={{ display: 'flex', gap: 10, paddingTop: 4, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => setNewScanOpen(false)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                      style={{ flex: '1 1 120px', minHeight: 44, padding: '11px 0', borderRadius: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                     >Cancel</button>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                       type="submit" disabled={isScanning} id="new-scan-submit"
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 13, border: 'none', cursor: isScanning ? 'wait' : 'pointer', background: isScanning ? 'rgba(61,80,22,0.45)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: isScanning ? 'none' : '0 4px 18px rgba(61,80,22,0.45)', transition: 'all 0.18s' }}
+                      style={{ flex: '1 1 140px', minHeight: 44, padding: '11px 0', borderRadius: 13, border: 'none', cursor: isScanning ? 'wait' : 'pointer', background: isScanning ? 'rgba(61,80,22,0.45)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: isScanning ? 'none' : '0 4px 18px rgba(61,80,22,0.45)', transition: 'all 0.18s' }}
                     >
                       {isScanning
                         ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Analyzing…</>

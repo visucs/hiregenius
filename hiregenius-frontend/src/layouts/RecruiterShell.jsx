@@ -339,7 +339,7 @@ const RecruiterSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
           <motion.aside
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="fixed top-0 left-0 z-40 h-full w-64 flex flex-col md:hidden overflow-hidden"
+            className="fixed top-0 left-0 z-40 h-full w-64 max-w-[85vw] flex flex-col md:hidden overflow-hidden"
             style={{
               background: 'linear-gradient(175deg, #18280a 0%, #0e1804 100%)',
               borderRight: '1px solid rgba(107,138,58,0.20)',
@@ -406,7 +406,7 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
       id="rec-topbar"
       style={{
         height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
+        padding: '0 clamp(12px, 3vw, 24px)', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
         background: TB.bg,
         backdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: `1px solid ${TB.border}`,
@@ -415,8 +415,25 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
     >
       {/* Left */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Mobile menu button */}
+        <motion.button
+          whileTap={{ scale: 0.90 }}
+          onClick={onMenuToggle}
+          className="md:hidden flex items-center justify-center"
+          style={{
+            ...iconBtnStyle,
+            minWidth: 44,
+            minHeight: 44,
+            color: TB.textPri,
+          }}
+          aria-label="Open navigation menu"
+          id="rec-topbar-menu-toggle"
+        >
+          <Menu size={18} />
+        </motion.button>
+
         {/* Search */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} className="hidden sm:block">
           <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: TB.textMuted, pointerEvents: 'none', zIndex: 1 }} />
           <input
             placeholder="Search jobs, candidates…"
@@ -494,7 +511,7 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
                 transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                 style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-                  width: 340, borderRadius: 18, zIndex: 100,
+                  width: 'min(340px, calc(100vw - 24px))', borderRadius: 18, zIndex: 100,
                   background: '#0f1f05',
                   border: '1px solid rgba(107,138,58,0.22)',
                   boxShadow: '0 20px 60px rgba(0,0,0,0.55)',

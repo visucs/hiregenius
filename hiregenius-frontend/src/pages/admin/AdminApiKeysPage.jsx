@@ -24,7 +24,7 @@ const PROVIDER_MODELS = {
 
 const PROVIDER_COLORS = { OPENAI: '#10b981', GEMINI: '#60a5fa', ANTHROPIC: '#f97316', COHERE: '#a78bfa' };
 
-const IS = { width: '100%', padding: '11px 14px', borderRadius: 13, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
+const IS = { width: '100%', minHeight: 44, padding: '11px 14px', borderRadius: 13, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
 
 const Field = ({ label, error, children }) => (
   <div>
@@ -83,22 +83,22 @@ const AdminApiKeysPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Hero ──────────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) clamp(24px, 4vw, 36px)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 680, margin: '0 auto', width: '100%' }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(129,140,248,0.95)', background: 'rgba(99,102,241,0.18)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.30)' }}>
                 <Key size={11} /> AI Provider Settings
               </span>
             </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>AI Provider Keys</h1>
+            <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 28px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>AI Provider Keys</h1>
             <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>Configure the LLM backend for resume screening and AI interviews</p>
           </motion.div>
         </div>
       </div>
 
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 680, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
+      <div style={{ padding: 'clamp(20px, 3vw, 24px) clamp(16px, 4vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 680, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
         {/* Active key status banner */}
         <AnimatePresence>
@@ -123,14 +123,14 @@ const AdminApiKeysPage = () => {
 
             {/* Provider selector */}
             <Field label="AI Provider" error={errors.provider?.message}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: 8 }}>
                 {Object.keys(PROVIDER_MODELS).map(p => {
                   const active = provider === p;
                   const pc = PROVIDER_COLORS[p];
                   return (
                     <label key={p} style={{ cursor: 'pointer' }}>
                       <input {...register('provider')} type="radio" value={p} style={{ display: 'none' }} />
-                      <div style={{ padding: '10px 8px', borderRadius: 13, textAlign: 'center', border: `2px solid ${active ? pc : 'var(--border)'}`, background: active ? `${pc}14` : 'var(--card-row-bg)', transition: 'all 0.15s', boxShadow: active ? `0 3px 12px ${pc}30` : 'none' }}>
+                      <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 8px', borderRadius: 13, textAlign: 'center', border: `2px solid ${active ? pc : 'var(--border)'}`, background: active ? `${pc}14` : 'var(--card-row-bg)', transition: 'all 0.15s', boxShadow: active ? `0 3px 12px ${pc}30` : 'none' }}>
                         <p style={{ fontSize: 12, fontWeight: 800, color: active ? pc : 'var(--text-muted)' }}>{p}</p>
                       </div>
                     </label>
@@ -154,11 +154,11 @@ const AdminApiKeysPage = () => {
               <div style={{ position: 'relative' }}>
                 <Key size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input {...register('apiKey')} type={showKey ? 'text' : 'password'} id="apikeys-key"
-                  placeholder="sk-…" style={{ ...IS, paddingLeft: 40, paddingRight: 42, fontFamily: 'monospace, monospace' }}
+                  placeholder="sk-…" style={{ ...IS, paddingLeft: 40, paddingRight: 46, fontFamily: 'monospace, monospace' }}
                 />
-                <button type="button" onClick={() => setShowKey(v => !v)} id="apikeys-show-toggle"
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4 }}
-                >{showKey ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                <button type="button" onClick={() => setShowKey(v => !v)} id="apikeys-show-toggle" aria-label={showKey ? 'Hide key' : 'Show key'}
+                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', minWidth: 44, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Only the last 4 characters will be visible after saving.</p>
             </Field>
@@ -168,9 +168,9 @@ const AdminApiKeysPage = () => {
               <input {...register('maxTokens')} type="number" id="apikeys-tokens" style={IS} />
             </Field>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4, flexWrap: 'wrap' }}>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={isSaving} id="apikeys-save"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', background: isSaving ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isSaving ? 'none' : '0 4px 18px rgba(79,70,229,0.40)', transition: 'all 0.18s', letterSpacing: '-0.01em' }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', background: isSaving ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isSaving ? 'none' : '0 4px 18px rgba(79,70,229,0.40)', transition: 'all 0.18s', letterSpacing: '-0.01em' }}
               >
                 {isSaving ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving…</> : <><Save size={14} />Save Configuration</>}
               </motion.button>

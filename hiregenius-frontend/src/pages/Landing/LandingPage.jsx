@@ -229,6 +229,7 @@ const LandingPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="hero-bento-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(12, 1fr)',
@@ -240,6 +241,7 @@ const LandingPage = () => {
             {/* Card: AI Score Ring */}
             <motion.div
               animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              className="bento-card-score"
               style={{
                 gridColumn: '1 / 4', gridRow: '1',
                 background: 'rgba(20,28,10,0.85)', border: '1px solid rgba(107,138,58,0.22)',
@@ -272,7 +274,7 @@ const LandingPage = () => {
             </motion.div>
 
             {/* Card: Candidate Dashboard */}
-            <div style={{
+            <div className="bento-card-candidates" style={{
               gridColumn: '4 / 10', gridRow: '1',
               background: 'rgba(18,24,10,0.90)', border: '1px solid rgba(107,138,58,0.18)',
               borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(20px)',
@@ -307,6 +309,7 @@ const LandingPage = () => {
             {/* Card: AI Interview Badge */}
             <motion.div
               animate={{ y: [0, 6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+              className="bento-card-interview"
               style={{
                 gridColumn: '10 / 13', gridRow: '1',
                 background: 'linear-gradient(135deg, #1a2d0a 0%, #0e1906 100%)',
@@ -332,14 +335,14 @@ const LandingPage = () => {
             </motion.div>
 
             {/* Card: Pipeline */}
-            <div style={{
+            <div className="bento-card-pipeline" style={{
               gridColumn: '1 / 8', gridRow: '2',
               background: 'rgba(18,24,10,0.90)', border: '1px solid rgba(107,138,58,0.18)',
               borderRadius: 20, padding: 22, backdropFilter: 'blur(20px)',
               boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
             }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#F0EDE4', marginBottom: 18 }}>Hiring Pipeline</div>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 8px' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 clamp(2px, 1vw, 8px)', overflowX: 'auto' }}>
                 <div style={{ position: 'absolute', top: 16, left: 20, right: 20, height: 2, background: 'linear-gradient(90deg, #3D5016 60%, rgba(107,138,58,0.2) 60%)', zIndex: 0 }} />
                 {[
                   { label: 'Job Posted', icon: Briefcase, done: true },
@@ -348,7 +351,7 @@ const LandingPage = () => {
                   { label: 'Shortlisted', icon: TrendingUp, done: false },
                   { label: 'Hired', icon: Check, done: false },
                 ].map((s, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 1 }}>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 1, minWidth: 44 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10,
                       background: s.current ? '#3D5016' : s.done ? 'rgba(61,80,22,0.30)' : 'rgba(255,255,255,0.05)',
@@ -368,6 +371,7 @@ const LandingPage = () => {
             {/* Card: Stats */}
             <motion.div
               animate={{ y: [0, -5, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+              className="bento-card-stats"
               style={{
                 gridColumn: '8 / 13', gridRow: '2',
                 background: 'rgba(20,28,10,0.85)', border: '1px solid rgba(107,138,58,0.20)',
@@ -396,9 +400,10 @@ const LandingPage = () => {
           {/* Robot */}
           <motion.img
             src={robotHead} alt="AI Helper"
+            className="hero-robot"
             animate={{ y: [0, -12, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
             style={{
-              position: 'absolute', bottom: -40, right: -10, width: 110, height: 110,
+              position: 'absolute', bottom: -40, right: 0, width: 110, height: 110,
               objectFit: 'contain', zIndex: 20, filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.45))',
               pointerEvents: 'none',
             }}
@@ -523,7 +528,7 @@ const LandingPage = () => {
             </motion.div>
 
             {/* Bento layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: 20 }}>
+            <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: 20 }}>
               {FEATURES.map(({ icon: Icon, tag, title, desc, tags, href, size, accent }, i) => (
                 <motion.div key={title} variants={scaleIn}
                   style={{
@@ -609,7 +614,7 @@ const LandingPage = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {BENEFITS.map(({ icon: Icon, title, desc, metric, metricLabel }, i) => (
-                <motion.div key={title} variants={fadeUp}
+                <motion.div key={title} variants={fadeUp} className="benefit-card"
                   style={{
                     display: 'grid', gridTemplateColumns: 'auto 1fr auto',
                     gap: 32, alignItems: 'center',
@@ -771,7 +776,7 @@ const LandingPage = () => {
         padding: '72px 40px 40px',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
+          <div className="footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
             {/* Brand column */}
             <div>
               <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 16 }}>
@@ -823,7 +828,7 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {/* Global CSS for shimmer + scroll behavior */}
+      {/* Global CSS for shimmer + scroll behavior + responsiveness */}
       <style>{`
         @keyframes shimmer {
           0% { background-position: 0% center; }
@@ -835,12 +840,68 @@ const LandingPage = () => {
         ::-webkit-scrollbar-track { background: #0A0E05; }
         ::-webkit-scrollbar-thumb { background: rgba(107,138,58,0.30); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(107,138,58,0.50); }
+
+        @media (max-width: 1024px) {
+          .hero-bento-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .bento-card-score { grid-column: 1 / 2 !important; grid-row: auto !important; }
+          .bento-card-interview { grid-column: 2 / 3 !important; grid-row: auto !important; }
+          .bento-card-candidates { grid-column: 1 / 3 !important; grid-row: auto !important; }
+          .bento-card-pipeline { grid-column: 1 / 3 !important; grid-row: auto !important; }
+          .bento-card-stats { grid-column: 1 / 3 !important; grid-row: auto !important; }
+        }
+
         @media (max-width: 768px) {
-          section { padding-left: 20px !important; padding-right: 20px !important; }
-          [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-          [style*="grid-template-columns: repeat(12"] { grid-template-columns: 1fr 1fr !important; }
-          [style*="grid-template-columns: 2fr 1fr 1fr 1fr"] { grid-template-columns: 1fr 1fr !important; }
-          [style*="gridTemplateColumns: 'auto 1fr auto'"] { grid-template-columns: auto 1fr !important; }
+          section {
+            padding-left: clamp(16px, 4vw, 32px) !important;
+            padding-right: clamp(16px, 4vw, 32px) !important;
+            padding-top: clamp(64px, 8vw, 96px) !important;
+            padding-bottom: clamp(48px, 6vw, 80px) !important;
+          }
+          .hero-bento-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .bento-card-score,
+          .bento-card-candidates,
+          .bento-card-interview,
+          .bento-card-pipeline,
+          .bento-card-stats {
+            grid-column: 1 / -1 !important;
+            grid-row: auto !important;
+          }
+          .features-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .benefit-card {
+            grid-template-columns: auto 1fr !important;
+            gap: 16px !important;
+            padding: 20px !important;
+          }
+          .footer-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 32px !important;
+          }
+          .hero-robot {
+            width: 70px !important;
+            height: 70px !important;
+            right: 8px !important;
+            bottom: -24px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .benefit-card {
+            grid-template-columns: 1fr !important;
+            text-align: center;
+            justify-items: center;
+            gap: 16px !important;
+            padding: 20px 16px !important;
+          }
+          .footer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
         }
       `}</style>
     </div>

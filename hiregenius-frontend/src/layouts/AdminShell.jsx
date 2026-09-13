@@ -338,7 +338,7 @@ const AdminSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) => {
           <motion.aside
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-0 left-0 z-40 h-full w-64 flex flex-col md:hidden overflow-hidden"
+            className="fixed top-0 left-0 z-40 h-full w-64 max-w-[85vw] flex flex-col md:hidden overflow-hidden"
             style={{ background: ADMIN.sidebarBg, borderRight: `1px solid ${ADMIN.border}` }}
           >
             {sidebarContent}
@@ -388,7 +388,7 @@ const AdminTopbar = ({ onMenuToggle }) => {
   return (
     <header
       id="admin-topbar"
-      className="h-16 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30"
+      className="h-16 flex items-center justify-between px-3 sm:px-4 md:px-6 sticky top-0 z-30"
       style={{
         background: 'rgba(10,10,28,0.92)',
         backdropFilter: 'blur(20px) saturate(180%)',
@@ -397,8 +397,24 @@ const AdminTopbar = ({ onMenuToggle }) => {
       }}
     >
 
-      {/* Left — admin badge + search (no hamburger on desktop) */}
-      <div className="flex items-center gap-3">
+      {/* Left — admin badge + search (with hamburger on mobile) */}
+      <div className="flex items-center gap-2 sm:gap-3">
+
+        {/* Mobile menu button */}
+        <motion.button
+          whileTap={{ scale: 0.90 }}
+          onClick={onMenuToggle}
+          className="md:hidden flex items-center justify-center p-2 rounded-xl"
+          style={{
+            ...iconBtn,
+            minWidth: 44,
+            minHeight: 44,
+          }}
+          aria-label="Open navigation menu"
+          id="admin-topbar-menu-toggle"
+        >
+          <Menu size={18} />
+        </motion.button>
 
         {/* Admin Console badge */}
         <div style={{
@@ -489,7 +505,7 @@ const AdminTopbar = ({ onMenuToggle }) => {
                 transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
                 style={{
                   position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                  width: 320, borderRadius: 16, zIndex: 100,
+                  width: 'min(320px, calc(100vw - 24px))', borderRadius: 16, zIndex: 100,
                   background: 'var(--bg-elevated)', border: '1px solid var(--border)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden',
                 }}

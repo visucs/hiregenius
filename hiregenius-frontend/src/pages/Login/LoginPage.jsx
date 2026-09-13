@@ -63,6 +63,7 @@ const LoginPage = () => {
 
   const inputStyle = (hasError) => ({
     width: '100%',
+    minHeight: 44,
     padding: '12px 16px',
     borderRadius: 'var(--radius-btn)',
     fontSize: 14,
@@ -76,7 +77,7 @@ const LoginPage = () => {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '40px 24px', position: 'relative', overflow: 'hidden',
+      padding: '40px clamp(12px, 4vw, 24px)', position: 'relative', overflow: 'hidden',
       background: 'var(--bg-base)',
     }}>
       {/* Background glow */}
@@ -130,7 +131,7 @@ const LoginPage = () => {
           WebkitBackdropFilter: 'blur(24px)',
           border: '1px solid var(--border)',
           borderRadius: 20,
-          padding: '40px',
+          padding: 'clamp(20px, 6vw, 40px)',
           boxShadow: '0 8px 48px rgba(0,0,0,0.4)',
         }}>
           <div style={{ marginBottom: 32 }}>
@@ -205,16 +206,16 @@ const LoginPage = () => {
                   onBlur={e => e.target.style.borderColor = errors.password ? 'var(--danger)' : 'var(--border)'}
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)} tabIndex={-1}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}
+                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               {errors.password && <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 6 }}>{errors.password.message}</p>}
             </div>
 
-            <GradientButton type="submit" isLoading={isLoading} disabled={isLoading} style={{ width: '100%', marginTop: 4 }} id="login-submit-btn">
+            <GradientButton type="submit" isLoading={isLoading} disabled={isLoading} style={{ width: '100%', minHeight: 44, marginTop: 4 }} id="login-submit-btn">
               <LogIn size={15} /> Sign In
             </GradientButton>
           </form>
@@ -229,10 +230,10 @@ const LoginPage = () => {
           {import.meta.env.DEV && (
             <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>DEV Quick Login</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" onClick={() => devLogin('CANDIDATE')} id="dev-login-candidate" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Candidate</button>
-                <button type="button" onClick={() => devLogin('RECRUITER')} id="dev-login-recruiter" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Recruiter</button>
-                <button type="button" onClick={() => devLogin('ADMIN')} id="dev-login-admin" style={{ flex: 1, padding: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Admin</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => devLogin('CANDIDATE')} id="dev-login-candidate" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Candidate</button>
+                <button type="button" onClick={() => devLogin('RECRUITER')} id="dev-login-recruiter" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Recruiter</button>
+                <button type="button" onClick={() => devLogin('ADMIN')} id="dev-login-admin" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Admin</button>
               </div>
             </div>
           )}

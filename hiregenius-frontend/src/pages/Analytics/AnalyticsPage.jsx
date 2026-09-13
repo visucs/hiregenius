@@ -58,7 +58,7 @@ const AnalyticsPage = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)',
-        padding: '32px 36px 0',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -73,18 +73,18 @@ const AnalyticsPage = () => {
                     <BarChart3 size={11} /> Hiring Intelligence
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Analytics</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Analytics</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Track resume screening, interview performance, and hiring pipeline metrics</p>
               </div>
 
               {/* Controls */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', paddingTop: 4 }}>
                 {/* Range tabs */}
-                <div style={{ display: 'flex', gap: 3, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(107,138,58,0.25)' }}>
+                <div style={{ display: 'flex', gap: 3, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(107,138,58,0.25)', flexWrap: 'wrap' }}>
                   {RANGES.map(r => (
                     <button key={r.value} id={`range-${r.value}`} onClick={() => setRange(r.value)}
                       style={{
-                        padding: '7px 16px', borderRadius: 9, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                        padding: '8px 16px', minHeight: 40, borderRadius: 9, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                         background: range === r.value ? 'linear-gradient(135deg, #3D5016, #6B8A3A)' : 'transparent',
                         color: range === r.value ? '#fff' : 'rgba(255,255,255,0.50)',
                         boxShadow: range === r.value ? '0 3px 12px rgba(61,80,22,0.45)' : 'none',
@@ -95,7 +95,7 @@ const AnalyticsPage = () => {
 
                 {/* Refresh */}
                 <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={refetch} id="analytics-refresh"
-                  style={{ height: 38, padding: '0 16px', borderRadius: 11, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.25)', color: 'rgba(255,255,255,0.70)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  style={{ minHeight: 44, padding: '0 16px', borderRadius: 11, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.25)', color: 'rgba(255,255,255,0.70)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                 >
                   <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                   Refresh
@@ -103,7 +103,7 @@ const AnalyticsPage = () => {
 
                 {/* Export */}
                 <motion.button whileHover={{ scale: 1.04, y: -1 }} whileTap={{ scale: 0.96 }} onClick={handleExport} id="analytics-export"
-                  style={{ height: 38, padding: '0 18px', borderRadius: 11, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.50)', letterSpacing: '-0.01em' }}
+                  style={{ minHeight: 44, padding: '0 18px', borderRadius: 11, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.50)', letterSpacing: '-0.01em' }}
                 >
                   <Download size={13} /> Export Report
                 </motion.button>
@@ -117,7 +117,7 @@ const AnalyticsPage = () => {
       </div>
 
       {/* ── Content below hero ────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Error banner */}
         {error && (

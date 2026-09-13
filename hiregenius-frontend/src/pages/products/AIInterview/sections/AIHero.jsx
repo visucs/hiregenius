@@ -257,7 +257,7 @@ const AIHero = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.8, duration: 0.4 }}
               style={{
-                position: 'absolute', top: '5%', right: '-4%', zIndex: 5,
+                position: 'absolute', top: '5%', right: 0, zIndex: 5,
                 background: 'var(--card-float-bg)',
                 border: '1px solid var(--card-float-border)',
                 borderRadius: 14, padding: '10px 16px',

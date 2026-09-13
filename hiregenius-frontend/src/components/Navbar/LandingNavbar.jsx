@@ -59,7 +59,7 @@ const LandingNavbar = () => {
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
           height: 64,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 32px',
+          padding: '0 clamp(12px, 3vw, 32px)',
           background: navBg,
           backdropFilter: scrolled ? 'blur(24px) saturate(160%)' : 'none',
           borderBottom: `1px solid ${navBorder}`,
@@ -242,10 +242,10 @@ const LandingNavbar = () => {
           {/* Theme toggle */}
           <button onClick={toggleTheme} aria-label="Toggle theme"
             style={{
-              padding: 8, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
+              width: 40, height: 40, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
               background: 'rgba(255,255,255,0.05)', color: 'rgba(240,237,228,0.50)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
+              transition: 'all 0.15s', flexShrink: 0,
             }}
             onMouseEnter={e => { e.currentTarget.style.color = textPri; e.currentTarget.style.borderColor = 'rgba(107,138,58,0.30)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(240,237,228,0.50)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
@@ -271,8 +271,9 @@ const LandingNavbar = () => {
 
           {/* CTA */}
           <Link to="/register" id="landing-nav-get-started"
+            className="hidden sm:inline-flex"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
+              alignItems: 'center', gap: 6,
               padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700,
               background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff',
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -287,9 +288,10 @@ const LandingNavbar = () => {
 
           {/* Mobile hamburger */}
           <button onClick={() => setMobileOpen(v => !v)} className="flex md:hidden"
-            style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)', color: textPri, cursor: 'pointer', display: 'flex' }}
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            style={{ minWidth: 44, minHeight: 44, borderRadius: 8, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)', color: textPri, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </motion.nav>
@@ -302,6 +304,7 @@ const LandingNavbar = () => {
             transition={{ duration: 0.2 }}
             style={{
               position: 'fixed', top: 64, left: 0, right: 0, zIndex: 99,
+              maxHeight: 'calc(100vh - 64px)', overflowY: 'auto',
               background: 'rgba(10,14,5,0.97)', backdropFilter: 'blur(24px)',
               borderBottom: '1px solid rgba(107,138,58,0.18)',
               padding: '16px 20px 24px',

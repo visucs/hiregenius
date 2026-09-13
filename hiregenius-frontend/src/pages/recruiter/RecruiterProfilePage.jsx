@@ -52,10 +52,11 @@ const Field = ({ label, error, icon: Icon, children }) => (
 
 const inputStyle = (hasIcon = true, focus = false) => ({
   width: '100%', paddingLeft: hasIcon ? 40 : 14, paddingRight: 14,
-  paddingTop: 11, paddingBottom: 11, borderRadius: 13, fontSize: 13, fontWeight: 500,
+  paddingTop: 11, paddingBottom: 11, minHeight: 44, borderRadius: 13, fontSize: 13, fontWeight: 500,
   background: 'var(--card-row-bg)', border: `1px solid ${focus ? 'var(--border-hover)' : 'var(--border)'}`,
   boxShadow: focus ? '0 0 0 3px rgba(61,80,22,0.09)' : 'none',
   color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit',
+  boxSizing: 'border-box',
   transition: 'all 0.16s ease',
 });
 
@@ -67,7 +68,7 @@ const Section = ({ title, subtitle, icon: Icon, iconColor = 'var(--primary)', ch
     style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}
   >
     {stripe && <div style={{ height: 3, background: stripe, borderRadius: '20px 20px 0 0' }} />}
-    <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ padding: 'clamp(14px, 2.5vw, 18px) clamp(16px, 2.5vw, 24px) 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ width: 38, height: 38, borderRadius: 12, background: `${iconColor}14`, border: `1px solid ${iconColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={18} style={{ color: iconColor }} />
       </div>
@@ -76,7 +77,7 @@ const Section = ({ title, subtitle, icon: Icon, iconColor = 'var(--primary)', ch
         {subtitle && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</p>}
       </div>
     </div>
-    <div style={{ padding: '22px 24px 26px' }}>{children}</div>
+    <div style={{ padding: 'clamp(16px, 2.5vw, 22px) clamp(16px, 2.5vw, 24px) 26px' }}>{children}</div>
   </motion.div>
 );
 
@@ -86,8 +87,8 @@ const SubmitBtn = ({ isLoading, id, children }) => (
     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
     type="submit" disabled={isLoading} id={id}
     style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
-      padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      padding: '11px 22px', minHeight: 44, borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
       background: isLoading ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
       color: '#fff', fontSize: 13, fontWeight: 800,
       boxShadow: isLoading ? 'none' : '0 4px 18px rgba(61,80,22,0.40)',
@@ -113,12 +114,12 @@ const PwdInput = ({ id, registration, placeholder }) => {
       <input
         {...registration} id={id} type={show ? 'text' : 'password'} placeholder={placeholder}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        style={{ ...inputStyle(true, focused), paddingRight: 42 }}
+        style={{ ...inputStyle(true, focused), paddingRight: 44 }}
       />
       <button type="button" onClick={() => setShow(v => !v)}
-        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4, zIndex: 1 }}
+        style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
       >
-        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>
   );
@@ -165,7 +166,7 @@ const RecruiterProfilePage = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)',
-        padding: '32px 36px 36px',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 36px',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -80, right: '10%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -180,11 +181,12 @@ const RecruiterProfilePage = () => {
 
             {/* Profile identity card inside hero */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 22,
-              padding: '24px 28px', borderRadius: 22,
+              display: 'flex', alignItems: 'center', gap: 'clamp(14px, 2.5vw, 22px)',
+              padding: 'clamp(16px, 3vw, 24px) clamp(16px, 3vw, 28px)', borderRadius: 22,
               background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255,255,255,0.12)',
               boxShadow: '0 4px 32px rgba(0,0,0,0.20)',
+              flexWrap: 'wrap',
             }}>
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -202,7 +204,7 @@ const RecruiterProfilePage = () => {
                   id="profile-avatar-upload"
                   aria-label="Change photo"
                   style={{
-                    position: 'absolute', bottom: -4, right: -4, width: 28, height: 28, borderRadius: '50%',
+                    position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: '50%',
                     background: '#3D5016', border: '2.5px solid rgba(255,255,255,0.20)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                     boxShadow: '0 2px 10px rgba(0,0,0,0.35)', transition: 'background 0.15s',
@@ -210,14 +212,14 @@ const RecruiterProfilePage = () => {
                   onMouseEnter={e => e.currentTarget.style.background = '#5a7e22'}
                   onMouseLeave={e => e.currentTarget.style.background = '#3D5016'}
                 >
-                  <Camera size={13} color="#fff" />
+                  <Camera size={14} color="#fff" />
                 </button>
               </div>
 
               {/* Info */}
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 4 }}>{user?.name ?? 'Recruiter'}</p>
-                <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.65)', marginBottom: 10 }}>{user?.email ?? ''}</p>
+              <div style={{ flex: 1, minWidth: 'min(100%, 200px)' }}>
+                <p style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 4 }}>{user?.name ?? 'Recruiter'}</p>
+                <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.65)', marginBottom: 10, wordBreak: 'break-all' }}>{user?.email ?? ''}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(107,138,58,0.22)', color: '#a3e635', border: '1px solid rgba(107,138,58,0.35)' }}>
                     <Shield size={11} /> Recruiter
@@ -229,13 +231,13 @@ const RecruiterProfilePage = () => {
               </div>
 
               {/* Stats */}
-              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                 {[
                   { label: 'Jobs Posted', value: '12', color: '#60a5fa' },
                   { label: 'Hired',       value: '3',  color: '#34d399' },
-                ].map(({ label, value, color }, i) => (
-                  <div key={label} style={{ padding: '14px 20px', textAlign: 'center', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', marginLeft: i > 0 ? 8 : 0 }}>
-                    <p style={{ fontSize: 26, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ padding: '12px 18px', textAlign: 'center', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                    <p style={{ fontSize: 24, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
                     <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 600, marginTop: 4 }}>{label}</p>
                   </div>
                 ))}
@@ -246,7 +248,7 @@ const RecruiterProfilePage = () => {
       </div>
 
       {/* ── Content ───────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
         {/* Account Details */}
         <Section

@@ -112,7 +112,7 @@ const ResumeScorePage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Olive/Forest Hero ─────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 36px' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) clamp(24px, 4vw, 36px)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '12%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -20, left: '5%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -120,21 +120,21 @@ const ResumeScorePage = () => {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
             {/* Title row */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
                     <Target size={11} /> My Career
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Resume Score</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Resume Score</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Your latest AI analysis and improvement suggestions.</p>
               </div>
 
               {/* Re-scan CTA */}
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} style={{ alignSelf: 'flex-start', marginTop: 4 }}>
                 <Link to="/candidate/scan-history"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 20px', borderRadius: 13, background: 'rgba(107,138,58,0.22)', border: '1px solid rgba(107,138,58,0.40)', color: '#c6e085', fontSize: 13, fontWeight: 800, textDecoration: 'none', backdropFilter: 'blur(10px)', letterSpacing: '-0.01em', transition: 'all 0.15s' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, gap: 8, padding: '11px 20px', borderRadius: 13, background: 'rgba(107,138,58,0.22)', border: '1px solid rgba(107,138,58,0.40)', color: '#c6e085', fontSize: 13, fontWeight: 800, textDecoration: 'none', backdropFilter: 'blur(10px)', letterSpacing: '-0.01em', transition: 'all 0.15s' }}
                 >
                   <RotateCcw size={14} /> Re-scan with a new job description
                 </Link>
@@ -143,14 +143,14 @@ const ResumeScorePage = () => {
 
             {/* Hero score band (inside hero) */}
             {!loading && resumeData && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '24px 28px', borderRadius: 22, background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 4px 32px rgba(0,0,0,0.20)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: 'clamp(16px, 3vw, 24px) clamp(16px, 3vw, 28px)', borderRadius: 22, background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 4px 32px rgba(0,0,0,0.20)', flexWrap: 'wrap' }}>
                 <ScoreRing score={resumeData.score} />
 
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ flex: 1, minWidth: 'min(100%, 200px)' }}>
                   <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(190,220,140,0.60)', marginBottom: 8 }}>
                     Latest Analysis · {resumeData.scanDate}
                   </p>
-                  <h2 style={{ fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: 6 }}>{resumeData.jobTitle}</h2>
+                  <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: 6 }}>{resumeData.jobTitle}</h2>
                   <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.55)', marginBottom: 16 }}>Target: {resumeData.targetCompany}</p>
 
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -167,13 +167,13 @@ const ResumeScorePage = () => {
                 </div>
 
                 {/* Score breakdown mini stats */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                   {[
                     { label: 'ATS Score',     value: resumeData.score,        color: '#a3e635' },
                     { label: 'Skills Match',  value: resumeData.skillsMatch,  color: '#34d399' },
                   ].map(({ label, value, color }) => (
-                    <div key={label} style={{ padding: '10px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', minWidth: 90 }}>
-                      <p style={{ fontSize: 24, fontWeight: 900, color, letterSpacing: '-0.05em', lineHeight: 1 }}>{value}%</p>
+                    <div key={label} style={{ padding: '10px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', minWidth: 80, flex: '1 1 auto' }}>
+                      <p style={{ fontSize: 22, fontWeight: 900, color, letterSpacing: '-0.05em', lineHeight: 1 }}>{value}%</p>
                       <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, marginTop: 5 }}>{label}</p>
                     </div>
                   ))}
@@ -193,14 +193,14 @@ const ResumeScorePage = () => {
 
       {/* ── Content ───────────────────────────────────────── */}
       {!loading && resumeData && (
-        <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
           {/* Skills grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 18 }}>
 
             {/* Matched Skills */}
             <Card stripe="linear-gradient(90deg, #3D5016, #6B8A3A)" delay={0.06}>
-              <div style={{ padding: '16px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: '16px clamp(14px, 3vw, 22px) 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <CheckCircle2 size={16} style={{ color: '#34d399' }} />
                 </div>
@@ -290,18 +290,20 @@ const ResumeScorePage = () => {
 
           {/* Bottom CTA */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 24px', borderRadius: 18, background: 'rgba(107,138,58,0.07)', border: '1px solid rgba(107,138,58,0.20)' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: 'clamp(16px, 3vw, 20px) clamp(16px, 3vw, 24px)', borderRadius: 18, background: 'rgba(107,138,58,0.07)', border: '1px solid rgba(107,138,58,0.20)' }}
           >
-            <div style={{ width: 44, height: 44, borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(61,80,22,0.40)', flexShrink: 0 }}>
-              <Zap size={20} color="#fff" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginBottom: 3 }}>Ready to improve your score?</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Run a fresh scan against any job description to get an updated AI analysis.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 'min(100%, 260px)', flex: 1 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(61,80,22,0.40)', flexShrink: 0 }}>
+                <Zap size={20} color="#fff" />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginBottom: 3 }}>Ready to improve your score?</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Run a fresh scan against any job description to get an updated AI analysis.</p>
+              </div>
             </div>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link to="/candidate/scan-history"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontWeight: 800, fontSize: 13, textDecoration: 'none', boxShadow: '0 4px 18px rgba(61,80,22,0.45)', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '11px 22px', borderRadius: 13, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontWeight: 800, fontSize: 13, textDecoration: 'none', boxShadow: '0 4px 18px rgba(61,80,22,0.45)', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}
               >Run New Scan <ArrowRight size={14} /></Link>
             </motion.div>
           </motion.div>

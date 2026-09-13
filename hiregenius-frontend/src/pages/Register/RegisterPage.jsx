@@ -54,7 +54,7 @@ const RegisterPage = () => {
   };
 
   const inputStyle = (hasError) => ({
-    width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-btn)',
+    width: '100%', minHeight: 44, padding: '12px 16px', borderRadius: 'var(--radius-btn)',
     fontSize: 14, background: 'rgba(255,255,255,0.04)',
     border: `1.5px solid ${hasError ? 'var(--danger)' : 'var(--border)'}`,
     color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s',
@@ -66,7 +66,7 @@ const RegisterPage = () => {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '40px 24px', position: 'relative', overflow: 'hidden', background: 'var(--bg-base)',
+      padding: '40px clamp(12px, 4vw, 24px)', position: 'relative', overflow: 'hidden', background: 'var(--bg-base)',
     }}>
       {/* Background glows */}
       <div style={{
@@ -116,7 +116,7 @@ const RegisterPage = () => {
         <div style={{
           background: 'rgba(15,20,32,0.8)', backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)', border: '1px solid var(--border)',
-          borderRadius: 20, padding: '40px',
+          borderRadius: 20, padding: 'clamp(20px, 6vw, 40px)',
           boxShadow: '0 8px 48px rgba(0,0,0,0.4)',
         }}>
           <div style={{ marginBottom: 32 }}>
@@ -168,7 +168,7 @@ const RegisterPage = () => {
               </label>
               {/* Hidden input keeps react-hook-form + Zod wired */}
               <input type="hidden" {...register('role')} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 10 }}>
                 {[
                   {
                     value: 'CANDIDATE',
@@ -242,8 +242,8 @@ const RegisterPage = () => {
                   onBlur={e => e.target.style.borderColor = errors.password ? 'var(--danger)' : 'var(--border)'}
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)} tabIndex={-1}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               <FieldError message={errors.password?.message} />
@@ -260,14 +260,14 @@ const RegisterPage = () => {
                   onBlur={e => e.target.style.borderColor = errors.confirmPassword ? 'var(--danger)' : 'var(--border)'}
                 />
                 <button type="button" onClick={() => setShowConfirm(p => !p)} tabIndex={-1}
-                  style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}>
-                  {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               <FieldError message={errors.confirmPassword?.message} />
             </div>
 
-            <GradientButton type="submit" isLoading={isLoading} disabled={isLoading} style={{ width: '100%', marginTop: 4 }} id="register-submit-btn">
+            <GradientButton type="submit" isLoading={isLoading} disabled={isLoading} style={{ width: '100%', minHeight: 44, marginTop: 4 }} id="register-submit-btn">
               <UserPlus size={15} /> Create Account
             </GradientButton>
           </form>

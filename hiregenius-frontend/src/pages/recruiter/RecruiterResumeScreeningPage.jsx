@@ -65,21 +65,21 @@ const RecruiterResumeScreeningPage = () => {
       <div style={{
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)',
-        padding: '32px 36px 0',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
                     <FileSearch size={11} /> AI Resume Screener
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Resume Screening</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Resume Screening</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>{screenings.length} resumes screened recently</p>
               </div>
 
@@ -107,7 +107,7 @@ const RecruiterResumeScreeningPage = () => {
               <Filter size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(163,230,53,0.6)', pointerEvents: 'none' }} />
               <ChevronDown size={13} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(163,230,53,0.6)', pointerEvents: 'none' }} />
               <select value={jobFilter} onChange={(e) => setJobFilter(e.target.value)} id="screening-job-filter"
-                style={{ appearance: 'none', paddingLeft: 32, paddingRight: 32, paddingTop: 9, paddingBottom: 9, borderRadius: 11, fontSize: 12, fontWeight: 700, cursor: 'pointer', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.30)', color: '#fff', outline: 'none' }}
+                style={{ appearance: 'none', paddingLeft: 32, paddingRight: 32, paddingTop: 9, paddingBottom: 9, minHeight: 40, borderRadius: 11, fontSize: 12, fontWeight: 700, cursor: 'pointer', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(107,138,58,0.30)', color: '#fff', outline: 'none' }}
               >
                 <option value="ALL" style={{ background: '#18280a' }}>All Jobs</option>
                 {jobs.map((j) => <option key={j.id} value={j.id} style={{ background: '#18280a' }}>{j.title}</option>)}
@@ -115,14 +115,14 @@ const RecruiterResumeScreeningPage = () => {
             </div>
 
             {/* Rec filter tabs */}
-            <div style={{ display: 'flex', gap: 4, padding: '4px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(107,138,58,0.20)' }}>
+            <div style={{ display: 'flex', gap: 4, padding: '4px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(107,138,58,0.20)', flexWrap: 'wrap' }}>
               {FILTER_TABS.map(({ key, label }) => {
                 const cfg = REC_CFG[key];
                 const active = recFilter === key;
                 return (
                   <button key={key} onClick={() => setRecFilter(key)} id={`screening-rec-${key.toLowerCase()}`}
                     style={{
-                      padding: '6px 14px', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+                      padding: '8px 14px', minHeight: 38, borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
                       background: active ? (cfg?.color ?? '#fff') : 'transparent',
                       color: active ? '#fff' : 'rgba(255,255,255,0.5)',
                       transition: 'all 0.15s',
@@ -141,7 +141,7 @@ const RecruiterResumeScreeningPage = () => {
       </div>
 
       {/* ── Cards list ────────────────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
             <FileSearch size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 12px', display: 'block' }} />
@@ -155,7 +155,7 @@ const RecruiterResumeScreeningPage = () => {
               initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.055, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                padding: '20px 24px', borderRadius: 20,
+                padding: 'clamp(16px, 3vw, 20px) clamp(14px, 3vw, 24px)', borderRadius: 20,
                 background: 'var(--bg-elevated)', border: '1px solid var(--border)',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
                 transition: 'all 0.18s ease', cursor: 'pointer',
@@ -163,44 +163,46 @@ const RecruiterResumeScreeningPage = () => {
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.07)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
 
-                {/* Avatar */}
-                <div style={{ width: 46, height: 46, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 800, boxShadow: '0 3px 10px rgba(61,80,22,0.35)', marginTop: 2 }}>
-                  {s.candidateName.charAt(0)}
-                </div>
-
-                {/* Main info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{s.candidateName}</p>
-                    <RecBadge rec={s.recommendation} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flex: '1 1 240px', minWidth: 'min(100%, 220px)' }}>
+                  {/* Avatar */}
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 800, boxShadow: '0 3px 10px rgba(61,80,22,0.35)', marginTop: 2 }}>
+                    {s.candidateName.charAt(0)}
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Applied: <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{s.jobTitle}</span></p>
 
-                  {/* Skill tags */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {s.matchedSkills.map((sk) => (
-                      <span key={sk} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'rgba(52,211,153,0.10)', color: '#34d399', border: '1px solid rgba(52,211,153,0.20)' }}>
-                        ✓ {sk}
-                      </span>
-                    ))}
-                    {s.missingSkills.map((sk) => (
-                      <span key={sk} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)' }}>
-                        ✗ {sk}
-                      </span>
-                    ))}
+                  {/* Main info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{s.candidateName}</p>
+                      <RecBadge rec={s.recommendation} />
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Applied: <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{s.jobTitle}</span></p>
+
+                    {/* Skill tags */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {s.matchedSkills.map((sk) => (
+                        <span key={sk} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'rgba(52,211,153,0.10)', color: '#34d399', border: '1px solid rgba(52,211,153,0.20)' }}>
+                          ✓ {sk}
+                        </span>
+                      ))}
+                      {s.missingSkills.map((sk) => (
+                        <span key={sk} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)' }}>
+                          ✗ {sk}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {/* Scores */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', alignSelf: 'center' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.05em', lineHeight: 1 }}>{s.resumeScore}</p>
+                    <p style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.05em', lineHeight: 1 }}>{s.resumeScore}</p>
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>Overall</p>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: 30, fontWeight: 900, color: scoreColor(s.skillsMatchPercent), letterSpacing: '-0.05em', lineHeight: 1 }}>{s.skillsMatchPercent}%</p>
+                    <p style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 900, color: scoreColor(s.skillsMatchPercent), letterSpacing: '-0.05em', lineHeight: 1 }}>{s.skillsMatchPercent}%</p>
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>Skills match</p>
                   </div>
                   <div style={{ textAlign: 'center' }}>

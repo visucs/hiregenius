@@ -46,7 +46,7 @@ const ForgotPasswordPage = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-3 sm:p-4"
       style={{ backgroundColor: 'var(--bg)' }}
     >
       <motion.div
@@ -56,7 +56,7 @@ const ForgotPasswordPage = () => {
         className="w-full max-w-md"
       >
         <div
-          className="rounded-2xl p-8 shadow-lg"
+          className="rounded-2xl p-5 sm:p-8 shadow-lg"
           style={{
             backgroundColor: 'var(--surface)',
             border: '1px solid var(--border)',
@@ -139,7 +139,7 @@ const ForgotPasswordPage = () => {
                     autoComplete="email"
                     placeholder="you@company.com"
                     {...register('email')}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl text-sm outline-none"
                     style={{
                       backgroundColor: 'var(--bg)',
                       border: `1px solid ${errors.email ? 'var(--danger)' : 'var(--border)'}`,
@@ -157,7 +157,7 @@ const ForgotPasswordPage = () => {
                   type="submit"
                   disabled={isLoading}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                   style={{ backgroundColor: 'var(--primary)' }}
                   id="forgot-submit-btn"
                 >

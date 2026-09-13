@@ -76,7 +76,7 @@ const RecruiterSchedulerPage = () => {
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Hero band ─────────────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: '32px 36px 0' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #18280a 0%, #0c1505 55%, #0f1e06 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
@@ -89,12 +89,12 @@ const RecruiterSchedulerPage = () => {
                     <CalendarDays size={11} /> Interview Scheduler
                   </span>
                 </div>
-                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Interview Scheduler</h1>
+                <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Interview Scheduler</h1>
                 <p style={{ fontSize: 13, color: 'rgba(190,220,140,0.60)' }}>Manage and track all scheduled candidate interviews</p>
               </div>
               <motion.button whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
                 onClick={() => setShowForm(true)} id="scheduler-new"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 22px', borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: '0 6px 28px rgba(61,80,22,0.60)', border: '1px solid rgba(107,138,58,0.35)', cursor: 'pointer', letterSpacing: '-0.01em' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '12px 22px', minHeight: 44, borderRadius: 14, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 14, fontWeight: 800, boxShadow: '0 6px 28px rgba(61,80,22,0.60)', border: '1px solid rgba(107,138,58,0.35)', cursor: 'pointer', letterSpacing: '-0.01em' }}
               >
                 <Plus size={16} strokeWidth={2.5} /> Schedule Interview <ArrowUpRight size={14} />
               </motion.button>
@@ -118,23 +118,23 @@ const RecruiterSchedulerPage = () => {
       </div>
 
       {/* ── Interviews by date ────────────────────────────── */}
-      <div style={{ padding: '24px 36px 60px' }}>
+      <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
         {Object.keys(grouped).length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
             <CalendarDays size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 12px', display: 'block' }} />
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>No interviews scheduled</p>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Schedule your first interview to start tracking candidates.</p>
             <button onClick={() => setShowForm(true)} id="scheduler-empty-cta"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 12, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.40)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', minHeight: 44, borderRadius: 12, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', color: '#fff', fontSize: 13, fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 18px rgba(61,80,22,0.40)' }}
             ><Plus size={15} /> Schedule First Interview</button>
           </div>
         ) : (
           Object.entries(grouped).map(([date, group]) => (
             <div key={date} style={{ marginBottom: 24 }}>
               {/* Date separator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{date}</span>
-                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <div style={{ flex: 1, minWidth: 40, height: 1, background: 'var(--border)' }} />
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(107,138,58,0.10)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.22)', whiteSpace: 'nowrap' }}>{group.length} interview{group.length !== 1 ? 's' : ''}</span>
               </div>
 
@@ -146,27 +146,28 @@ const RecruiterSchedulerPage = () => {
                     <motion.div key={int.id}
                       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '18px 22px', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.16s ease' }}
+                      className="rec-sched-row"
+                      style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px, 2vw, 18px)', padding: 'clamp(12px, 2vw, 18px) clamp(14px, 2vw, 22px)', borderRadius: 18, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.16s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateX(0)'; }}
                     >
                       {/* Time block */}
-                      <div style={{ textAlign: 'center', minWidth: 56, flexShrink: 0 }}>
+                      <div style={{ textAlign: 'center', minWidth: 50, flexShrink: 0 }}>
                         <p style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{timeStr.split(':')[0]}</p>
                         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>:{timeStr.split(':')[1]}</p>
                       </div>
 
                       {/* Vertical divider */}
-                      <div style={{ width: 2, height: 44, borderRadius: 999, background: `linear-gradient(to bottom, ${sc.color}80, ${sc.color}20)`, flexShrink: 0 }} />
+                      <div className="rec-sched-divider" style={{ width: 2, height: 44, borderRadius: 999, background: `linear-gradient(to bottom, ${sc.color}80, ${sc.color}20)`, flexShrink: 0 }} />
 
                       {/* Avatar */}
-                      <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 800, boxShadow: '0 3px 10px rgba(61,80,22,0.35)' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 800, boxShadow: '0 3px 10px rgba(61,80,22,0.35)' }}>
                         {int.candidateName.charAt(0)}
                       </div>
 
                       {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <div className="rec-sched-info" style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                           <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{int.candidateName}</p>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
                             <span style={{ width: 4, height: 4, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />{sc.label}
@@ -181,18 +182,20 @@ const RecruiterSchedulerPage = () => {
                       </div>
 
                       {/* Join button */}
-                      {int.status === 'SCHEDULED' && (
-                        <a href={int.meetingLink} target="_blank" rel="noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, background: 'rgba(96,165,250,0.10)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.28)', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s', flexShrink: 0 }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(96,165,250,0.18)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(96,165,250,0.10)'}
-                        >
-                          <Video size={13} /> Join <ExternalLink size={11} />
-                        </a>
-                      )}
-                      {int.status === 'COMPLETED' && (
-                        <CheckCircle2 size={20} style={{ color: '#34d399', flexShrink: 0 }} />
-                      )}
+                      <div className="rec-sched-action" style={{ flexShrink: 0 }}>
+                        {int.status === 'SCHEDULED' && (
+                          <a href={int.meetingLink} target="_blank" rel="noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 16px', minHeight: 44, borderRadius: 12, background: 'rgba(96,165,250,0.10)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.28)', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(96,165,250,0.18)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(96,165,250,0.10)'}
+                          >
+                            <Video size={13} /> Join <ExternalLink size={11} />
+                          </a>
+                        )}
+                        {int.status === 'COMPLETED' && (
+                          <CheckCircle2 size={22} style={{ color: '#34d399', flexShrink: 0 }} />
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })}
@@ -212,13 +215,13 @@ const RecruiterSchedulerPage = () => {
             />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, pointerEvents: 'none' }}
+              style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 20px)', pointerEvents: 'none' }}
             >
-              <div style={{ width: '100%', maxWidth: 480, borderRadius: 24, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 32px 96px rgba(0,0,0,0.30)', pointerEvents: 'auto' }}>
+              <div style={{ width: '100%', maxWidth: 'min(480px, 100%)', maxHeight: '90vh', overflowY: 'auto', borderRadius: 24, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 32px 96px rgba(0,0,0,0.30)', pointerEvents: 'auto' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #60a5fa)', borderRadius: '24px 24px 0 0' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px 14px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(14px, 3vw, 18px) clamp(16px, 3vw, 24px) 14px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(96,165,250,0.14)', border: '1px solid rgba(96,165,250,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(96,165,250,0.14)', border: '1px solid rgba(96,165,250,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <CalendarDays size={16} style={{ color: '#60a5fa' }} />
                     </div>
                     <div>
@@ -226,34 +229,34 @@ const RecruiterSchedulerPage = () => {
                       <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Set up a meeting with a candidate</p>
                     </div>
                   </div>
-                  <button onClick={() => setShowForm(false)} id="scheduler-form-close"
-                    style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
-                  ><X size={16} /></button>
+                  <button onClick={() => setShowForm(false)} id="scheduler-form-close" aria-label="Close dialog"
+                    style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 11, background: 'var(--card-row-bg)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
+                  ><X size={18} /></button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <form onSubmit={handleSubmit(onSubmit)} style={{ padding: 'clamp(16px, 3vw, 20px) clamp(16px, 3vw, 24px) 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <Field label="Candidate *" error={errors.candidateId?.message}>
-                    <select {...register('candidateId')} id="scheduler-form-candidate" style={IS}>
+                    <select {...register('candidateId')} id="scheduler-form-candidate" style={{ ...IS, minHeight: 44 }}>
                       <option value="">Select candidate…</option>
                       {MOCK_CANDIDATES.map(c => <option key={c.id} value={c.id}>{c.name} — {c.appliedJobTitle}</option>)}
                     </select>
                   </Field>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    <Field label="Date *" error={errors.date?.message}><input {...register('date')} type="date" id="scheduler-form-date" style={IS} /></Field>
-                    <Field label="Time *" error={errors.time?.message}><input {...register('time')} type="time" id="scheduler-form-time" style={IS} /></Field>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 14 }}>
+                    <Field label="Date *" error={errors.date?.message}><input {...register('date')} type="date" id="scheduler-form-date" style={{ ...IS, minHeight: 44 }} /></Field>
+                    <Field label="Time *" error={errors.time?.message}><input {...register('time')} type="time" id="scheduler-form-time" style={{ ...IS, minHeight: 44 }} /></Field>
                   </div>
                   <Field label="Duration (minutes)" error={errors.durationMinutes?.message}>
-                    <input {...register('durationMinutes')} type="number" id="scheduler-form-duration" style={IS} />
+                    <input {...register('durationMinutes')} type="number" id="scheduler-form-duration" style={{ ...IS, minHeight: 44 }} />
                   </Field>
                   <Field label="Meeting Link *" error={errors.meetingLink?.message}>
-                    <input {...register('meetingLink')} type="url" id="scheduler-form-link" placeholder="https://meet.google.com/…" style={IS} />
+                    <input {...register('meetingLink')} type="url" id="scheduler-form-link" placeholder="https://meet.google.com/…" style={{ ...IS, minHeight: 44 }} />
                   </Field>
-                  <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+                  <div style={{ display: 'flex', gap: 10, paddingTop: 4, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => setShowForm(false)}
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                      style={{ flex: 1, minWidth: 100, minHeight: 44, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                     >Cancel</button>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={isSubmitting} id="scheduler-form-submit"
-                      style={{ flex: 1, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: isSubmitting ? 'rgba(96,165,250,0.25)' : 'linear-gradient(135deg, #1e40af, #3b82f6)', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: isSubmitting ? 'none' : '0 4px 18px rgba(59,130,246,0.40)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      style={{ flex: 1, minWidth: 120, minHeight: 44, padding: '11px 0', borderRadius: 12, fontSize: 13, fontWeight: 800, background: isSubmitting ? 'rgba(96,165,250,0.25)' : 'linear-gradient(135deg, #1e40af, #3b82f6)', color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: isSubmitting ? 'none' : '0 4px 18px rgba(59,130,246,0.40)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
                     >
                       {isSubmitting ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Scheduling…</> : <><CheckCircle2 size={14} />Schedule</>}
                     </motion.button>
@@ -264,7 +267,27 @@ const RecruiterSchedulerPage = () => {
           </>
         )}
       </AnimatePresence>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) {
+          .rec-sched-row {
+            flex-wrap: wrap !important;
+          }
+          .rec-sched-divider {
+            display: none !important;
+          }
+          .rec-sched-info {
+            width: calc(100% - 110px) !important;
+          }
+          .rec-sched-action {
+            width: 100% !important;
+            margin-top: 4px;
+          }
+          .rec-sched-action a {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

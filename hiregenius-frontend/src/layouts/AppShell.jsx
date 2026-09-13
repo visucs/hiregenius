@@ -356,7 +356,7 @@ const CandidateSidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) =>
           <motion.aside
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="fixed top-0 left-0 z-40 h-full w-64 flex flex-col md:hidden overflow-hidden"
+            className="fixed top-0 left-0 z-40 h-full w-64 max-w-[85vw] flex flex-col md:hidden overflow-hidden"
             style={{
               background: 'linear-gradient(175deg, #18280a 0%, #0e1804 100%)',
               borderRight: '1px solid rgba(107,138,58,0.20)',
@@ -425,17 +425,34 @@ const CandidateTopbar = ({ onMenuToggle }) => {
       id="cand-topbar"
       style={{
         height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 22px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
+        padding: '0 clamp(12px, 3vw, 22px)', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
         background: TB.bg,
         backdropFilter: 'blur(20px) saturate(160%)',
         borderBottom: `1px solid ${TB.border}`,
         boxShadow: '0 1px 0 rgba(107,138,58,0.10), 0 4px 24px rgba(0,0,0,0.30)',
       }}
     >
-      {/* ── Left: Search ── */}
+      {/* ── Left: Hamburger + Search ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Mobile hamburger button */}
+        <motion.button
+          whileTap={{ scale: 0.90 }}
+          onClick={onMenuToggle}
+          className="md:hidden flex items-center justify-center"
+          style={{
+            ...iconBtnStyle,
+            minWidth: 44,
+            minHeight: 44,
+            color: TB.textPri,
+          }}
+          aria-label="Open navigation menu"
+          id="cand-topbar-menu-toggle"
+        >
+          <Menu size={18} />
+        </motion.button>
+
         {/* Search */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} className="hidden sm:block">
           <motion.div
             animate={{ opacity: searchFocus ? 1 : 0 }}
             transition={{ duration: 0.18 }}
@@ -509,7 +526,7 @@ const CandidateTopbar = ({ onMenuToggle }) => {
               <motion.div
                 initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                style={{ position: 'absolute', right: 0, top: 'calc(100% + 10px)', width: 330, borderRadius: 20, zIndex: 100, background: '#0f1f05', border: '1px solid rgba(107,138,58,0.22)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}
+                style={{ position: 'absolute', right: 0, top: 'calc(100% + 10px)', width: 'min(330px, calc(100vw - 24px))', borderRadius: 20, zIndex: 100, background: '#0f1f05', border: '1px solid rgba(107,138,58,0.22)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}
               >
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)' }} />
                 <div style={{ padding: '13px 16px 10px', borderBottom: '1px solid rgba(107,138,58,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
