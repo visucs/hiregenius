@@ -171,6 +171,18 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render deploy hook
+      - name: Trigger Render Deploy
         run: |
-          curl -fsSL -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json")
+          echo "Render API returned HTTP status: $HTTP_STATUS"
+          echo "render_status=$HTTP_STATUS" >> $GITHUB_ENV
+
+      - name: Confirm deploy trigger succeeded
+        run: |
+          if [[ "${{ env.render_status }}" -lt 200 || "${{ env.render_status }}" -ge 300 ]]; then
+            echo "❌ Render deploy hook failed with status: ${{ env.render_status }}"
+            exit 1
+          fi
+          echo "✅ Render deploy triggered successfully (HTTP ${{ env.render_status }})"
