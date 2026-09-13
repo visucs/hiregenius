@@ -68,14 +68,15 @@ const RSHowItWorks = () => (
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.45, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -6 }}
+              whileHover={{ y: -6, scale: 1.02 }}
               style={{
                 position: 'relative', zIndex: 1,
                 background: 'var(--card-float-bg)',
                 border: '1px solid var(--card-float-border)',
                 borderRadius: 20, padding: '28px 24px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+                boxShadow: 'var(--card-float-shadow)',
                 display: 'flex', flexDirection: 'column', gap: 16,
+                transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
               }}
             >
               {/* Number badge */}

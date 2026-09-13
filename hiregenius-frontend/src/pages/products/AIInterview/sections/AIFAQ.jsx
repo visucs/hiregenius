@@ -73,7 +73,12 @@ const AIFAQ = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          style={{ background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)', borderRadius: 24, padding: '8px 32px 8px' }}
+          style={{
+            background: 'var(--card-float-bg)',
+            border: '1px solid var(--card-float-border)',
+            borderRadius: 24, padding: '8px 32px 8px',
+            boxShadow: 'var(--card-float-shadow)',
+          }}
         >
           {FAQS.map((item, i) => (
             <FAQItem key={i} q={item.q} a={item.a} isOpen={open === i} toggle={() => setOpen(open === i ? -1 : i)} />

@@ -118,9 +118,10 @@ const RSDemo = () => {
             onDrop={(e) => { e.preventDefault(); setDragging(false); handleFileSelect(e.dataTransfer.files?.[0]); }}
             onDragOver={e => e.preventDefault()}
             style={{
-              border: `2px dashed ${dragging ? 'var(--primary)' : uploadedFile ? 'rgba(34,197,94,0.5)' : 'var(--border)'}`,
+              border: `2px dashed ${dragging ? 'var(--primary)' : uploadedFile ? 'rgba(34,197,94,0.5)' : 'var(--card-float-border)'}`,
               borderRadius: 20,
-              background: dragging ? 'var(--step-active-bg)' : 'var(--bg-elevated)',
+              background: dragging ? 'var(--step-active-bg)' : 'var(--card-float-bg)',
+              boxShadow: 'var(--card-float-shadow)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '48px 32px', textAlign: 'center', cursor: 'pointer',
               transition: 'all 0.25s', minHeight: 360,
@@ -202,6 +203,7 @@ const RSDemo = () => {
           <div style={{
             background: 'var(--card-float-bg)',
             border: '1px solid var(--card-float-border)',
+            boxShadow: 'var(--card-float-shadow)',
             borderRadius: 20, padding: '28px 28px', overflow: 'hidden',
           }}>
             {/* Header */}

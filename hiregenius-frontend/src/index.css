@@ -46,12 +46,12 @@
   --radius-btn:    10px;
   --radius-icon:   14px;
 
-  /* Floating card surfaces (hero) */
-  --card-float-bg:     #FFFFFF;
-  --card-float-border: rgba(61, 80, 22, 0.10);
-  --card-float-shadow: 0 20px 50px rgba(61,80,22,0.10), 0 4px 14px rgba(61,80,22,0.05);
-  --card-row-bg:       rgba(61, 80, 22, 0.04);
-  --card-row-border:   rgba(61, 80, 22, 0.08);
+  /* Floating card surfaces (hero & product landing pages) */
+  --card-float-bg:     rgba(250, 249, 245, 0.72);
+  --card-float-border: rgba(61, 80, 22, 0.14);
+  --card-float-shadow: 0 16px 40px rgba(61, 80, 22, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.90);
+  --card-row-bg:       rgba(61, 80, 22, 0.05);
+  --card-row-border:   rgba(61, 80, 22, 0.09);
   --pill-badge-bg:     rgba(61, 80, 22, 0.07);
   --pill-badge-border: rgba(61, 80, 22, 0.15);
   --icon-circle-bg:    rgba(61, 80, 22, 0.09);
@@ -91,12 +91,12 @@
   --glass-bg:     rgba(13, 17, 10, 0.75);
   --glass-border: rgba(107, 138, 58, 0.12);
 
-  /* Floating card surfaces — dark olive */
-  --card-float-bg:     #1A1F10;
-  --card-float-border: rgba(107, 138, 58, 0.18);
-  --card-float-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 4px 14px rgba(61,80,22,0.12);
-  --card-row-bg:       rgba(61, 80, 22, 0.10);
-  --card-row-border:   rgba(107, 138, 58, 0.15);
+  /* Floating card surfaces — dark olive deep glass */
+  --card-float-bg:     rgba(18, 24, 10, 0.68);
+  --card-float-border: rgba(107, 138, 58, 0.22);
+  --card-float-shadow: 0 24px 64px rgba(0, 0, 0, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --card-row-bg:       rgba(107, 138, 58, 0.10);
+  --card-row-border:   rgba(107, 138, 58, 0.18);
   --pill-badge-bg:     rgba(61, 80, 22, 0.18);
   --pill-badge-border: rgba(107, 138, 58, 0.30);
   --icon-circle-bg:    rgba(61, 80, 22, 0.20);
@@ -104,6 +104,12 @@
   --step-active-border:rgba(107, 138, 58, 0.45);
   --step-inactive-bg:  rgba(61, 80, 22, 0.08);
   --glow-radial:       rgba(107,138,58,0.10);
+}
+
+/* Deep glassmorphism support for product card surfaces */
+[style*="--card-float-bg"] {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 /* ============================================================

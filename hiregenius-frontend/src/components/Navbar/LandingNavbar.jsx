@@ -34,7 +34,10 @@ const LandingNavbar = () => {
   const navigate = useNavigate();
 
   const isDark = theme === 'dark';
-  const isLanding = location.pathname === '/';
+  const isLanding =
+    location.pathname === '/' ||
+    location.pathname.startsWith('/products/resume-screening') ||
+    location.pathname.startsWith('/products/ai-interview');
 
   const dropRef = useRef(null);
   const hoverTimer = useRef(null);

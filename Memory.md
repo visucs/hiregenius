@@ -511,3 +511,12 @@ pm run build build command, and dist output directory for monorepo configuration
 - Added hardware-accelerated micro-interactions (`whileHover={{ y: -6, scale: 1.02 }}`) on interactive cards.
 - Verified WCAG AA contrast in both light and dark modes with warm off-white and deep olive green.
 - Verified zero horizontal overflow at 320px width.
+
+### 2026-09-14 - Resume Screening & AI Interview Landing Pages Glassmorphism Redesign
+
+**Scope & Execution:**
+- **LandingNavbar.jsx**: Extended `isLanding` to include `/products/resume-screening` and `/products/ai-interview` so the floating glass pill navbar (top: clamp(10px, 2vw, 16px), border-radius 999px, specular top highlight, backdrop blur 24px) and full-screen mobile glass drawer are activated on both product landing pages.
+- **index.css**: Calibrated `--card-float-bg`, `--card-float-border`, and `--card-float-shadow` tokens in `:root` and `.dark` to deep glassmorphism (`rgba(250, 249, 245, 0.72)` light / `rgba(18, 24, 10, 0.68)` dark) with specular highlight (`inset 0 1px 0 0 rgba(255, 255, 255, ...)`) and hardware-accelerated `backdrop-filter: blur(24px) saturate(180%)`.
+- **ResumeScreeningPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden to prevent horizontal overflow at 320px width). Upgraded all section cards (RSHero, RSDemo, RSHowItWorks, RSAnalyzed, RSBenefits, RSShowcase, RSFAQ, RSCrossLinks, RSFinalCTA) to deep glassmorphism with scale and lift micro-interactions.
+- **AIInterviewPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden). Upgraded all section cards (AIHero, AIDemo, AIHowItWorks, AIEvaluated, AIBenefits, AIShowcase, AIFAQ, AICrossLinks, AIFinalCTA) to deep glassmorphism with specular highlights and micro-interactions.
+- **Verification**: `npm run build` passed with 0 errors in 887ms.

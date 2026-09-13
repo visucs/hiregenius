@@ -17,7 +17,10 @@ const AIFinalCTA = () => (
         }}
       >
         <div style={{
-          background: 'var(--bg-elevated)',
+          background: 'var(--card-float-bg)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          boxShadow: 'var(--card-float-shadow)',
           borderRadius: 26, padding: '56px 48px',
           textAlign: 'center',
         }}>

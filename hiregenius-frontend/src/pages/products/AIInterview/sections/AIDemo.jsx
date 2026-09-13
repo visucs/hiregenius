@@ -56,7 +56,7 @@ const AIDemo = () => {
           className="ai-demo-grid"
         >
           {/* Chat panel */}
-          <div style={{ background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)', borderRadius: 20, padding: '28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)', boxShadow: 'var(--card-float-shadow)', borderRadius: 20, padding: '28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Interview Session</p>
@@ -80,10 +80,10 @@ const AIDemo = () => {
                 transition={{ delay: 0.3 + i * 0.25, duration: 0.4 }}
                 style={{ display: 'flex', gap: 10, flexDirection: msg.role === 'candidate' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}
               >
-                <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: msg.role === 'ai' ? 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))' : 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: msg.role === 'ai' ? 'linear-gradient(135deg, var(--gradient-start), var(--gradient-end))' : 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {msg.role === 'ai' ? <MessageSquare size={14} color="#fff" /> : <User size={14} color="var(--text-secondary)" />}
                 </div>
-                <div style={{ maxWidth: '80%', background: msg.role === 'ai' ? 'var(--step-active-bg)' : 'var(--bg-elevated)', border: `1px solid ${msg.role === 'ai' ? 'var(--step-active-border)' : 'var(--border)'}`, borderRadius: 14, padding: '11px 14px' }}>
+                <div style={{ maxWidth: '80%', background: msg.role === 'ai' ? 'var(--step-active-bg)' : 'var(--card-row-bg)', border: `1px solid ${msg.role === 'ai' ? 'var(--step-active-border)' : 'var(--card-row-border)'}`, borderRadius: 14, padding: '11px 14px' }}>
                   <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-primary)', margin: 0 }}>{msg.text}</p>
                   <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, fontWeight: 600 }}>{msg.role === 'ai' ? 'HireGenius AI' : 'Ravi Kumar'}</p>
                 </div>
@@ -92,7 +92,7 @@ const AIDemo = () => {
           </div>
 
           {/* Result panel */}
-          <div style={{ background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)', borderRadius: 20, padding: '28px' }}>
+          <div style={{ background: 'var(--card-float-bg)', border: '1px solid var(--card-float-border)', boxShadow: 'var(--card-float-shadow)', borderRadius: 20, padding: '28px' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>AI Evaluation</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20 }}>Response Score Breakdown</p>
             <AnimatedBar label="Communication"   value={84} inView={inView} />
