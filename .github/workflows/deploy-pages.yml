@@ -1,0 +1,64 @@
+﻿name: Deploy GitHub Pages
+
+on:
+  workflow_run:
+    workflows: [ "Frontend CI/CD" ]
+    types: [ completed ]
+    branches: [ main ]
+
+concurrency:
+  group: github-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy to GitHub Pages
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository at triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './hiregenius-frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./hiregenius-frontend
+        run: npm ci
+
+      - name: Build for GitHub Pages
+        working-directory: ./hiregenius-frontend
+        run: npm run build
+        env:
+          VITE_BASE_PATH: /hiregenius/
+
+      - name: Copy index.html to 404.html for SPA routing fallback
+        working-directory: ./hiregenius-frontend
+        run: cp dist/index.html dist/404.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './hiregenius-frontend/dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
