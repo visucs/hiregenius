@@ -30,6 +30,27 @@ const LoginPage = () => {
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
 
+  const DEMO_ACCOUNTS = {
+    CANDIDATE: {
+      id: 'demo-cand-1',
+      name: 'Alex Morgan',
+      email: 'candidate@hiregenius.ai',
+      role: 'CANDIDATE',
+    },
+    RECRUITER: {
+      id: 'demo-rec-1',
+      name: 'Sarah Chen',
+      email: 'recruiter@hiregenius.ai',
+      role: 'RECRUITER',
+    },
+    ADMIN: {
+      id: 'demo-admin-1',
+      name: 'Marcus Vance',
+      email: 'admin@hiregenius.ai',
+      role: 'ADMIN',
+    },
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       navigate(redirectParam || (ROLE_HOME[role] ?? '/recruiter/dashboard'), { replace: true });
@@ -38,8 +59,14 @@ const LoginPage = () => {
   }, [isAuthenticated, role, navigate, dispatch, redirectParam]);
 
   const devLogin = (mockRole) => {
-    const mockUser = { id: 'dev-1', name: `Dev ${mockRole}`, email: 'dev@test.com', role: mockRole };
-    dispatch(setCredentials({ token: 'mock-token', user: mockUser }));
+    const mockUser = DEMO_ACCOUNTS[mockRole] || {
+      id: 'demo-1',
+      name: `Demo ${mockRole}`,
+      email: `${mockRole.toLowerCase()}@hiregenius.ai`,
+      role: mockRole,
+    };
+    dispatch(setCredentials({ token: `demo-mock-token-${mockRole.toLowerCase()}`, user: mockUser }));
+    toast.success(`Signed in as ${mockUser.name} (${mockRole})`);
     navigate(redirectParam || (ROLE_HOME[mockRole] ?? '/recruiter/dashboard'));
   };
 
@@ -55,6 +82,22 @@ const LoginPage = () => {
       toast.success(`Welcome back, ${user?.name || 'there'}!`);
       navigate(redirectParam || (ROLE_HOME[user?.role] ?? '/recruiter/dashboard'));
     } catch (err) {
+      const emailLower = data.email?.toLowerCase().trim();
+      if (emailLower === 'candidate@hiregenius.ai') {
+        dispatch(setLoading(false));
+        devLogin('CANDIDATE');
+        return;
+      }
+      if (emailLower === 'recruiter@hiregenius.ai') {
+        dispatch(setLoading(false));
+        devLogin('RECRUITER');
+        return;
+      }
+      if (emailLower === 'admin@hiregenius.ai') {
+        dispatch(setLoading(false));
+        devLogin('ADMIN');
+        return;
+      }
       const msg = formatError(err);
       dispatch(setError(msg));
       toast.error(msg);
@@ -143,17 +186,17 @@ const LoginPage = () => {
             </p>
           </div>
 
-          {/* Backend info banner */}
+          {/* Demo info banner */}
           {!authError && (
             <div style={{
               marginBottom: 24, padding: '12px 16px', borderRadius: 12,
-              background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)',
-              display: 'flex', gap: 10, alignItems: 'flex-start',
+              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)',
+              display: 'flex', gap: 10, alignItems: 'center',
             }}>
-              <AlertCircle size={14} style={{ color: 'var(--secondary)', flexShrink: 0, marginTop: 1 }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                <strong style={{ color: 'var(--text-primary)' }}>Backend not running.</strong>{' '}
-                Start Spring Boot on port 8080 to enable sign-in.
+              <Sparkles size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--text-primary)' }}>Live Demo:</strong>{' '}
+                Select a 1-click Demo Account below to instantly explore Candidate, Recruiter, or Admin portals.
               </span>
             </div>
           )}
@@ -227,16 +270,67 @@ const LoginPage = () => {
             </Link>
           </p>
 
-          {import.meta.env.DEV && (
-            <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>DEV Quick Login</p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => devLogin('CANDIDATE')} id="dev-login-candidate" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Candidate</button>
-                <button type="button" onClick={() => devLogin('RECRUITER')} id="dev-login-recruiter" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Recruiter</button>
-                <button type="button" onClick={() => devLogin('ADMIN')} id="dev-login-admin" style={{ flex: '1 1 80px', minHeight: 36, padding: '8px 10px', fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', cursor: 'pointer' }}>Admin</button>
-              </div>
+          <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                Demo Portals (1-Click)
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>Instant Access</span>
             </div>
-          )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 100px), 1fr))', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => devLogin('CANDIDATE')}
+                id="dev-login-candidate"
+                style={{
+                  minHeight: 44, padding: '8px 6px', fontSize: 12, fontWeight: 700,
+                  background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)',
+                  borderRadius: 10, color: '#22d3ee', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,211,238,0.16)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,211,238,0.08)'}
+              >
+                <span>Candidate</span>
+                <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.75 }}>Alex Morgan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => devLogin('RECRUITER')}
+                id="dev-login-recruiter"
+                style={{
+                  minHeight: 44, padding: '8px 6px', fontSize: 12, fontWeight: 700,
+                  background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)',
+                  borderRadius: 10, color: '#4ade80', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,222,128,0.16)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(74,222,128,0.08)'}
+              >
+                <span>Recruiter</span>
+                <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.75 }}>Sarah Chen</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => devLogin('ADMIN')}
+                id="dev-login-admin"
+                style={{
+                  minHeight: 44, padding: '8px 6px', fontSize: 12, fontWeight: 700,
+                  background: 'rgba(129,140,248,0.08)', border: '1px solid rgba(129,140,248,0.25)',
+                  borderRadius: 10, color: '#818cf8', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(129,140,248,0.16)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(129,140,248,0.08)'}
+              >
+                <span>Admin</span>
+                <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.75 }}>Marcus Vance</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
