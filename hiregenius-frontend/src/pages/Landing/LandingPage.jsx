@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence, useInView, useMotionValue, useSpring } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, ArrowRight, CheckCircle2, FileSearch, BrainCircuit,
+  Sparkles, ArrowRight, FileSearch, BrainCircuit,
   Users, BarChart3, Upload, Cpu, MessageSquare, Trophy,
-  Zap, Shield, TrendingUp, Star, ChevronDown, ChevronRight,
-  Globe, Mail, Bookmark, Search, Video, Play, Check, Activity, Briefcase,
-  CircleDot, Layers, Clock, Target, Award, Rocket, ChevronUp,
+  Zap, Shield, TrendingUp, ChevronDown,
+  Bookmark, Search, Video, Play, Check, Briefcase,
+  CircleDot,
 } from 'lucide-react';
 import LandingNavbar from '../../components/Navbar/LandingNavbar';
-import GradientButton from '../../components/GradientButton/GradientButton';
 import AnimatedCounter from '../../components/AnimatedCounter/AnimatedCounter';
 import robotHead from '../../assets/robot-head.png';
+import useTheme from '../../hooks/useTheme';
 
 /* ── Animation variants ─────────────────────────────────────── */
 const fadeUp = {
@@ -93,46 +93,34 @@ const FOOTER_LINKS = {
 };
 
 /* ── Reusable Components ─────────────────────────────────────── */
-const EyebrowBadge = ({ children }) => (
+const EyebrowBadge = ({ children, isDark }) => (
   <div style={{
     display: 'inline-flex', alignItems: 'center', gap: 7,
     padding: '5px 14px', borderRadius: 999,
-    background: 'rgba(61,80,22,0.08)', border: '1px solid rgba(61,80,22,0.18)',
+    background: isDark ? 'rgba(107,138,58,0.15)' : 'rgba(61,80,22,0.08)',
+    border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.18)',
     fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-    color: '#3D5016', marginBottom: 20,
+    color: isDark ? '#a3c55a' : '#3D5016', marginBottom: 20,
   }}>
     <CircleDot size={10} style={{ color: '#6B8A3A' }} />
     {children}
   </div>
 );
 
-const SectionTitle = ({ eyebrow, title, subtitle, centered = true }) => (
-  <div style={{ textAlign: centered ? 'center' : 'left', marginBottom: 64 }}>
-    <EyebrowBadge>{eyebrow}</EyebrowBadge>
-    <h2 style={{
-      fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1,
-      color: '#1A1F0E', letterSpacing: '-0.03em', marginBottom: 16,
-    }}>
-      {title}
-    </h2>
-    {subtitle && (
-      <p style={{
-        fontSize: 17, lineHeight: 1.7, color: '#4A5239',
-        maxWidth: centered ? 560 : 'none', margin: centered ? '0 auto' : 0,
-      }}>
-        {subtitle}
-      </p>
-    )}
-  </div>
-);
-
 /* ── Main Page ───────────────────────────────────────────────── */
 const LandingPage = () => {
   const [openFaq, setOpenFaq] = useState(null);
-  const [hoveredFeature, setHoveredFeature] = useState(null);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   return (
-    <div style={{ backgroundColor: '#0A0E05', color: '#F0EDE4', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{
+      backgroundColor: 'var(--bg-base)',
+      color: 'var(--text-primary)',
+      overflowX: 'hidden',
+      fontFamily: "'Inter', system-ui, sans-serif",
+      transition: 'background-color 0.25s ease, color 0.25s ease',
+    }}>
       <LandingNavbar />
 
       {/* ══════════════════════════════════════════════════════
@@ -146,11 +134,13 @@ const LandingPage = () => {
         {/* Gradient mesh background */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
-          background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(107,138,58,0.22) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(61,80,22,0.14) 0%, transparent 60%), #0A0E05',
+          background: isDark
+            ? 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(107,138,58,0.22) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(61,80,22,0.14) 0%, transparent 60%), var(--bg-base)'
+            : 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(107,138,58,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(61,80,22,0.06) 0%, transparent 60%), var(--bg-base)',
         }} />
         {/* Dot grid */}
         <div style={{
-          position: 'absolute', inset: 0, zIndex: 0, opacity: 0.4,
+          position: 'absolute', inset: 0, zIndex: 0, opacity: isDark ? 0.4 : 0.22,
           backgroundImage: 'radial-gradient(rgba(107,138,58,0.35) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }} />
@@ -158,7 +148,9 @@ const LandingPage = () => {
         <div style={{
           position: 'absolute', top: '-120px', left: '50%', transform: 'translateX(-50%)',
           width: 800, height: 500, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(107,138,58,0.18) 0%, transparent 70%)',
+          background: isDark
+            ? 'radial-gradient(circle, rgba(107,138,58,0.18) 0%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(107,138,58,0.10) 0%, transparent 70%)',
           filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0,
         }} />
 
@@ -169,12 +161,12 @@ const LandingPage = () => {
             style={{ textAlign: 'center', marginBottom: 72 }}
           >
             <motion.div variants={fadeUp}>
-              <EyebrowBadge>AI-Powered Recruitment Platform</EyebrowBadge>
+              <EyebrowBadge isDark={isDark}>AI-Powered Recruitment Platform</EyebrowBadge>
             </motion.div>
 
             <motion.h1 variants={fadeUp} style={{
               fontSize: 'clamp(44px, 6vw, 84px)', fontWeight: 900, lineHeight: 1.04,
-              letterSpacing: '-0.04em', marginBottom: 24, color: '#F0EDE4',
+              letterSpacing: '-0.04em', marginBottom: 24, color: 'var(--text-primary)',
             }}>
               Hire smarter with{' '}
               <span style={{
@@ -189,7 +181,7 @@ const LandingPage = () => {
             </motion.h1>
 
             <motion.p variants={fadeUp} style={{
-              fontSize: 18, lineHeight: 1.7, color: 'rgba(240,237,228,0.65)',
+              fontSize: 18, lineHeight: 1.7, color: 'var(--text-secondary)',
               maxWidth: 560, margin: '0 auto 40px',
             }}>
               Post a job, let AI score every resume in under 10 seconds,
@@ -213,12 +205,14 @@ const LandingPage = () => {
               <Link to="/register" id="hero-demo" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '14px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600,
-                color: 'rgba(240,237,228,0.80)', textDecoration: 'none',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                color: 'var(--text-primary)', textDecoration: 'none',
+                background: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
+                border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(61,80,22,0.18)',
+                boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.06)',
                 backdropFilter: 'blur(12px)', transition: 'all 0.2s',
               }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(240,237,228,0.80)'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF'; }}
               >
                 <Play size={13} fill="currentColor" /> Watch Demo
               </Link>
@@ -244,16 +238,17 @@ const LandingPage = () => {
               className="bento-card-score"
               style={{
                 gridColumn: '1 / 4', gridRow: '1',
-                background: 'rgba(20,28,10,0.85)', border: '1px solid rgba(107,138,58,0.22)',
+                background: isDark ? 'rgba(20,28,10,0.85)' : '#FFFFFF',
+                border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: 24, backdropFilter: 'blur(20px)',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               }}
             >
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(163,197,90,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.75)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
               <div style={{ position: 'relative', width: 88, height: 88 }}>
                 <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="44" cy="44" r="36" fill="none" stroke="rgba(107,138,58,0.15)" strokeWidth="7" />
+                  <circle cx="44" cy="44" r="36" fill="none" stroke={isDark ? 'rgba(107,138,58,0.15)' : 'rgba(61,80,22,0.10)'} strokeWidth="7" />
                   <circle cx="44" cy="44" r="36" fill="none"
                     stroke="url(#sg1)" strokeWidth="7" strokeLinecap="round"
                     strokeDasharray={226} strokeDashoffset={226 - (92 / 100) * 226}
@@ -265,24 +260,25 @@ const LandingPage = () => {
                     </linearGradient>
                   </defs>
                 </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#F0EDE4' }}>92%</div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: 'var(--text-primary)' }}>92%</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#4A7C3F', fontSize: 12, fontWeight: 700 }}>
                 <Check size={13} strokeWidth={3} /> Highly Recommended
               </div>
-              <span style={{ fontSize: 10, color: 'rgba(240,237,228,0.35)' }}>Scored in 8.2 seconds</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Scored in 8.2 seconds</span>
             </motion.div>
 
             {/* Card: Candidate Dashboard */}
             <div className="bento-card-candidates" style={{
               gridColumn: '4 / 10', gridRow: '1',
-              background: 'rgba(18,24,10,0.90)', border: '1px solid rgba(107,138,58,0.18)',
+              background: isDark ? 'rgba(18,24,10,0.90)' : '#FFFFFF',
+              border: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)',
               borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(20px)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+              boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
             }}>
               {/* Topbar */}
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(107,138,58,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#F0EDE4' }}>Top Candidates</span>
+              <div style={{ padding: '14px 18px', borderBottom: isDark ? '1px solid rgba(107,138,58,0.12)' : '1px solid rgba(61,80,22,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Top Candidates</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: '#4A7C3F', background: 'rgba(74,124,63,0.12)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(74,124,63,0.25)' }}>
                   <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>●</motion.span> Live
                 </div>
@@ -293,14 +289,18 @@ const LandingPage = () => {
                   { name: 'Priya Sharma', role: 'Frontend Developer', match: 88, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop' },
                   { name: 'Rohan Verma', role: 'Backend Developer', match: 85, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop' },
                 ].map((c, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 12, background: 'rgba(107,138,58,0.07)', border: '1px solid rgba(107,138,58,0.12)' }}>
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 12,
+                    background: isDark ? 'rgba(107,138,58,0.07)' : 'rgba(61,80,22,0.04)',
+                    border: isDark ? '1px solid rgba(107,138,58,0.12)' : '1px solid rgba(61,80,22,0.08)',
+                  }}>
                     <img src={c.avatar} alt={c.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#F0EDE4', lineHeight: 1.2 }}>{c.name}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(240,237,228,0.45)' }}>{c.role}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{c.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{c.role}</div>
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 800, color: '#4A7C3F' }}>{c.match}% Match</span>
-                    <Bookmark size={12} style={{ color: 'rgba(240,237,228,0.30)' }} />
+                    <Bookmark size={12} style={{ color: 'var(--text-muted)' }} />
                   </div>
                 ))}
               </div>
@@ -312,24 +312,24 @@ const LandingPage = () => {
               className="bento-card-interview"
               style={{
                 gridColumn: '10 / 13', gridRow: '1',
-                background: 'linear-gradient(135deg, #1a2d0a 0%, #0e1906 100%)',
-                border: '1px solid rgba(107,138,58,0.30)',
+                background: isDark ? 'linear-gradient(135deg, #1a2d0a 0%, #0e1906 100%)' : '#FFFFFF',
+                border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: '20px 16px', backdropFilter: 'blur(20px)',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
                 display: 'flex', flexDirection: 'column', gap: 14,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(107,138,58,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: isDark ? 'rgba(107,138,58,0.20)' : 'rgba(61,80,22,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Video size={15} style={{ color: '#6B8A3A' }} />
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#F0EDE4' }}>AI Interview</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>AI Interview</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, background: 'rgba(74,124,63,0.15)', border: '1px solid rgba(74,124,63,0.25)' }}>
                 <Check size={12} strokeWidth={3} style={{ color: '#4A7C3F' }} />
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#4A7C3F' }}>Completed</span>
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(240,237,228,0.35)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 12 Q&A evaluated<br />Score: 87/100
               </div>
             </motion.div>
@@ -337,13 +337,20 @@ const LandingPage = () => {
             {/* Card: Pipeline */}
             <div className="bento-card-pipeline" style={{
               gridColumn: '1 / 8', gridRow: '2',
-              background: 'rgba(18,24,10,0.90)', border: '1px solid rgba(107,138,58,0.18)',
+              background: isDark ? 'rgba(18,24,10,0.90)' : '#FFFFFF',
+              border: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)',
               borderRadius: 20, padding: 22, backdropFilter: 'blur(20px)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+              boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.4)' : '0 20px 50px rgba(61,80,22,0.10)',
             }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#F0EDE4', marginBottom: 18 }}>Hiring Pipeline</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 18 }}>Hiring Pipeline</div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 clamp(2px, 1vw, 8px)', overflowX: 'auto' }}>
-                <div style={{ position: 'absolute', top: 16, left: 20, right: 20, height: 2, background: 'linear-gradient(90deg, #3D5016 60%, rgba(107,138,58,0.2) 60%)', zIndex: 0 }} />
+                <div style={{
+                  position: 'absolute', top: 16, left: 20, right: 20, height: 2,
+                  background: isDark
+                    ? 'linear-gradient(90deg, #3D5016 60%, rgba(107,138,58,0.2) 60%)'
+                    : 'linear-gradient(90deg, #3D5016 60%, rgba(61,80,22,0.15) 60%)',
+                  zIndex: 0,
+                }} />
                 {[
                   { label: 'Job Posted', icon: Briefcase, done: true },
                   { label: 'Screening', icon: Search, done: true },
@@ -354,15 +361,15 @@ const LandingPage = () => {
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 1, minWidth: 44 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10,
-                      background: s.current ? '#3D5016' : s.done ? 'rgba(61,80,22,0.30)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${s.current ? '#6B8A3A' : s.done ? 'rgba(107,138,58,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                      background: s.current ? '#3D5016' : s.done ? (isDark ? 'rgba(61,80,22,0.30)' : 'rgba(61,80,22,0.12)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.04)'),
+                      border: `1px solid ${s.current ? '#6B8A3A' : s.done ? (isDark ? 'rgba(107,138,58,0.35)' : 'rgba(61,80,22,0.25)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(61,80,22,0.08)')}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: s.current ? '#fff' : s.done ? '#6B8A3A' : 'rgba(240,237,228,0.25)',
+                      color: s.current ? '#fff' : s.done ? '#6B8A3A' : 'var(--text-muted)',
                       boxShadow: s.current ? '0 0 20px rgba(107,138,58,0.5)' : 'none',
                     }}>
                       <s.icon size={14} />
                     </div>
-                    <span style={{ fontSize: 9, fontWeight: s.done ? 700 : 500, color: s.done ? 'rgba(240,237,228,0.70)' : 'rgba(240,237,228,0.25)', textAlign: 'center', maxWidth: 52 }}>{s.label}</span>
+                    <span style={{ fontSize: 9, fontWeight: s.done ? 700 : 500, color: s.done ? 'var(--text-primary)' : 'var(--text-muted)', textAlign: 'center', maxWidth: 52 }}>{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -374,24 +381,25 @@ const LandingPage = () => {
               className="bento-card-stats"
               style={{
                 gridColumn: '8 / 13', gridRow: '2',
-                background: 'rgba(20,28,10,0.85)', border: '1px solid rgba(107,138,58,0.20)',
+                background: isDark ? 'rgba(20,28,10,0.85)' : '#FFFFFF',
+                border: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: 22, backdropFilter: 'blur(20px)',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.4)' : '0 20px 50px rgba(61,80,22,0.10)',
                 display: 'flex', flexDirection: 'column', gap: 16,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(163,197,90,0.55)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.75)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
               {[
                 { text: '120 resumes screened', time: '2m ago', color: '#4A7C3F' },
                 { text: 'AI interviews completed', time: '15m ago', color: '#4A7C3F' },
-                { text: 'Top candidates updated', time: '1h ago', color: 'rgba(240,237,228,0.30)' },
+                { text: 'Top candidates updated', time: '1h ago', color: 'var(--text-muted)' },
               ].map((act, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: act.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: 'rgba(240,237,228,0.70)', fontWeight: 500 }}>{act.text}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{act.text}</span>
                   </div>
-                  <span style={{ fontSize: 10, color: 'rgba(240,237,228,0.25)', whiteSpace: 'nowrap' }}>{act.time}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{act.time}</span>
                 </div>
               ))}
             </motion.div>
@@ -404,7 +412,7 @@ const LandingPage = () => {
             animate={{ y: [0, -12, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
             style={{
               position: 'absolute', bottom: -40, right: 0, width: 110, height: 110,
-              objectFit: 'contain', zIndex: 20, filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.45))',
+              objectFit: 'contain', zIndex: 20, filter: 'drop-shadow(0 16px 32px rgba(0,0,0,0.35))',
               pointerEvents: 'none',
             }}
           />
@@ -416,13 +424,15 @@ const LandingPage = () => {
           transition={{ delay: 1.2, duration: 0.6 }}
           style={{ position: 'relative', zIndex: 1, marginTop: 80, textAlign: 'center' }}
         >
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(240,237,228,0.30)', textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 20 }}>Trusted by teams at</p>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: 20 }}>Trusted by teams at</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             {TRUSTED.map(name => (
               <div key={name} style={{
                 padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                color: 'rgba(240,237,228,0.35)', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)', letterSpacing: '0.02em',
+                color: 'var(--text-secondary)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.05)',
+                border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(61,80,22,0.12)',
+                letterSpacing: '0.02em',
               }}>{name}</div>
             ))}
           </div>
@@ -433,8 +443,10 @@ const LandingPage = () => {
           STATS BAND
       ══════════════════════════════════════════════════════ */}
       <section style={{
-        borderTop: '1px solid rgba(107,138,58,0.15)', borderBottom: '1px solid rgba(107,138,58,0.15)',
-        background: 'linear-gradient(135deg, rgba(61,80,22,0.12) 0%, rgba(107,138,58,0.06) 100%)',
+        borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(61,80,22,0.12) 0%, rgba(107,138,58,0.06) 100%)'
+          : 'linear-gradient(135deg, rgba(61,80,22,0.05) 0%, rgba(107,138,58,0.02) 100%)',
         padding: '64px 40px',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 48 }}>
@@ -443,12 +455,14 @@ const LandingPage = () => {
               <div style={{
                 fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 900, lineHeight: 1,
                 letterSpacing: '-0.04em', marginBottom: 8,
-                background: 'linear-gradient(135deg, #F0EDE4 0%, rgba(163,197,90,0.90) 100%)',
+                background: isDark
+                  ? 'linear-gradient(135deg, #F0EDE4 0%, rgba(163,197,90,0.90) 100%)'
+                  : 'linear-gradient(135deg, #1A1F0E 0%, #3D5016 100%)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}>
                 <AnimatedCounter value={value} suffix={suffix} />
               </div>
-              <div style={{ fontSize: 14, color: 'rgba(240,237,228,0.50)', fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -457,47 +471,57 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           HOW IT WORKS — Numbered timeline
       ══════════════════════════════════════════════════════ */}
-      <section id="how-it-works" style={{ padding: '120px 40px', background: '#0A0E05' }}>
+      <section id="how-it-works" style={{ padding: '120px 40px', background: 'var(--bg-base)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 80 }}>
-              <EyebrowBadge>How It Works</EyebrowBadge>
-              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#F0EDE4', marginBottom: 16 }}>
+              <EyebrowBadge isDark={isDark}>How It Works</EyebrowBadge>
+              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--text-primary)', marginBottom: 16 }}>
                 From job post to ranked shortlist
               </h2>
-              <p style={{ fontSize: 17, color: 'rgba(240,237,228,0.55)', maxWidth: 500, margin: '0 auto' }}>
+              <p style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 500, margin: '0 auto' }}>
                 Four intelligent steps — automated by multi-agent AI.
               </p>
             </motion.div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, position: 'relative' }}>
               {/* Connector */}
-              <div style={{ position: 'absolute', top: 36, left: '12%', right: '12%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(107,138,58,0.30), transparent)', zIndex: 0 }} aria-hidden />
+              <div style={{
+                position: 'absolute', top: 36, left: '12%', right: '12%', height: 1,
+                background: isDark
+                  ? 'linear-gradient(90deg, transparent, rgba(107,138,58,0.30), transparent)'
+                  : 'linear-gradient(90deg, transparent, rgba(61,80,22,0.20), transparent)',
+                zIndex: 0,
+              }} aria-hidden />
 
-              {HOW_IT_WORKS.map(({ icon: Icon, step, title, desc }, i) => (
+              {HOW_IT_WORKS.map(({ icon: Icon, step, title, desc }) => (
                 <motion.div key={step} variants={fadeUp}
                   style={{
-                    background: 'rgba(18,24,10,0.80)', border: '1px solid rgba(107,138,58,0.15)',
+                    background: isDark ? 'rgba(18,24,10,0.80)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 20, padding: '28px 24px', position: 'relative', zIndex: 1,
+                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
                     transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
                     cursor: 'default',
                   }}
-                  whileHover={{ y: -4, borderColor: 'rgba(107,138,58,0.40)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}
+                  whileHover={{ y: -4, borderColor: isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
                 >
                   {/* Step number */}
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(107,138,58,0.50)', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 16 }}>Step {step}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: isDark ? 'rgba(107,138,58,0.60)' : '#6B8A3A', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 16 }}>Step {step}</div>
                   {/* Icon */}
                   <div style={{
                     width: 52, height: 52, borderRadius: 14, marginBottom: 20,
-                    background: 'linear-gradient(135deg, rgba(61,80,22,0.50), rgba(107,138,58,0.25))',
-                    border: '1px solid rgba(107,138,58,0.30)',
+                    background: isDark
+                      ? 'linear-gradient(135deg, rgba(61,80,22,0.50), rgba(107,138,58,0.25))'
+                      : 'linear-gradient(135deg, rgba(61,80,22,0.14), rgba(107,138,58,0.08))',
+                    border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.20)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(61,80,22,0.25)',
+                    boxShadow: '0 8px 24px rgba(61,80,22,0.15)',
                   }}>
-                    <Icon size={24} style={{ color: '#a3c55a' }} />
+                    <Icon size={24} style={{ color: isDark ? '#a3c55a' : '#3D5016' }} />
                   </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: '#F0EDE4', marginBottom: 10, letterSpacing: '-0.02em' }}>{title}</h3>
-                  <p style={{ fontSize: 14, lineHeight: 1.7, color: 'rgba(240,237,228,0.50)' }}>{desc}</p>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10, letterSpacing: '-0.02em' }}>{title}</h3>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}>{desc}</p>
                   {/* Bottom accent line */}
                   <div style={{ position: 'absolute', bottom: 0, left: 20, right: 20, height: 2, borderRadius: 999, background: 'linear-gradient(90deg, transparent, rgba(107,138,58,0.40), transparent)' }} />
                 </motion.div>
@@ -512,39 +536,45 @@ const LandingPage = () => {
       ══════════════════════════════════════════════════════ */}
       <section id="features" style={{
         padding: '120px 40px',
-        background: 'linear-gradient(180deg, rgba(18,24,10,0.95) 0%, #0A0E05 100%)',
-        borderTop: '1px solid rgba(107,138,58,0.12)',
+        background: isDark
+          ? 'linear-gradient(180deg, rgba(18,24,10,0.95) 0%, #0A0E05 100%)'
+          : 'var(--bg-surface)',
+        borderTop: '1px solid var(--border)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 72 }}>
-              <EyebrowBadge>Platform Modules</EyebrowBadge>
-              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#F0EDE4', marginBottom: 16 }}>
+              <EyebrowBadge isDark={isDark}>Platform Modules</EyebrowBadge>
+              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--text-primary)', marginBottom: 16 }}>
                 Everything your hiring team needs
               </h2>
-              <p style={{ fontSize: 17, color: 'rgba(240,237,228,0.50)', maxWidth: 500, margin: '0 auto' }}>
+              <p style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 500, margin: '0 auto' }}>
                 One platform — from resume to hire decision — powered by multi-agent AI.
               </p>
             </motion.div>
 
             {/* Bento layout */}
             <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: 20 }}>
-              {FEATURES.map(({ icon: Icon, tag, title, desc, tags, href, size, accent }, i) => (
+              {FEATURES.map(({ icon: Icon, tag, title, desc, tags, href, size, accent }) => (
                 <motion.div key={title} variants={scaleIn}
                   style={{
                     gridColumn: size === 'large' ? 'span 1' : 'span 1',
-                    background: 'rgba(15,22,8,0.90)', border: '1px solid rgba(107,138,58,0.15)',
+                    background: isDark ? 'rgba(15,22,8,0.90)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 24, overflow: 'hidden', cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
                     transition: 'border-color 0.25s, box-shadow 0.25s, transform 0.25s',
                     position: 'relative',
                   }}
-                  whileHover={{ y: -6, borderColor: 'rgba(107,138,58,0.45)', boxShadow: `0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(107,138,58,0.22)` }}
+                  whileHover={{ y: -6, borderColor: isDark ? 'rgba(107,138,58,0.45)' : 'rgba(61,80,22,0.35)', boxShadow: `0 32px 80px rgba(0,0,0,0.18)` }}
                 >
                   {/* Gradient header */}
                   <div style={{
                     height: size === 'large' ? 180 : 130,
-                    background: `linear-gradient(135deg, ${accent}22 0%, rgba(107,138,58,0.08) 100%)`,
-                    borderBottom: '1px solid rgba(107,138,58,0.12)',
+                    background: isDark
+                      ? `linear-gradient(135deg, ${accent}22 0%, rgba(107,138,58,0.08) 100%)`
+                      : `linear-gradient(135deg, ${accent}12 0%, rgba(107,138,58,0.04) 100%)`,
+                    borderBottom: isDark ? '1px solid rgba(107,138,58,0.12)' : '1px solid rgba(61,80,22,0.08)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     position: 'relative', overflow: 'hidden',
                   }}>
@@ -556,30 +586,37 @@ const LandingPage = () => {
                     <div style={{
                       width: size === 'large' ? 68 : 54, height: size === 'large' ? 68 : 54,
                       borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `linear-gradient(135deg, ${accent}33, ${accent}15)`,
-                      border: `1px solid ${accent}44`,
-                      boxShadow: `0 12px 32px ${accent}30`,
+                      background: isDark ? `linear-gradient(135deg, ${accent}33, ${accent}15)` : '#FFFFFF',
+                      border: isDark ? `1px solid ${accent}44` : `1px solid rgba(61,80,22,0.15)`,
+                      boxShadow: isDark ? `0 12px 32px ${accent}30` : '0 8px 24px rgba(61,80,22,0.10)',
                       position: 'relative', zIndex: 1,
                     }}>
-                      <Icon size={size === 'large' ? 30 : 24} style={{ color: '#a3c55a' }} />
+                      <Icon size={size === 'large' ? 30 : 24} style={{ color: isDark ? '#a3c55a' : '#3D5016' }} />
                     </div>
                     {/* Tag badge */}
                     <div style={{
                       position: 'absolute', top: 14, right: 14,
                       fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
                       padding: '3px 10px', borderRadius: 999,
-                      background: `${accent}22`, border: `1px solid ${accent}44`, color: '#a3c55a',
+                      background: isDark ? `${accent}22` : 'rgba(61,80,22,0.08)',
+                      border: isDark ? `1px solid ${accent}44` : '1px solid rgba(61,80,22,0.18)',
+                      color: isDark ? '#a3c55a' : '#3D5016',
                     }}>
                       {tag}
                     </div>
                   </div>
                   {/* Content */}
                   <div style={{ padding: size === 'large' ? '28px 28px 24px' : '20px 22px 18px' }}>
-                    <h3 style={{ fontSize: size === 'large' ? 20 : 17, fontWeight: 700, color: '#F0EDE4', marginBottom: 10, letterSpacing: '-0.02em' }}>{title}</h3>
-                    <p style={{ fontSize: 14, lineHeight: 1.7, color: 'rgba(240,237,228,0.50)', marginBottom: 18 }}>{desc}</p>
+                    <h3 style={{ fontSize: size === 'large' ? 20 : 17, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10, letterSpacing: '-0.02em' }}>{title}</h3>
+                    <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: 18 }}>{desc}</p>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
                       {tags.map(t => (
-                        <span key={t} style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'rgba(107,138,58,0.10)', border: '1px solid rgba(107,138,58,0.20)', color: 'rgba(163,197,90,0.80)' }}>{t}</span>
+                        <span key={t} style={{
+                          fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
+                          background: isDark ? 'rgba(107,138,58,0.10)' : 'rgba(61,80,22,0.06)',
+                          border: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
+                          color: isDark ? 'rgba(163,197,90,0.80)' : '#3D5016',
+                        }}>{t}</span>
                       ))}
                     </div>
                     <Link to={href} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#6B8A3A', textDecoration: 'none', transition: 'color 0.15s' }}
@@ -599,54 +636,60 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           BENEFITS — Horizontal magazine cards
       ══════════════════════════════════════════════════════ */}
-      <section id="benefits" style={{ padding: '120px 40px', background: '#0A0E05', borderTop: '1px solid rgba(107,138,58,0.12)' }}>
+      <section id="benefits" style={{ padding: '120px 40px', background: 'var(--bg-base)', borderTop: '1px solid var(--border)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 72 }}>
-              <EyebrowBadge>Why HireGenius AI</EyebrowBadge>
-              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#F0EDE4', marginBottom: 16 }}>
+              <EyebrowBadge isDark={isDark}>Why HireGenius AI</EyebrowBadge>
+              <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--text-primary)', marginBottom: 16 }}>
                 Built for modern recruiting teams
               </h2>
-              <p style={{ fontSize: 17, color: 'rgba(240,237,228,0.50)', maxWidth: 480, margin: '0 auto' }}>
+              <p style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto' }}>
                 Practical benefits that translate into faster, fairer, smarter hiring.
               </p>
             </motion.div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {BENEFITS.map(({ icon: Icon, title, desc, metric, metricLabel }, i) => (
+              {BENEFITS.map(({ icon: Icon, title, desc, metric, metricLabel }) => (
                 <motion.div key={title} variants={fadeUp} className="benefit-card"
                   style={{
                     display: 'grid', gridTemplateColumns: 'auto 1fr auto',
                     gap: 32, alignItems: 'center',
-                    background: 'rgba(15,22,8,0.85)', border: '1px solid rgba(107,138,58,0.15)',
+                    background: isDark ? 'rgba(15,22,8,0.85)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 20, padding: '28px 32px',
+                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
                     transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
                   }}
-                  whileHover={{ borderColor: 'rgba(107,138,58,0.40)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', y: -3 }}
+                  whileHover={{ borderColor: isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', y: -3 }}
                 >
                   {/* Icon square */}
                   <div style={{
                     width: 60, height: 60, borderRadius: 16, flexShrink: 0,
-                    background: 'linear-gradient(135deg, rgba(61,80,22,0.40), rgba(107,138,58,0.20))',
-                    border: '1px solid rgba(107,138,58,0.30)',
+                    background: isDark
+                      ? 'linear-gradient(135deg, rgba(61,80,22,0.40), rgba(107,138,58,0.20))'
+                      : 'linear-gradient(135deg, rgba(61,80,22,0.12), rgba(107,138,58,0.06))',
+                    border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.20)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 8px 24px rgba(61,80,22,0.30)',
+                    boxShadow: '0 8px 24px rgba(61,80,22,0.15)',
                   }}>
-                    <Icon size={26} style={{ color: '#a3c55a' }} />
+                    <Icon size={26} style={{ color: isDark ? '#a3c55a' : '#3D5016' }} />
                   </div>
                   {/* Content */}
                   <div>
-                    <h3 style={{ fontSize: 19, fontWeight: 700, color: '#F0EDE4', marginBottom: 8, letterSpacing: '-0.02em' }}>{title}</h3>
-                    <p style={{ fontSize: 14, lineHeight: 1.7, color: 'rgba(240,237,228,0.50)' }}>{desc}</p>
+                    <h3 style={{ fontSize: 19, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>{title}</h3>
+                    <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}>{desc}</p>
                   </div>
                   {/* Big metric */}
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
                     <div style={{
                       fontSize: 42, fontWeight: 900, lineHeight: 1, letterSpacing: '-0.04em',
-                      background: 'linear-gradient(135deg, #F0EDE4 0%, rgba(163,197,90,0.90) 100%)',
+                      background: isDark
+                        ? 'linear-gradient(135deg, #F0EDE4 0%, rgba(163,197,90,0.90) 100%)'
+                        : 'linear-gradient(135deg, #1A1F0E 0%, #3D5016 100%)',
                       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                     }}>{metric}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(240,237,228,0.35)', fontWeight: 600, marginTop: 2 }}>{metricLabel}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>{metricLabel}</div>
                   </div>
                 </motion.div>
               ))}
@@ -660,18 +703,20 @@ const LandingPage = () => {
       ══════════════════════════════════════════════════════ */}
       <section style={{
         padding: '100px 40px',
-        background: 'linear-gradient(135deg, rgba(61,80,22,0.25) 0%, rgba(107,138,58,0.10) 50%, rgba(61,80,22,0.20) 100%)',
-        borderTop: '1px solid rgba(107,138,58,0.20)', borderBottom: '1px solid rgba(107,138,58,0.20)',
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(61,80,22,0.25) 0%, rgba(107,138,58,0.10) 50%, rgba(61,80,22,0.20) 100%)'
+          : 'linear-gradient(135deg, rgba(61,80,22,0.12) 0%, rgba(107,138,58,0.05) 50%, rgba(61,80,22,0.08) 100%)',
+        borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
         position: 'relative', overflow: 'hidden',
         textAlign: 'center',
       }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.15) 1px, transparent 1px)', backgroundSize: '28px 28px', opacity: 0.5 }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto' }}>
-          <EyebrowBadge>Free to start</EyebrowBadge>
-          <h2 style={{ fontSize: 'clamp(32px, 5vw, 58px)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.04em', color: '#F0EDE4', marginBottom: 20 }}>
+          <EyebrowBadge isDark={isDark}>Free to start</EyebrowBadge>
+          <h2 style={{ fontSize: 'clamp(32px, 5vw, 58px)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.04em', color: 'var(--text-primary)', marginBottom: 20 }}>
             Ready to hire smarter?
           </h2>
-          <p style={{ fontSize: 17, color: 'rgba(240,237,228,0.55)', marginBottom: 40, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 17, color: 'var(--text-secondary)', marginBottom: 40, lineHeight: 1.6 }}>
             Join 500+ hiring teams screening candidates 10× faster with AI.<br />No credit card required.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -690,12 +735,14 @@ const LandingPage = () => {
             <Link to="/login" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '15px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600,
-              color: 'rgba(240,237,228,0.75)', textDecoration: 'none',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: 'var(--text-primary)', textDecoration: 'none',
+              background: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
+              border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(61,80,22,0.18)',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.06)',
               transition: 'all 0.2s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(240,237,228,0.75)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.06)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF'; }}
             >
               Log in instead
             </Link>
@@ -706,15 +753,15 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           FAQ
       ══════════════════════════════════════════════════════ */}
-      <section id="faq" style={{ padding: '120px 40px', background: '#0A0E05' }}>
+      <section id="faq" style={{ padding: '120px 40px', background: 'var(--bg-base)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 72 }}>
-              <EyebrowBadge>FAQ</EyebrowBadge>
-              <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#F0EDE4', marginBottom: 16 }}>
+              <EyebrowBadge isDark={isDark}>FAQ</EyebrowBadge>
+              <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--text-primary)', marginBottom: 16 }}>
                 Common questions
               </h2>
-              <p style={{ fontSize: 16, color: 'rgba(240,237,228,0.45)', maxWidth: 440, margin: '0 auto' }}>
+              <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 440, margin: '0 auto' }}>
                 Everything you need to know before you start.
               </p>
             </motion.div>
@@ -728,18 +775,21 @@ const LandingPage = () => {
                       width: '100%', textAlign: 'left',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
                       padding: '22px 24px',
-                      background: openFaq === i ? 'rgba(61,80,22,0.18)' : 'rgba(15,22,8,0.85)',
-                      border: `1px solid ${openFaq === i ? 'rgba(107,138,58,0.40)' : 'rgba(107,138,58,0.14)'}`,
+                      background: openFaq === i
+                        ? (isDark ? 'rgba(61,80,22,0.18)' : 'rgba(61,80,22,0.08)')
+                        : (isDark ? 'rgba(15,22,8,0.85)' : '#FFFFFF'),
+                      border: `1px solid ${openFaq === i ? (isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)') : 'var(--border)'}`,
                       borderRadius: openFaq === i ? '16px 16px 0 0' : 16,
                       cursor: 'pointer', transition: 'all 0.2s',
-                      fontSize: 15, fontWeight: 600, color: openFaq === i ? '#F0EDE4' : 'rgba(240,237,228,0.75)',
+                      boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.04)',
+                      fontSize: 15, fontWeight: 600, color: 'var(--text-primary)',
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(107,138,58,0.50)', minWidth: 24 }}>0{i + 1}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: isDark ? 'rgba(107,138,58,0.60)' : '#6B8A3A', minWidth: 24 }}>0{i + 1}</span>
                       {q}
                     </span>
-                    <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, color: openFaq === i ? '#6B8A3A' : 'rgba(240,237,228,0.30)' }}>
+                    <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, color: '#6B8A3A' }}>
                       <ChevronDown size={18} />
                     </motion.div>
                   </button>
@@ -752,9 +802,10 @@ const LandingPage = () => {
                       >
                         <div style={{
                           padding: '16px 24px 24px',
-                          background: 'rgba(61,80,22,0.10)', border: '1px solid rgba(107,138,58,0.25)',
+                          background: isDark ? 'rgba(61,80,22,0.10)' : 'rgba(61,80,22,0.04)',
+                          border: `1px solid ${isDark ? 'rgba(107,138,58,0.25)' : 'rgba(61,80,22,0.15)'}`,
                           borderTop: 'none', borderRadius: '0 0 16px 16px',
-                          fontSize: 14, lineHeight: 1.8, color: 'rgba(240,237,228,0.60)',
+                          fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)',
                         }}>
                           {a}
                         </div>
@@ -772,7 +823,8 @@ const LandingPage = () => {
           FOOTER
       ══════════════════════════════════════════════════════ */}
       <footer style={{
-        background: '#060A03', borderTop: '1px solid rgba(107,138,58,0.15)',
+        background: isDark ? '#070A03' : 'var(--bg-surface)',
+        borderTop: '1px solid var(--border)',
         padding: '72px 40px 40px',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -783,16 +835,20 @@ const LandingPage = () => {
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(61,80,22,0.4)' }}>
                   <Sparkles size={16} color="#fff" />
                 </div>
-                <span style={{ fontWeight: 800, fontSize: 15, color: '#F0EDE4', letterSpacing: '-0.02em' }}>
+                <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                   HireGenius <span style={{ background: 'linear-gradient(135deg, #6B8A3A, #a3c55a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>AI</span>
                 </span>
               </Link>
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: 'rgba(240,237,228,0.35)', maxWidth: 240, marginBottom: 24 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text-muted)', maxWidth: 240, marginBottom: 24 }}>
                 AI-powered recruitment platform. Screen, interview, and rank candidates in minutes.
               </p>
               {/* Newsletter */}
-              <div style={{ display: 'flex', gap: 0, maxWidth: 280, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(107,138,58,0.20)', background: 'rgba(255,255,255,0.04)' }}>
-                <input placeholder="Your email address" style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: 'rgba(240,237,228,0.70)', fontFamily: 'inherit' }} />
+              <div style={{
+                display: 'flex', gap: 0, maxWidth: 280, borderRadius: 10, overflow: 'hidden',
+                border: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.18)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+              }}>
+                <input placeholder="Your email address" style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: 'var(--text-primary)', fontFamily: 'inherit' }} />
                 <button style={{ padding: '10px 14px', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
                   Subscribe
                 </button>
@@ -801,12 +857,12 @@ const LandingPage = () => {
             {/* Link columns */}
             {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
               <div key={heading}>
-                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.10em', color: 'rgba(163,197,90,0.50)', marginBottom: 16 }}>{heading}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.10em', color: isDark ? 'rgba(163,197,90,0.75)' : '#3D5016', marginBottom: 16 }}>{heading}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {links.map(link => (
-                    <a key={link} href="#" style={{ fontSize: 13, color: 'rgba(240,237,228,0.40)', textDecoration: 'none', transition: 'color 0.15s' }}
-                      onMouseEnter={e => e.target.style.color = 'rgba(240,237,228,0.80)'}
-                      onMouseLeave={e => e.target.style.color = 'rgba(240,237,228,0.40)'}
+                    <a key={link} href="#" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s' }}
+                      onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
+                      onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
                     >{link}</a>
                   ))}
                 </div>
@@ -814,13 +870,13 @@ const LandingPage = () => {
             ))}
           </div>
           {/* Bottom bar */}
-          <div style={{ borderTop: '1px solid rgba(107,138,58,0.12)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <span style={{ fontSize: 12, color: 'rgba(240,237,228,0.25)' }}>© 2026 HireGenius AI. All rights reserved.</span>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>© 2026 HireGenius AI. All rights reserved.</span>
             <div style={{ display: 'flex', gap: 16 }}>
               {['Privacy', 'Terms', 'Security'].map(item => (
-                <a key={item} href="#" style={{ fontSize: 12, color: 'rgba(240,237,228,0.25)', textDecoration: 'none', transition: 'color 0.15s' }}
-                  onMouseEnter={e => e.target.style.color = 'rgba(240,237,228,0.60)'}
-                  onMouseLeave={e => e.target.style.color = 'rgba(240,237,228,0.25)'}
+                <a key={item} href="#" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
                 >{item}</a>
               ))}
             </div>
@@ -837,7 +893,7 @@ const LandingPage = () => {
         html { scroll-behavior: smooth; }
         ::selection { background: rgba(107,138,58,0.35); color: #F0EDE4; }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0A0E05; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
         ::-webkit-scrollbar-thumb { background: rgba(107,138,58,0.30); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(107,138,58,0.50); }
 

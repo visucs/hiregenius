@@ -33,6 +33,8 @@ const LandingNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isDark = theme === 'dark';
+
   const dropRef = useRef(null);
   const hoverTimer = useRef(null);
 
@@ -129,11 +131,15 @@ const LandingNavbar = () => {
     setDropOpen(false);
   };
 
-  /* ── Design Tokens ─────────────────────────────────────────── */
-  const navBg = scrolled ? 'rgba(10,14,5,0.92)' : 'rgba(10,14,5,0.0)';
-  const navBorder = scrolled ? 'rgba(107,138,58,0.18)' : 'rgba(107,138,58,0.0)';
-  const textPri = '#F0EDE4';
-  const textMuted = 'rgba(240,237,228,0.52)';
+  /* ── Dynamic Design Tokens (Theme-aware) ─────────────────────── */
+  const navBg = scrolled
+    ? (isDark ? 'rgba(10,14,5,0.92)' : 'rgba(242,239,232,0.92)')
+    : 'transparent';
+  const navBorder = scrolled
+    ? (isDark ? 'rgba(107,138,58,0.18)' : 'rgba(61,80,22,0.12)')
+    : 'transparent';
+  const textPri = isDark ? '#F0EDE4' : '#1A1F0E';
+  const textMuted = isDark ? 'rgba(240,237,228,0.60)' : 'rgba(26,31,14,0.65)';
 
   return (
     <>
@@ -236,14 +242,16 @@ const LandingNavbar = () => {
                   fontSize: 13,
                   fontWeight: 500,
                   color: dropOpen ? textPri : textMuted,
-                  background: dropOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  background: dropOpen
+                    ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.08)')
+                    : 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = textPri;
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.08)';
                 }}
                 onMouseLeave={(e) => {
                   if (!dropOpen) {
@@ -279,7 +287,7 @@ const LandingNavbar = () => {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = textPri;
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.08)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = textMuted;
@@ -309,10 +317,12 @@ const LandingNavbar = () => {
                   transform: 'translateX(-50%)',
                   width: 720,
                   maxWidth: 'calc(100vw - 32px)',
-                  background: 'rgba(12,18,6,0.98)',
-                  border: '1px solid rgba(107,138,58,0.22)',
+                  background: isDark ? 'rgba(12,18,6,0.98)' : 'rgba(255,255,255,0.98)',
+                  border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.15)',
                   borderRadius: 20,
-                  boxShadow: '0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(107,138,58,0.12)',
+                  boxShadow: isDark
+                    ? '0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(107,138,58,0.12)'
+                    : '0 32px 80px rgba(61,80,22,0.12), 0 0 0 1px rgba(61,80,22,0.08)',
                   backdropFilter: 'blur(32px) saturate(160%)',
                   WebkitBackdropFilter: 'blur(32px) saturate(160%)',
                   overflow: 'hidden',
@@ -326,7 +336,7 @@ const LandingNavbar = () => {
                     gridTemplateColumns: 'repeat(2, 1fr)',
                     gap: 4,
                     padding: 14,
-                    borderBottom: '1px solid rgba(107,138,58,0.14)',
+                    borderBottom: isDark ? '1px solid rgba(107,138,58,0.14)' : '1px solid rgba(61,80,22,0.10)',
                   }}
                 >
                   {PRODUCTS.map(({ icon: Icon, label, tag, desc, href, highlight }) => {
@@ -346,18 +356,26 @@ const LandingNavbar = () => {
                           padding: '10px 12px',
                           borderRadius: 12,
                           textDecoration: 'none',
-                          background: highlight ? 'rgba(107,138,58,0.12)' : 'transparent',
-                          border: highlight ? '1px solid rgba(107,138,58,0.24)' : '1px solid transparent',
+                          background: highlight
+                            ? (isDark ? 'rgba(107,138,58,0.12)' : 'rgba(61,80,22,0.08)')
+                            : 'transparent',
+                          border: highlight
+                            ? (isDark ? '1px solid rgba(107,138,58,0.24)' : '1px solid rgba(61,80,22,0.16)')
+                            : '1px solid transparent',
                           transition: 'all 0.15s ease',
                           cursor: 'pointer',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(107,138,58,0.14)';
-                          e.currentTarget.style.borderColor = 'rgba(107,138,58,0.24)';
+                          e.currentTarget.style.background = isDark ? 'rgba(107,138,58,0.14)' : 'rgba(61,80,22,0.06)';
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(107,138,58,0.24)' : 'rgba(61,80,22,0.14)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = highlight ? 'rgba(107,138,58,0.12)' : 'transparent';
-                          e.currentTarget.style.borderColor = highlight ? 'rgba(107,138,58,0.24)' : 'transparent';
+                          e.currentTarget.style.background = highlight
+                            ? (isDark ? 'rgba(107,138,58,0.12)' : 'rgba(61,80,22,0.08)')
+                            : 'transparent';
+                          e.currentTarget.style.borderColor = highlight
+                            ? (isDark ? '1px solid rgba(107,138,58,0.24)' : '1px solid rgba(61,80,22,0.16)')
+                            : 'transparent';
                         }}
                       >
                         <div
@@ -367,14 +385,18 @@ const LandingNavbar = () => {
                             borderRadius: 8,
                             flexShrink: 0,
                             marginTop: 1,
-                            background: highlight ? 'rgba(107,138,58,0.22)' : 'rgba(255,255,255,0.06)',
-                            border: highlight ? '1px solid rgba(107,138,58,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                            background: highlight
+                              ? (isDark ? 'rgba(107,138,58,0.22)' : 'rgba(61,80,22,0.15)')
+                              : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.06)'),
+                            border: highlight
+                              ? (isDark ? '1px solid rgba(107,138,58,0.35)' : '1px solid rgba(61,80,22,0.25)')
+                              : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.10)'),
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                           }}
                         >
-                          <Icon size={15} style={{ color: highlight ? '#a3c55a' : 'rgba(240,237,228,0.60)' }} />
+                          <Icon size={15} style={{ color: highlight ? (isDark ? '#a3c55a' : '#3D5016') : (isDark ? 'rgba(240,237,228,0.60)' : '#4A5239') }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
@@ -389,7 +411,7 @@ const LandingNavbar = () => {
                               style={{
                                 fontSize: 13,
                                 fontWeight: 600,
-                                color: highlight ? '#a3c55a' : textPri,
+                                color: highlight ? (isDark ? '#a3c55a' : '#3D5016') : textPri,
                                 lineHeight: 1.2,
                               }}
                             >
@@ -402,9 +424,9 @@ const LandingNavbar = () => {
                                   fontWeight: 700,
                                   padding: '1px 6px',
                                   borderRadius: 999,
-                                  background: 'rgba(107,138,58,0.25)',
-                                  border: '1px solid rgba(107,138,58,0.35)',
-                                  color: '#a3c55a',
+                                  background: isDark ? 'rgba(107,138,58,0.25)' : 'rgba(61,80,22,0.12)',
+                                  border: isDark ? '1px solid rgba(107,138,58,0.35)' : '1px solid rgba(61,80,22,0.20)',
+                                  color: isDark ? '#a3c55a' : '#3D5016',
                                   letterSpacing: '0.04em',
                                   textTransform: 'uppercase',
                                 }}
@@ -413,7 +435,7 @@ const LandingNavbar = () => {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: 11, color: 'rgba(240,237,228,0.45)', lineHeight: 1.35 }}>
+                          <div style={{ fontSize: 11, color: isDark ? 'rgba(240,237,228,0.45)' : 'rgba(26,31,14,0.55)', lineHeight: 1.35 }}>
                             {desc}
                           </div>
                         </div>
@@ -430,7 +452,9 @@ const LandingNavbar = () => {
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'linear-gradient(135deg, rgba(61,80,22,0.14) 0%, rgba(107,138,58,0.06) 100%)',
+                        background: isDark
+                          ? 'linear-gradient(135deg, rgba(61,80,22,0.14) 0%, rgba(107,138,58,0.06) 100%)'
+                          : 'linear-gradient(135deg, rgba(61,80,22,0.08) 0%, rgba(107,138,58,0.03) 100%)',
                         pointerEvents: 'none',
                       }}
                     />
@@ -448,7 +472,7 @@ const LandingNavbar = () => {
                           10 resumes free
                         </span>
                       </p>
-                      <p style={{ fontSize: 11, color: 'rgba(240,237,228,0.45)', marginBottom: 12 }}>
+                      <p style={{ fontSize: 11, color: isDark ? 'rgba(240,237,228,0.45)' : 'rgba(26,31,14,0.60)', marginBottom: 12 }}>
                         AI scoring, skills match & ranked shortlist — no credit card needed.
                       </p>
                       <Link
@@ -474,7 +498,7 @@ const LandingNavbar = () => {
                         {[1, 2, 3, 4, 5].map((n) => (
                           <Star key={n} size={10} fill="#F59E0B" style={{ color: '#F59E0B' }} />
                         ))}
-                        <span style={{ fontSize: 10, color: 'rgba(240,237,228,0.35)' }}>500+ hiring teams</span>
+                        <span style={{ fontSize: 10, color: isDark ? 'rgba(240,237,228,0.35)' : 'rgba(26,31,14,0.45)' }}>500+ hiring teams</span>
                       </div>
                     </div>
                   </div>
@@ -485,7 +509,7 @@ const LandingNavbar = () => {
                       width: 200,
                       padding: '16px 18px',
                       background: 'linear-gradient(160deg, #1a2d0a 0%, #0e1906 100%)',
-                      borderLeft: '1px solid rgba(107,138,58,0.18)',
+                      borderLeft: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.15)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 8,
@@ -520,7 +544,7 @@ const LandingNavbar = () => {
                           $29
                         </span>
                       </div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
                         /month, billed annually
                       </div>
                     </div>
@@ -542,7 +566,7 @@ const LandingNavbar = () => {
                     >
                       Upgrade Now
                     </Link>
-                    <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.30)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.40)', textAlign: 'center' }}>
                       All 8 modules included
                     </div>
                   </div>
@@ -557,14 +581,14 @@ const LandingNavbar = () => {
             <button
               type="button"
               onClick={toggleTheme}
-              aria-label="Toggle theme"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               style={{
                 width: 40,
                 height: 40,
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.05)',
-                color: 'rgba(240,237,228,0.60)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.15)',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.06)',
+                color: isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -574,14 +598,14 @@ const LandingNavbar = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = textPri;
-                e.currentTarget.style.borderColor = 'rgba(107,138,58,0.35)';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(107,138,58,0.35)' : 'rgba(61,80,22,0.30)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(240,237,228,0.60)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(61,80,22,0.15)';
               }}
             >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
             {/* Desktop / Tablet Login link (>= 640px) */}
@@ -594,22 +618,22 @@ const LandingNavbar = () => {
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 500,
-                color: 'rgba(240,237,228,0.70)',
+                color: isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E',
                 textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.10)',
-                background: 'rgba(255,255,255,0.04)',
+                border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(61,80,22,0.15)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.04)',
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = textPri;
-                e.currentTarget.style.borderColor = 'rgba(107,138,58,0.35)';
-                e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(107,138,58,0.35)' : 'rgba(61,80,22,0.30)';
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(61,80,22,0.08)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(240,237,228,0.70)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)';
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.color = isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.15)';
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.04)';
               }}
             >
               Log in
@@ -656,8 +680,10 @@ const LandingNavbar = () => {
                 width: 44,
                 height: 44,
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.10)',
-                background: mobileOpen ? 'rgba(107,138,58,0.18)' : 'rgba(255,255,255,0.05)',
+                border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(61,80,22,0.15)',
+                background: mobileOpen
+                  ? (isDark ? 'rgba(107,138,58,0.18)' : 'rgba(61,80,22,0.12)')
+                  : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.05)'),
                 color: textPri,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
@@ -686,7 +712,7 @@ const LandingNavbar = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'rgba(0,0,0,0.72)',
+              background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(0,0,0,0.40)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               zIndex: 98,
@@ -713,11 +739,11 @@ const LandingNavbar = () => {
               maxHeight: 'calc(100dvh - 64px)',
               overflowY: 'auto',
               overscrollBehavior: 'contain',
-              background: 'rgba(10,14,5,0.98)',
+              background: isDark ? 'rgba(10,14,5,0.98)' : 'rgba(242,239,232,0.98)',
               backdropFilter: 'blur(28px)',
               WebkitBackdropFilter: 'blur(28px)',
-              borderBottom: '1px solid rgba(107,138,58,0.22)',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.85)',
+              borderBottom: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.15)',
+              boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.85)' : '0 24px 60px rgba(61,80,22,0.15)',
               padding: '16px clamp(12px, 3.5vw, 24px) 28px',
               display: 'flex',
               flexDirection: 'column',
@@ -737,7 +763,7 @@ const LandingNavbar = () => {
                 style={{
                   fontSize: 10.5,
                   fontWeight: 800,
-                  color: 'rgba(163,197,90,0.80)',
+                  color: isDark ? 'rgba(163,197,90,0.80)' : '#3D5016',
                   letterSpacing: '0.10em',
                   textTransform: 'uppercase',
                 }}
@@ -748,11 +774,11 @@ const LandingNavbar = () => {
                 style={{
                   fontSize: 9.5,
                   fontWeight: 700,
-                  color: 'rgba(240,237,228,0.45)',
-                  background: 'rgba(255,255,255,0.06)',
+                  color: isDark ? 'rgba(240,237,228,0.45)' : 'rgba(26,31,14,0.55)',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.08)',
                   padding: '2px 7px',
                   borderRadius: 999,
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.12)',
                 }}
               >
                 8 Features
@@ -785,8 +811,12 @@ const LandingNavbar = () => {
                       padding: '8px 12px',
                       borderRadius: 12,
                       textDecoration: 'none',
-                      background: highlight ? 'rgba(107,138,58,0.12)' : 'rgba(255,255,255,0.03)',
-                      border: highlight ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(255,255,255,0.05)',
+                      background: highlight
+                        ? (isDark ? 'rgba(107,138,58,0.12)' : 'rgba(61,80,22,0.08)')
+                        : (isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF'),
+                      border: highlight
+                        ? (isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.18)')
+                        : (isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(61,80,22,0.10)'),
                       transition: 'background 0.15s ease',
                       cursor: 'pointer',
                     }}
@@ -796,15 +826,17 @@ const LandingNavbar = () => {
                         width: 32,
                         height: 32,
                         borderRadius: 8,
-                        background: highlight ? 'rgba(107,138,58,0.22)' : 'rgba(107,138,58,0.14)',
-                        border: '1px solid rgba(107,138,58,0.25)',
+                        background: highlight
+                          ? (isDark ? 'rgba(107,138,58,0.22)' : 'rgba(61,80,22,0.15)')
+                          : (isDark ? 'rgba(107,138,58,0.14)' : 'rgba(61,80,22,0.08)'),
+                        border: isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      <Icon size={15} style={{ color: '#a3c55a' }} />
+                      <Icon size={15} style={{ color: isDark ? '#a3c55a' : '#3D5016' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -812,7 +844,7 @@ const LandingNavbar = () => {
                           style={{
                             fontSize: 13,
                             fontWeight: 600,
-                            color: highlight ? '#a3c55a' : textPri,
+                            color: highlight ? (isDark ? '#a3c55a' : '#3D5016') : textPri,
                           }}
                         >
                           {label}
@@ -824,8 +856,8 @@ const LandingNavbar = () => {
                               fontWeight: 700,
                               padding: '1px 5px',
                               borderRadius: 4,
-                              background: 'rgba(107,138,58,0.25)',
-                              color: '#a3c55a',
+                              background: isDark ? 'rgba(107,138,58,0.25)' : 'rgba(61,80,22,0.12)',
+                              color: isDark ? '#a3c55a' : '#3D5016',
                             }}
                           >
                             {tag}
@@ -835,7 +867,7 @@ const LandingNavbar = () => {
                       <div
                         style={{
                           fontSize: 11,
-                          color: 'rgba(240,237,228,0.40)',
+                          color: isDark ? 'rgba(240,237,228,0.40)' : 'rgba(26,31,14,0.60)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -844,14 +876,14 @@ const LandingNavbar = () => {
                         {desc}
                       </div>
                     </div>
-                    <ChevronRight size={14} style={{ color: 'rgba(240,237,228,0.25)', flexShrink: 0 }} />
+                    <ChevronRight size={14} style={{ color: isDark ? 'rgba(240,237,228,0.25)' : 'rgba(26,31,14,0.35)', flexShrink: 0 }} />
                   </El>
                 );
               })}
             </div>
 
             {/* Divider */}
-            <div style={{ height: 1, background: 'rgba(107,138,58,0.14)', margin: '2px 0' }} />
+            <div style={{ height: 1, background: isDark ? 'rgba(107,138,58,0.14)' : 'rgba(61,80,22,0.10)', margin: '2px 0' }} />
 
             {/* Anchor Nav Links */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -869,15 +901,15 @@ const LandingNavbar = () => {
                     borderRadius: 10,
                     fontSize: 13.5,
                     fontWeight: 500,
-                    color: 'rgba(240,237,228,0.80)',
+                    color: textPri,
                     textDecoration: 'none',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.04)',
+                    background: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(61,80,22,0.08)',
                     cursor: 'pointer',
                   }}
                 >
                   {label}
-                  <ChevronRight size={14} style={{ color: 'rgba(240,237,228,0.25)' }} />
+                  <ChevronRight size={14} style={{ color: isDark ? 'rgba(240,237,228,0.25)' : 'rgba(26,31,14,0.35)' }} />
                 </a>
               ))}
             </div>
@@ -895,12 +927,12 @@ const LandingNavbar = () => {
                   justifyContent: 'center',
                   padding: '10px 0',
                   borderRadius: 10,
-                  border: '1px solid rgba(107,138,58,0.30)',
-                  color: 'rgba(240,237,228,0.85)',
+                  border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.20)',
+                  color: textPri,
                   textDecoration: 'none',
                   fontSize: 13.5,
                   fontWeight: 600,
-                  background: 'rgba(255,255,255,0.04)',
+                  background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
                 }}
               >
                 Log in
@@ -933,7 +965,7 @@ const LandingNavbar = () => {
             <p
               style={{
                 fontSize: 11,
-                color: 'rgba(240,237,228,0.40)',
+                color: isDark ? 'rgba(240,237,228,0.40)' : 'rgba(26,31,14,0.55)',
                 textAlign: 'center',
                 margin: '2px 0 0',
               }}
