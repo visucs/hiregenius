@@ -34,6 +34,7 @@ const LandingNavbar = () => {
   const navigate = useNavigate();
 
   const isDark = theme === 'dark';
+  const isLanding = location.pathname === '/';
 
   const dropRef = useRef(null);
   const hoverTimer = useRef(null);
@@ -131,15 +132,49 @@ const LandingNavbar = () => {
     setDropOpen(false);
   };
 
-  /* ── Dynamic Design Tokens (Theme-aware) ─────────────────────── */
-  const navBg = scrolled
-    ? (isDark ? 'rgba(10,14,5,0.92)' : 'rgba(242,239,232,0.92)')
-    : 'transparent';
-  const navBorder = scrolled
-    ? (isDark ? 'rgba(107,138,58,0.18)' : 'rgba(61,80,22,0.12)')
-    : 'transparent';
+  /* ── Design Tokens & Dynamic Surfaces ───────────────────────── */
   const textPri = isDark ? '#F0EDE4' : '#1A1F0E';
   const textMuted = isDark ? 'rgba(240,237,228,0.60)' : 'rgba(26,31,14,0.65)';
+
+  // Floating pill styles for Landing page only; flush edge-to-edge for product pages
+  const navStyle = isLanding
+    ? {
+        position: 'fixed',
+        top: 'clamp(10px, 2vw, 16px)',
+        left: 0,
+        right: 0,
+        margin: '0 auto',
+        width: 'calc(100% - clamp(16px, 4vw, 32px))',
+        maxWidth: 1240,
+        height: 60,
+        zIndex: 100,
+        borderRadius: 'clamp(16px, 3vw, 999px)',
+        background: isDark ? 'rgba(12, 18, 6, 0.78)' : 'rgba(250, 249, 245, 0.82)',
+        backdropFilter: 'blur(24px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(61, 80, 22, 0.12)',
+        boxShadow: isDark
+          ? '0 16px 40px rgba(0, 0, 0, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.06)'
+          : '0 12px 32px rgba(61, 80, 22, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.80)',
+        transition: 'all 0.35s ease',
+      }
+    : {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        height: 64,
+        background: scrolled
+          ? (isDark ? 'rgba(10,14,5,0.92)' : 'rgba(242,239,232,0.92)')
+          : 'transparent',
+        backdropFilter: scrolled ? 'blur(24px) saturate(160%)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(160%)' : 'none',
+        borderBottom: scrolled
+          ? (isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)')
+          : '1px solid transparent',
+        transition: 'background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease',
+      };
 
   return (
     <>
@@ -147,19 +182,7 @@ const LandingNavbar = () => {
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          height: 64,
-          background: navBg,
-          backdropFilter: scrolled ? 'blur(24px) saturate(160%)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(160%)' : 'none',
-          borderBottom: `1px solid ${navBorder}`,
-          transition: 'background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease',
-        }}
+        style={navStyle}
       >
         <div
           style={{
@@ -170,7 +193,7 @@ const LandingNavbar = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 clamp(14px, 3vw, 32px)',
+            padding: isLanding ? '0 clamp(12px, 2.5vw, 24px)' : '0 clamp(14px, 3vw, 32px)',
             position: 'relative',
           }}
         >
@@ -312,17 +335,17 @@ const LandingNavbar = () => {
                 className="hidden md:block"
                 style={{
                   position: 'absolute',
-                  top: 'calc(100% + 10px)',
+                  top: 'calc(100% + 12px)',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   width: 720,
                   maxWidth: 'calc(100vw - 32px)',
-                  background: isDark ? 'rgba(12,18,6,0.98)' : 'rgba(255,255,255,0.98)',
-                  border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.15)',
+                  background: isDark ? 'rgba(14, 20, 8, 0.88)' : 'rgba(255, 255, 255, 0.90)',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(61, 80, 22, 0.12)',
                   borderRadius: 20,
                   boxShadow: isDark
-                    ? '0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(107,138,58,0.12)'
-                    : '0 32px 80px rgba(61,80,22,0.12), 0 0 0 1px rgba(61,80,22,0.08)',
+                    ? '0 32px 80px rgba(0,0,0,0.75), inset 0 1px 0 0 rgba(255,255,255,0.06)'
+                    : '0 32px 80px rgba(61,80,22,0.12), inset 0 1px 0 0 rgba(255,255,255,0.80)',
                   backdropFilter: 'blur(32px) saturate(160%)',
                   WebkitBackdropFilter: 'blur(32px) saturate(160%)',
                   overflow: 'hidden',
@@ -336,7 +359,7 @@ const LandingNavbar = () => {
                     gridTemplateColumns: 'repeat(2, 1fr)',
                     gap: 4,
                     padding: 14,
-                    borderBottom: isDark ? '1px solid rgba(107,138,58,0.14)' : '1px solid rgba(61,80,22,0.10)',
+                    borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(61, 80, 22, 0.08)',
                   }}
                 >
                   {PRODUCTS.map(({ icon: Icon, label, tag, desc, href, highlight }) => {
@@ -366,8 +389,8 @@ const LandingNavbar = () => {
                           cursor: 'pointer',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = isDark ? 'rgba(107,138,58,0.14)' : 'rgba(61,80,22,0.06)';
-                          e.currentTarget.style.borderColor = isDark ? 'rgba(107,138,58,0.24)' : 'rgba(61,80,22,0.14)';
+                          e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.06)';
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.14)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = highlight
@@ -509,7 +532,7 @@ const LandingNavbar = () => {
                       width: 200,
                       padding: '16px 18px',
                       background: 'linear-gradient(160deg, #1a2d0a 0%, #0e1906 100%)',
-                      borderLeft: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.15)',
+                      borderLeft: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(61,80,22,0.12)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 8,
@@ -587,7 +610,7 @@ const LandingNavbar = () => {
                 height: 40,
                 borderRadius: 8,
                 border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.15)',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.06)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.06)',
                 color: isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E',
                 cursor: 'pointer',
                 display: 'flex',
@@ -620,7 +643,7 @@ const LandingNavbar = () => {
                 fontWeight: 500,
                 color: isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E',
                 textDecoration: 'none',
-                border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(61,80,22,0.15)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.15)',
                 background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.04)',
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
@@ -632,7 +655,7 @@ const LandingNavbar = () => {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = isDark ? 'rgba(240,237,228,0.75)' : '#1A1F0E';
-                e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.15)';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(61,80,22,0.15)';
                 e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.04)';
               }}
             >
@@ -680,10 +703,10 @@ const LandingNavbar = () => {
                 width: 44,
                 height: 44,
                 borderRadius: 8,
-                border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(61,80,22,0.15)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.15)',
                 background: mobileOpen
                   ? (isDark ? 'rgba(107,138,58,0.18)' : 'rgba(61,80,22,0.12)')
-                  : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.05)'),
+                  : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.05)'),
                 color: textPri,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
@@ -708,48 +731,76 @@ const LandingNavbar = () => {
             className="md:hidden"
             style={{
               position: 'fixed',
-              top: 64,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              inset: 0,
               background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(0,0,0,0.40)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               zIndex: 98,
             }}
           />
         )}
       </AnimatePresence>
 
-      {/* ── Mobile Menu Drawer ─────────────────────────────────── */}
+      {/* ── Full-Screen Mobile Glass Drawer ─────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="md:hidden"
             style={{
               position: 'fixed',
-              top: 64,
-              left: 0,
+              top: 0,
               right: 0,
+              bottom: 0,
+              width: 'min(400px, 100vw)',
               zIndex: 99,
-              maxHeight: 'calc(100dvh - 64px)',
               overflowY: 'auto',
               overscrollBehavior: 'contain',
-              background: isDark ? 'rgba(10,14,5,0.98)' : 'rgba(242,239,232,0.98)',
+              background: isDark ? 'rgba(12,18,6,0.94)' : 'rgba(250,249,245,0.96)',
               backdropFilter: 'blur(28px)',
               WebkitBackdropFilter: 'blur(28px)',
-              borderBottom: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.15)',
-              boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.85)' : '0 24px 60px rgba(61,80,22,0.15)',
-              padding: '16px clamp(12px, 3.5vw, 24px) 28px',
+              borderLeft: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.12)',
+              boxShadow: isDark ? '-16px 0 50px rgba(0,0,0,0.7)' : '-16px 0 50px rgba(61,80,22,0.10)',
+              padding: '20px clamp(16px, 4vw, 24px) 32px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 14,
+              gap: 16,
             }}
           >
+            {/* Drawer Top Header: Logo + Close X */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(61,80,22,0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Sparkles size={14} color="#fff" />
+                </div>
+                <span style={{ fontWeight: 800, fontSize: 14, color: textPri }}>
+                  HireGenius <span style={{ color: '#a3c55a' }}>AI</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(61,80,22,0.08)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.12)',
+                  color: textPri,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
             {/* Products Header */}
             <div
               style={{
@@ -813,10 +864,12 @@ const LandingNavbar = () => {
                       textDecoration: 'none',
                       background: highlight
                         ? (isDark ? 'rgba(107,138,58,0.12)' : 'rgba(61,80,22,0.08)')
-                        : (isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF'),
+                        : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.70)'),
                       border: highlight
                         ? (isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.18)')
                         : (isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(61,80,22,0.10)'),
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
                       transition: 'background 0.15s ease',
                       cursor: 'pointer',
                     }}
@@ -883,7 +936,7 @@ const LandingNavbar = () => {
             </div>
 
             {/* Divider */}
-            <div style={{ height: 1, background: isDark ? 'rgba(107,138,58,0.14)' : 'rgba(61,80,22,0.10)', margin: '2px 0' }} />
+            <div style={{ height: 1, background: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(61, 80, 22, 0.08)', margin: '2px 0' }} />
 
             {/* Anchor Nav Links */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -903,8 +956,10 @@ const LandingNavbar = () => {
                     fontWeight: 500,
                     color: textPri,
                     textDecoration: 'none',
-                    background: isDark ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+                    background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.70)',
                     border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(61,80,22,0.08)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
                     cursor: 'pointer',
                   }}
                 >
@@ -927,7 +982,7 @@ const LandingNavbar = () => {
                   justifyContent: 'center',
                   padding: '10px 0',
                   borderRadius: 10,
-                  border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.20)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(61,80,22,0.20)',
                   color: textPri,
                   textDecoration: 'none',
                   fontSize: 13.5,

@@ -117,9 +117,46 @@ const LandingPage = () => {
       backgroundColor: 'var(--bg-base)',
       color: 'var(--text-primary)',
       overflowX: 'hidden',
+      position: 'relative',
       fontFamily: "'Inter', system-ui, sans-serif",
       transition: 'background-color 0.25s ease, color 0.25s ease',
     }}>
+      {/* ── Fixed Ambient Olive Glow Mesh (Z-Index 0, non-interactive, zero overflow) ── */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden',
+      }} aria-hidden>
+        {/* Blob 1: Hero Ambient Glow */}
+        <div style={{
+          position: 'absolute', top: '-15%', left: '50%', transform: 'translateX(-50%)',
+          width: 'clamp(500px, 60vw, 850px)', height: 'clamp(350px, 45vw, 550px)',
+          borderRadius: '50%',
+          background: isDark
+            ? 'radial-gradient(circle, rgba(107,138,58,0.22) 0%, rgba(61,80,22,0.12) 50%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(107,138,58,0.10) 0%, rgba(61,80,22,0.05) 50%, transparent 70%)',
+          filter: 'blur(140px)',
+        }} />
+        {/* Blob 2: Mid-page Glow */}
+        <div style={{
+          position: 'absolute', top: '38%', right: '-8%',
+          width: 'clamp(400px, 45vw, 650px)', height: 'clamp(400px, 45vw, 650px)',
+          borderRadius: '50%',
+          background: isDark
+            ? 'radial-gradient(circle, rgba(163,197,90,0.18) 0%, rgba(107,138,58,0.08) 50%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(163,197,90,0.08) 0%, rgba(107,138,58,0.04) 50%, transparent 70%)',
+          filter: 'blur(130px)',
+        }} />
+        {/* Blob 3: Bottom Glow */}
+        <div style={{
+          position: 'absolute', bottom: '5%', left: '-8%',
+          width: 'clamp(450px, 50vw, 700px)', height: 'clamp(350px, 40vw, 500px)',
+          borderRadius: '50%',
+          background: isDark
+            ? 'radial-gradient(circle, rgba(61,80,22,0.24) 0%, rgba(107,138,58,0.10) 60%, transparent 75%)'
+            : 'radial-gradient(circle, rgba(61,80,22,0.10) 0%, rgba(107,138,58,0.04) 60%, transparent 75%)',
+          filter: 'blur(140px)',
+        }} />
+      </div>
+
       <LandingNavbar />
 
       {/* ══════════════════════════════════════════════════════
@@ -128,29 +165,13 @@ const LandingPage = () => {
       <section style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '120px 24px 80px', position: 'relative', overflow: 'hidden',
+        padding: '130px 24px 80px', position: 'relative', overflow: 'hidden',
       }}>
-        {/* Gradient mesh background */}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 0,
-          background: isDark
-            ? 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(107,138,58,0.22) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(61,80,22,0.14) 0%, transparent 60%), var(--bg-base)'
-            : 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(107,138,58,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(61,80,22,0.06) 0%, transparent 60%), var(--bg-base)',
-        }} />
         {/* Dot grid */}
         <div style={{
-          position: 'absolute', inset: 0, zIndex: 0, opacity: isDark ? 0.4 : 0.22,
+          position: 'absolute', inset: 0, zIndex: 0, opacity: isDark ? 0.35 : 0.20,
           backgroundImage: 'radial-gradient(rgba(107,138,58,0.35) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }} />
-        {/* Top glow orb */}
-        <div style={{
-          position: 'absolute', top: '-120px', left: '50%', transform: 'translateX(-50%)',
-          width: 800, height: 500, borderRadius: '50%',
-          background: isDark
-            ? 'radial-gradient(circle, rgba(107,138,58,0.18) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(107,138,58,0.10) 0%, transparent 70%)',
-          filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0,
+          backgroundSize: '32px 32px', pointerEvents: 'none',
         }} />
 
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 1200, margin: '0 auto' }}>
@@ -205,13 +226,13 @@ const LandingPage = () => {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '14px 28px', borderRadius: 12, fontSize: 15, fontWeight: 600,
                 color: 'var(--text-primary)', textDecoration: 'none',
-                background: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-                border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(61,80,22,0.18)',
-                boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.06)',
-                backdropFilter: 'blur(12px)', transition: 'all 0.2s',
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(250,249,245,0.70)',
+                border: isDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(61,80,22,0.18)',
+                boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.10)' : '0 4px 16px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', transition: 'all 0.2s',
               }}
-                onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(250,249,245,0.90)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(250,249,245,0.70)'; }}
               >
                 <Play size={13} fill="currentColor" /> Watch Demo
               </Link>
@@ -237,14 +258,16 @@ const LandingPage = () => {
               className="bento-card-score"
               style={{
                 gridColumn: '1 / 4', gridRow: '1',
-                background: isDark ? 'rgba(20,28,10,0.85)' : '#FFFFFF',
-                border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
-                borderRadius: 20, padding: 24, backdropFilter: 'blur(20px)',
-                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
+                background: isDark ? 'rgba(18,24,10,0.65)' : 'rgba(250,249,245,0.72)',
+                border: isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.14)',
+                borderRadius: 20, padding: 24, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: isDark
+                  ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
+                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               }}
             >
-              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.75)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.85)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
               <div style={{ position: 'relative', width: 88, height: 88 }}>
                 <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)' }}>
                   <circle cx="44" cy="44" r="36" fill="none" stroke={isDark ? 'rgba(107,138,58,0.15)' : 'rgba(61,80,22,0.10)'} strokeWidth="7" />
@@ -270,13 +293,15 @@ const LandingPage = () => {
             {/* Card: Candidate Dashboard */}
             <div className="bento-card-candidates" style={{
               gridColumn: '4 / 10', gridRow: '1',
-              background: isDark ? 'rgba(18,24,10,0.90)' : '#FFFFFF',
-              border: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)',
-              borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(20px)',
-              boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
+              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
+              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+              borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              boxShadow: isDark
+                ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
+                : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
             }}>
               {/* Topbar */}
-              <div style={{ padding: '14px 18px', borderBottom: isDark ? '1px solid rgba(107,138,58,0.12)' : '1px solid rgba(61,80,22,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '14px 18px', borderBottom: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Top Candidates</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: '#4A7C3F', background: 'rgba(74,124,63,0.12)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(74,124,63,0.25)' }}>
                   <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>●</motion.span> Live
@@ -290,8 +315,9 @@ const LandingPage = () => {
                 ].map((c, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 12,
-                    background: isDark ? 'rgba(107,138,58,0.07)' : 'rgba(61,80,22,0.04)',
-                    border: isDark ? '1px solid rgba(107,138,58,0.12)' : '1px solid rgba(61,80,22,0.08)',
+                    background: isDark ? 'rgba(107,138,58,0.10)' : 'rgba(61,80,22,0.05)',
+                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)',
                   }}>
                     <img src={c.avatar} alt={c.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                     <div style={{ flex: 1 }}>
@@ -311,10 +337,12 @@ const LandingPage = () => {
               className="bento-card-interview"
               style={{
                 gridColumn: '10 / 13', gridRow: '1',
-                background: isDark ? 'linear-gradient(135deg, #1a2d0a 0%, #0e1906 100%)' : '#FFFFFF',
-                border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.12)',
-                borderRadius: 20, padding: '20px 16px', backdropFilter: 'blur(20px)',
-                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.5)' : '0 20px 50px rgba(61,80,22,0.10)',
+                background: isDark ? 'linear-gradient(135deg, rgba(26,45,10,0.70) 0%, rgba(14,25,6,0.70) 100%)' : 'rgba(250,249,245,0.75)',
+                border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.14)',
+                borderRadius: 20, padding: '20px 16px', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: isDark
+                  ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
+                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
                 display: 'flex', flexDirection: 'column', gap: 14,
               }}
             >
@@ -336,10 +364,12 @@ const LandingPage = () => {
             {/* Card: Pipeline */}
             <div className="bento-card-pipeline" style={{
               gridColumn: '1 / 8', gridRow: '2',
-              background: isDark ? 'rgba(18,24,10,0.90)' : '#FFFFFF',
-              border: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)',
-              borderRadius: 20, padding: 22, backdropFilter: 'blur(20px)',
-              boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.4)' : '0 20px 50px rgba(61,80,22,0.10)',
+              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
+              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+              borderRadius: 20, padding: 22, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              boxShadow: isDark
+                ? '0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.08)'
+                : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
             }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 18 }}>Hiring Pipeline</div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 clamp(2px, 1vw, 8px)', overflowX: 'auto' }}>
@@ -380,14 +410,16 @@ const LandingPage = () => {
               className="bento-card-stats"
               style={{
                 gridColumn: '8 / 13', gridRow: '2',
-                background: isDark ? 'rgba(20,28,10,0.85)' : '#FFFFFF',
-                border: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
-                borderRadius: 20, padding: 22, backdropFilter: 'blur(20px)',
-                boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.4)' : '0 20px 50px rgba(61,80,22,0.10)',
+                background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
+                border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+                borderRadius: 20, padding: 22, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: isDark
+                  ? '0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.08)'
+                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
                 display: 'flex', flexDirection: 'column', gap: 16,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.75)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.85)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
               {[
                 { text: '120 resumes screened', time: '2m ago', color: '#4A7C3F' },
                 { text: 'AI interviews completed', time: '15m ago', color: '#4A7C3F' },
@@ -415,10 +447,12 @@ const LandingPage = () => {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             {TRUSTED.map(name => (
               <div key={name} style={{
-                padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                padding: '7px 18px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                 color: 'var(--text-secondary)',
-                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(61,80,22,0.05)',
-                border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(61,80,22,0.12)',
+                background: isDark ? 'rgba(18,24,10,0.50)' : 'rgba(250,249,245,0.60)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: isDark ? '1px solid rgba(107,138,58,0.18)' : '1px solid rgba(61,80,22,0.12)',
+                boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 0 rgba(255,255,255,0.80)',
                 letterSpacing: '0.02em',
               }}>{name}</div>
             ))}
@@ -430,10 +464,13 @@ const LandingPage = () => {
           STATS BAND
       ══════════════════════════════════════════════════════ */}
       <section style={{
-        borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+        borderTop: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
+        borderBottom: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
         background: isDark
-          ? 'linear-gradient(135deg, rgba(61,80,22,0.12) 0%, rgba(107,138,58,0.06) 100%)'
-          : 'linear-gradient(135deg, rgba(61,80,22,0.05) 0%, rgba(107,138,58,0.02) 100%)',
+          ? 'linear-gradient(135deg, rgba(61,80,22,0.15) 0%, rgba(18,24,10,0.65) 100%)'
+          : 'linear-gradient(135deg, rgba(250,249,245,0.70) 0%, rgba(242,239,232,0.70) 100%)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 0 rgba(255,255,255,0.70)',
         padding: '64px 40px',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 48 }}>
@@ -484,14 +521,22 @@ const LandingPage = () => {
               {HOW_IT_WORKS.map(({ icon: Icon, step, title, desc }) => (
                 <motion.div key={step} variants={fadeUp}
                   style={{
-                    background: isDark ? 'rgba(18,24,10,0.80)' : '#FFFFFF',
-                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
+                    background: isDark ? 'rgba(18,24,10,0.65)' : 'rgba(250,249,245,0.72)',
+                    backdropFilter: 'blur(24px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 20, padding: '28px 24px', position: 'relative', zIndex: 1,
-                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
+                    boxShadow: isDark
+                      ? '0 12px 36px rgba(0,0,0,0.35), inset 0 1px 0 0 rgba(255,255,255,0.06)'
+                      : '0 8px 30px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.90)',
                     transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
                     cursor: 'default',
                   }}
-                  whileHover={{ y: -4, borderColor: isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+                  whileHover={{
+                    y: -6, scale: 1.02,
+                    borderColor: isDark ? 'rgba(107,138,58,0.45)' : 'rgba(61,80,22,0.30)',
+                    boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.50), 0 0 24px rgba(107,138,58,0.20)' : '0 20px 50px rgba(61,80,22,0.14)',
+                  }}
                 >
                   {/* Step number */}
                   <div style={{ fontSize: 10, fontWeight: 800, color: isDark ? 'rgba(107,138,58,0.60)' : '#6B8A3A', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 16 }}>Step {step}</div>
@@ -524,9 +569,10 @@ const LandingPage = () => {
       <section id="features" style={{
         padding: '120px 40px',
         background: isDark
-          ? 'linear-gradient(180deg, rgba(18,24,10,0.95) 0%, #0A0E05 100%)'
-          : 'var(--bg-surface)',
-        borderTop: '1px solid var(--border)',
+          ? 'linear-gradient(180deg, rgba(14,19,8,0.85) 0%, rgba(10,14,5,0.92) 100%)'
+          : 'rgba(242,239,232,0.60)',
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        borderTop: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
@@ -546,14 +592,22 @@ const LandingPage = () => {
                 <motion.div key={title} variants={scaleIn}
                   style={{
                     gridColumn: size === 'large' ? 'span 1' : 'span 1',
-                    background: isDark ? 'rgba(15,22,8,0.90)' : '#FFFFFF',
-                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
+                    background: isDark ? 'rgba(18,24,10,0.65)' : 'rgba(250,249,245,0.75)',
+                    backdropFilter: 'blur(24px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 24, overflow: 'hidden', cursor: 'pointer',
-                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
+                    boxShadow: isDark
+                      ? '0 16px 40px rgba(0,0,0,0.40), inset 0 1px 0 0 rgba(255,255,255,0.06)'
+                      : '0 8px 30px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.90)',
                     transition: 'border-color 0.25s, box-shadow 0.25s, transform 0.25s',
                     position: 'relative',
                   }}
-                  whileHover={{ y: -6, borderColor: isDark ? 'rgba(107,138,58,0.45)' : 'rgba(61,80,22,0.35)', boxShadow: `0 32px 80px rgba(0,0,0,0.18)` }}
+                  whileHover={{
+                    y: -6, scale: 1.015,
+                    borderColor: isDark ? 'rgba(107,138,58,0.45)' : 'rgba(61,80,22,0.35)',
+                    boxShadow: isDark ? '0 32px 80px rgba(0,0,0,0.50), 0 0 28px rgba(107,138,58,0.18)' : '0 24px 60px rgba(61,80,22,0.12)',
+                  }}
                 >
                   {/* Gradient header */}
                   <div style={{
@@ -623,7 +677,7 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           BENEFITS — Horizontal magazine cards
       ══════════════════════════════════════════════════════ */}
-      <section id="benefits" style={{ padding: '120px 40px', background: 'var(--bg-base)', borderTop: '1px solid var(--border)' }}>
+      <section id="benefits" style={{ padding: '120px 40px', background: 'var(--bg-base)', borderTop: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 72 }}>
@@ -642,13 +696,20 @@ const LandingPage = () => {
                   style={{
                     display: 'grid', gridTemplateColumns: 'auto 1fr auto',
                     gap: 32, alignItems: 'center',
-                    background: isDark ? 'rgba(15,22,8,0.85)' : '#FFFFFF',
-                    border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.12)',
+                    background: isDark ? 'rgba(18,24,10,0.65)' : 'rgba(250,249,245,0.72)',
+                    backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
                     borderRadius: 20, padding: '28px 32px',
-                    boxShadow: isDark ? 'none' : '0 8px 30px rgba(61,80,22,0.06)',
+                    boxShadow: isDark
+                      ? '0 12px 36px rgba(0,0,0,0.35), inset 0 1px 0 0 rgba(255,255,255,0.06)'
+                      : '0 8px 30px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.85)',
                     transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
                   }}
-                  whileHover={{ borderColor: isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', y: -3 }}
+                  whileHover={{
+                    y: -4, scale: 1.01,
+                    borderColor: isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)',
+                    boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.45), 0 0 20px rgba(107,138,58,0.15)' : '0 16px 45px rgba(61,80,22,0.10)',
+                  }}
                 >
                   {/* Icon square */}
                   <div style={{
@@ -691,9 +752,12 @@ const LandingPage = () => {
       <section style={{
         padding: '100px 40px',
         background: isDark
-          ? 'linear-gradient(135deg, rgba(61,80,22,0.25) 0%, rgba(107,138,58,0.10) 50%, rgba(61,80,22,0.20) 100%)'
-          : 'linear-gradient(135deg, rgba(61,80,22,0.12) 0%, rgba(107,138,58,0.05) 50%, rgba(61,80,22,0.08) 100%)',
-        borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+          ? 'linear-gradient(135deg, rgba(61,80,22,0.25) 0%, rgba(18,24,10,0.75) 50%, rgba(61,80,22,0.20) 100%)'
+          : 'linear-gradient(135deg, rgba(250,249,245,0.80) 0%, rgba(242,239,232,0.80) 100%)',
+        backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderTop: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+        borderBottom: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+        boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.06)' : 'inset 0 1px 0 0 rgba(255,255,255,0.85)',
         position: 'relative', overflow: 'hidden',
         textAlign: 'center',
       }}>
@@ -723,13 +787,14 @@ const LandingPage = () => {
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '15px 32px', borderRadius: 12, fontSize: 16, fontWeight: 600,
               color: 'var(--text-primary)', textDecoration: 'none',
-              background: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-              border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(61,80,22,0.18)',
-              boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.06)',
+              background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(250,249,245,0.70)',
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              border: isDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(61,80,22,0.18)',
+              boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.10)' : '0 4px 16px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.90)',
               transition: 'all 0.2s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(61,80,22,0.06)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(250,249,245,0.90)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(250,249,245,0.70)'; }}
             >
               Log in instead
             </Link>
@@ -740,7 +805,7 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           FAQ
       ══════════════════════════════════════════════════════ */}
-      <section id="faq" style={{ padding: '120px 40px', background: 'var(--bg-base)' }}>
+      <section id="faq" style={{ padding: '120px 40px', background: 'var(--bg-base)', borderTop: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
             <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 72 }}>
@@ -763,12 +828,13 @@ const LandingPage = () => {
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
                       padding: '22px 24px',
                       background: openFaq === i
-                        ? (isDark ? 'rgba(61,80,22,0.18)' : 'rgba(61,80,22,0.08)')
-                        : (isDark ? 'rgba(15,22,8,0.85)' : '#FFFFFF'),
-                      border: `1px solid ${openFaq === i ? (isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)') : 'var(--border)'}`,
+                        ? (isDark ? 'rgba(61,80,22,0.22)' : 'rgba(61,80,22,0.08)')
+                        : (isDark ? 'rgba(18,24,10,0.60)' : 'rgba(250,249,245,0.70)'),
+                      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      border: `1px solid ${openFaq === i ? (isDark ? 'rgba(107,138,58,0.40)' : 'rgba(61,80,22,0.30)') : (isDark ? 'rgba(107,138,58,0.18)' : 'rgba(61,80,22,0.10)')}`,
                       borderRadius: openFaq === i ? '16px 16px 0 0' : 16,
                       cursor: 'pointer', transition: 'all 0.2s',
-                      boxShadow: isDark ? 'none' : '0 4px 16px rgba(61,80,22,0.04)',
+                      boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.20), inset 0 1px 0 0 rgba(255,255,255,0.05)' : '0 4px 16px rgba(61,80,22,0.04), inset 0 1px 0 0 rgba(255,255,255,0.85)',
                       fontSize: 15, fontWeight: 600, color: 'var(--text-primary)',
                     }}
                   >
@@ -789,7 +855,8 @@ const LandingPage = () => {
                       >
                         <div style={{
                           padding: '16px 24px 24px',
-                          background: isDark ? 'rgba(61,80,22,0.10)' : 'rgba(61,80,22,0.04)',
+                          background: isDark ? 'rgba(18,24,10,0.50)' : 'rgba(250,249,245,0.50)',
+                          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
                           border: `1px solid ${isDark ? 'rgba(107,138,58,0.25)' : 'rgba(61,80,22,0.15)'}`,
                           borderTop: 'none', borderRadius: '0 0 16px 16px',
                           fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)',
@@ -810,8 +877,10 @@ const LandingPage = () => {
           FOOTER
       ══════════════════════════════════════════════════════ */}
       <footer style={{
-        background: isDark ? '#070A03' : 'var(--bg-surface)',
-        borderTop: '1px solid var(--border)',
+        background: isDark ? 'rgba(10,14,6,0.85)' : 'rgba(242,239,232,0.80)',
+        backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderTop: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.12)',
+        boxShadow: isDark ? 'inset 0 1px 0 0 rgba(255,255,255,0.05)' : 'inset 0 1px 0 0 rgba(255,255,255,0.80)',
         padding: '72px 40px 40px',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -832,8 +901,9 @@ const LandingPage = () => {
               {/* Newsletter */}
               <div style={{
                 display: 'flex', gap: 0, maxWidth: 280, borderRadius: 10, overflow: 'hidden',
-                border: isDark ? '1px solid rgba(107,138,58,0.20)' : '1px solid rgba(61,80,22,0.18)',
-                background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+                border: isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.18)',
+                background: isDark ? 'rgba(18,24,10,0.60)' : 'rgba(250,249,245,0.70)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               }}>
                 <input placeholder="Your email address" style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: 'var(--text-primary)', fontFamily: 'inherit' }} />
                 <button style={{ padding: '10px 14px', background: 'linear-gradient(135deg, #3D5016, #6B8A3A)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -857,7 +927,7 @@ const LandingPage = () => {
             ))}
           </div>
           {/* Bottom bar */}
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ borderTop: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>© 2026 HireGenius AI. All rights reserved.</span>
             <div style={{ display: 'flex', gap: 16 }}>
               {['Privacy', 'Terms', 'Security'].map(item => (

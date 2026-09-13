@@ -492,3 +492,22 @@ pm run build build command, and dist output directory for monorepo configuration
 - **Generic Sidebar (Sidebar.jsx)**: Decoupled desktop sidebar and mobile drawer; drawer always receives isCollapsed=false on mobile.
 - **Build & Verification**: npm run build passed with 0 errors (2,935 modules in 910ms). npm run lint passed with 0 errors.
 
+
+### 2026-09-14 - Landing Page Glassmorphism Redesign & Canonical Olive Tokens
+
+**Context & Token Corrections:**
+- Verified canonical brand tokens: Primary Olive (`#3D5016`), Secondary Olive (`#6B8A3A`), Olive Tint (`#a3c55a`), Off-White Canvas (`#F2EFE8`), Off-White Surface (`#FAF9F5`), Dark Warm Off-White (`#F0EDE4`).
+- Updated `Design.md` to remove outdated indigo (`#6366F1`) and cyan (`#22D3EE`), replacing Section 2 with canonical tokens and adding Section 12 for the Landing Glassmorphism & Ambient Olive Glow specifications.
+- Strictly prohibited cyan, purple, and indigo from background mesh or any elements.
+
+**Landing Navbar Scoping (`LandingNavbar.jsx`):**
+- Scoped floating pill navbar (`top: clamp(10px, 2vw, 16px)`, `max-width: 1240px`, `border-radius: clamp(16px, 3vw, 999px)`, deep glass background, specular top highlight) to `location.pathname === '/'` only.
+- Ensured product pages (`/products/*`) and auth pages retain standard edge-to-edge navbar untouched.
+- Replaced basic dropdown mobile menu with full-screen animated glass mobile drawer (`AnimatePresence`, `motion.div`, backdrop blur 24px, logo header, 44px close button).
+
+**Landing Page Deep Glassmorphism (`LandingPage.jsx`):**
+- Added fixed ambient olive glow mesh (3 blurred blobs: top-hero `#3D5016`/`#6B8A3A`, mid-page `#a3c55a`, bottom `#3D5016` with `blur(130px–140px)`, opacity 18–24% dark / 7–10% light, `pointer-events: none; z-index: 0; overflow: hidden`).
+- Applied deep glass styling (`backdrop-filter: blur(24px) saturate(180%)`) with specular top highlight (`inset 0 1px 0 0 rgba(255,255,255,...)`) across Hero Bento cards, Stats Band, How It Works cards, Platform Features bento, Why HireGenius benefit cards, CTA band, FAQ accordion, and Footer.
+- Added hardware-accelerated micro-interactions (`whileHover={{ y: -6, scale: 1.02 }}`) on interactive cards.
+- Verified WCAG AA contrast in both light and dark modes with warm off-white and deep olive green.
+- Verified zero horizontal overflow at 320px width.
