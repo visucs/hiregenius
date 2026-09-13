@@ -94,15 +94,16 @@ const FOOTER_LINKS = {
 /* ── Reusable Components ─────────────────────────────────────── */
 const EyebrowBadge = ({ children, isDark }) => (
   <div style={{
-    display: 'inline-flex', alignItems: 'center', gap: 7,
-    padding: '5px 14px', borderRadius: 999,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+    padding: '6px clamp(10px, 3vw, 14px)', borderRadius: 999,
     background: isDark ? 'rgba(107,138,58,0.15)' : 'rgba(61,80,22,0.08)',
     border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.18)',
-    fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+    fontSize: 'clamp(9.5px, 2.7vw, 11px)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
     color: isDark ? '#a3c55a' : '#3D5016', marginBottom: 20,
+    maxWidth: 'calc(100% - 24px)', textAlign: 'center', boxSizing: 'border-box',
   }}>
-    <CircleDot size={10} style={{ color: '#6B8A3A' }} />
-    {children}
+    <CircleDot size={10} style={{ color: '#6B8A3A', flexShrink: 0 }} />
+    <span>{children}</span>
   </div>
 );
 
@@ -162,11 +163,15 @@ const LandingPage = () => {
       {/* ══════════════════════════════════════════════════════
           HERO — Full-viewport with bento floating cards
       ══════════════════════════════════════════════════════ */}
-      <section style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '130px 24px 80px', position: 'relative', overflow: 'hidden',
-      }}>
+      <section
+        id="hero"
+        className="hero-section landing-hero-section"
+        style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '130px 24px 80px', position: 'relative', overflow: 'hidden',
+        }}
+      >
         {/* Dot grid */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0, opacity: isDark ? 0.35 : 0.20,
@@ -185,7 +190,7 @@ const LandingPage = () => {
             </motion.div>
 
             <motion.h1 variants={fadeUp} style={{
-              fontSize: 'clamp(44px, 6vw, 84px)', fontWeight: 900, lineHeight: 1.04,
+              fontSize: 'clamp(34px, 6vw, 84px)', fontWeight: 900, lineHeight: 1.04,
               letterSpacing: '-0.04em', marginBottom: 24, color: 'var(--text-primary)',
             }}>
               Hire smarter with{' '}
@@ -971,6 +976,10 @@ const LandingPage = () => {
             padding-right: clamp(16px, 4vw, 32px) !important;
             padding-top: clamp(64px, 8vw, 96px) !important;
             padding-bottom: clamp(48px, 6vw, 80px) !important;
+          }
+          section.landing-hero-section,
+          .landing-hero-section {
+            padding-top: clamp(108px, 16vw, 136px) !important;
           }
           .hero-bento-grid {
             grid-template-columns: 1fr !important;

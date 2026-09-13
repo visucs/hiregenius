@@ -30,7 +30,10 @@ const STATS = [
 ];
 
 const APHero = () => (
-  <section style={{ paddingTop: 140, paddingBottom: 96, position: 'relative', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
+  <section
+    className="hero-section ap-hero-section"
+    style={{ paddingTop: 140, paddingBottom: 96, position: 'relative', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}
+  >
     {/* Glow */}
     <div style={{ position: 'absolute', top: '0%', left: '50%', transform: 'translateX(-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 65%)', filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0 }} />
     <div className="hero-dot-bg" style={{ position: 'absolute', inset: 0, opacity: 0.4, pointerEvents: 'none', zIndex: 0 }} />
@@ -43,8 +46,8 @@ const APHero = () => (
         {/* Left */}
         <div>
           {/* Breadcrumb */}
-          <motion.div variants={fade} style={{ marginBottom: 24 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
+          <motion.div variants={fade} style={{ marginBottom: 20 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px, 2.8vw, 13px)', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
               <Link to="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
                 onMouseEnter={e => e.target.style.color='var(--primary)'} onMouseLeave={e => e.target.style.color='var(--text-muted)'}>
                 Home
@@ -58,9 +61,16 @@ const APHero = () => (
 
           {/* Badge */}
           <motion.div variants={fade} style={{ marginBottom: 20 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', borderRadius: 999, background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.20)', fontSize: 12, fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              <BarChart3 size={12} />
-              Real-time · Multi-chart · Exportable
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '5px clamp(10px, 3vw, 14px)', borderRadius: 999,
+              background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.20)',
+              fontSize: 'clamp(10px, 2.7vw, 12px)', fontWeight: 600, color: 'var(--primary)',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+              maxWidth: '100%', boxSizing: 'border-box',
+            }}>
+              <BarChart3 size={12} style={{ flexShrink: 0 }} />
+              <span>Real-time · Multi-chart · Exportable</span>
             </div>
           </motion.div>
 
@@ -188,7 +198,17 @@ const APHero = () => (
       </motion.div>
     </div>
 
-    <style>{`@media(max-width:900px){.ap-hero-grid{grid-template-columns:1fr!important;gap:48px!important;}}`}</style>
+    <style>{`
+      @media(max-width:900px){
+        .ap-hero-grid{grid-template-columns:1fr!important;gap:48px!important;}
+      }
+      @media(max-width:768px){
+        .ap-hero-section{
+          padding-top: clamp(108px, 16vw, 136px) !important;
+          padding-bottom: clamp(48px, 6vw, 80px) !important;
+        }
+      }
+    `}</style>
   </section>
 );
 
