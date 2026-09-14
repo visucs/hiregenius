@@ -43,7 +43,7 @@ const AIInterviewPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(107,138,58,0.22) 0%, rgba(61,80,22,0.12) 50%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(107,138,58,0.10) 0%, rgba(61,80,22,0.05) 50%, transparent 70%)',
+            : 'radial-gradient(circle, rgba(107,138,58,0.06) 0%, rgba(163,197,90,0.03) 50%, transparent 70%)',
           filter: 'blur(140px)',
         }} />
         {/* Blob 2: Mid-page Glow */}
@@ -53,7 +53,7 @@ const AIInterviewPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(163,197,90,0.18) 0%, rgba(107,138,58,0.08) 50%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(163,197,90,0.08) 0%, rgba(107,138,58,0.04) 50%, transparent 70%)',
+            : 'radial-gradient(circle, rgba(163,197,90,0.05) 0%, rgba(107,138,58,0.02) 50%, transparent 70%)',
           filter: 'blur(130px)',
         }} />
         {/* Blob 3: Bottom Glow */}
@@ -63,7 +63,7 @@ const AIInterviewPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(61,80,22,0.24) 0%, rgba(107,138,58,0.10) 60%, transparent 75%)'
-            : 'radial-gradient(circle, rgba(61,80,22,0.10) 0%, rgba(107,138,58,0.04) 60%, transparent 75%)',
+            : 'radial-gradient(circle, rgba(61,80,22,0.05) 0%, rgba(107,138,58,0.02) 60%, transparent 75%)',
           filter: 'blur(140px)',
         }} />
       </div>
