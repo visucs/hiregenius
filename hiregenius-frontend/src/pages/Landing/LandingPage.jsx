@@ -133,7 +133,7 @@ const LandingPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(107,138,58,0.22) 0%, rgba(61,80,22,0.12) 50%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(107,138,58,0.10) 0%, rgba(61,80,22,0.05) 50%, transparent 70%)',
+            : 'radial-gradient(circle, rgba(107,138,58,0.06) 0%, rgba(163,197,90,0.03) 50%, transparent 70%)',
           filter: 'blur(140px)',
         }} />
         {/* Blob 2: Mid-page Glow */}
@@ -143,7 +143,7 @@ const LandingPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(163,197,90,0.18) 0%, rgba(107,138,58,0.08) 50%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(163,197,90,0.08) 0%, rgba(107,138,58,0.04) 50%, transparent 70%)',
+            : 'radial-gradient(circle, rgba(163,197,90,0.05) 0%, rgba(107,138,58,0.02) 50%, transparent 70%)',
           filter: 'blur(130px)',
         }} />
         {/* Blob 3: Bottom Glow */}
@@ -153,7 +153,7 @@ const LandingPage = () => {
           borderRadius: '50%',
           background: isDark
             ? 'radial-gradient(circle, rgba(61,80,22,0.24) 0%, rgba(107,138,58,0.10) 60%, transparent 75%)'
-            : 'radial-gradient(circle, rgba(61,80,22,0.10) 0%, rgba(107,138,58,0.04) 60%, transparent 75%)',
+            : 'radial-gradient(circle, rgba(61,80,22,0.05) 0%, rgba(107,138,58,0.02) 60%, transparent 75%)',
           filter: 'blur(140px)',
         }} />
       </div>
@@ -168,8 +168,8 @@ const LandingPage = () => {
         className="hero-section landing-hero-section"
         style={{
           minHeight: '100vh', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          padding: '130px 24px 80px', position: 'relative', overflow: 'hidden',
+          alignItems: 'center', justifyContent: 'flex-start',
+          padding: '140px 24px 80px', position: 'relative', overflow: 'hidden',
         }}
       >
         {/* Dot grid */}
@@ -263,16 +263,16 @@ const LandingPage = () => {
               className="bento-card-score"
               style={{
                 gridColumn: '1 / 4', gridRow: '1',
-                background: isDark ? 'rgba(18,24,10,0.65)' : 'rgba(250,249,245,0.72)',
-                border: isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.14)',
+                background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.70)',
+                border: isDark ? '1px solid rgba(107,138,58,0.25)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: 24, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
                 boxShadow: isDark
                   ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
-                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                  : '0 20px 48px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.95)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               }}
             >
-              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.85)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: isDark ? '#a3c55a' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Resume Score</span>
               <div style={{ position: 'relative', width: 88, height: 88 }}>
                 <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)' }}>
                   <circle cx="44" cy="44" r="36" fill="none" stroke={isDark ? 'rgba(107,138,58,0.15)' : 'rgba(61,80,22,0.10)'} strokeWidth="7" />
@@ -287,28 +287,28 @@ const LandingPage = () => {
                     </linearGradient>
                   </defs>
                 </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: 'var(--text-primary)' }}>92%</div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: isDark ? '#F0EDE4' : '#1A1F0E' }}>92%</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#4A7C3F', fontSize: 12, fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: isDark ? '#6B8A3A' : '#2D5522', fontSize: 12, fontWeight: 700 }}>
                 <Check size={13} strokeWidth={3} /> Highly Recommended
               </div>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Scored in 8.2 seconds</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: isDark ? 'rgba(240,237,228,0.60)' : '#3A422E' }}>Scored in 8.2 seconds</span>
             </motion.div>
 
             {/* Card: Candidate Dashboard */}
             <div className="bento-card-candidates" style={{
               gridColumn: '4 / 10', gridRow: '1',
-              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
-              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.70)',
+              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
               borderRadius: 20, overflow: 'hidden', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
               boxShadow: isDark
                 ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
-                : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                : '0 20px 48px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.95)',
             }}>
               {/* Topbar */}
               <div style={{ padding: '14px 18px', borderBottom: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Top Candidates</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: '#4A7C3F', background: 'rgba(74,124,63,0.12)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(74,124,63,0.25)' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: isDark ? '#F0EDE4' : '#1A1F0E' }}>Top Candidates</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, color: isDark ? '#a3c55a' : '#2D5522', background: isDark ? 'rgba(74,124,63,0.20)' : 'rgba(61,80,22,0.08)', padding: '3px 10px', borderRadius: 999, border: isDark ? '1px solid rgba(74,124,63,0.30)' : '1px solid rgba(61,80,22,0.18)' }}>
                   <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>●</motion.span> Live
                 </div>
               </div>
@@ -320,17 +320,17 @@ const LandingPage = () => {
                 ].map((c, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 12,
-                    background: isDark ? 'rgba(107,138,58,0.10)' : 'rgba(61,80,22,0.05)',
+                    background: isDark ? 'rgba(107,138,58,0.10)' : 'rgba(61,80,22,0.04)',
                     backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                     border: isDark ? '1px solid rgba(107,138,58,0.15)' : '1px solid rgba(61,80,22,0.08)',
                   }}>
                     <img src={c.avatar} alt={c.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{c.name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{c.role}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#F0EDE4' : '#1A1F0E', lineHeight: 1.2 }}>{c.name}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: isDark ? 'rgba(240,237,228,0.65)' : '#4A5239' }}>{c.role}</div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#4A7C3F' }}>{c.match}% Match</span>
-                    <Bookmark size={12} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? '#a3c55a' : '#2D5522' }}>{c.match}% Match</span>
+                    <Bookmark size={12} style={{ color: isDark ? 'rgba(240,237,228,0.40)' : '#7A8468' }} />
                   </div>
                 ))}
               </div>
@@ -342,26 +342,26 @@ const LandingPage = () => {
               className="bento-card-interview"
               style={{
                 gridColumn: '10 / 13', gridRow: '1',
-                background: isDark ? 'linear-gradient(135deg, rgba(26,45,10,0.70) 0%, rgba(14,25,6,0.70) 100%)' : 'rgba(250,249,245,0.75)',
-                border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.14)',
+                background: isDark ? 'linear-gradient(135deg, rgba(26,45,10,0.70) 0%, rgba(14,25,6,0.70) 100%)' : 'rgba(250,249,245,0.70)',
+                border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: '20px 16px', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
                 boxShadow: isDark
                   ? '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.08)'
-                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                  : '0 20px 48px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.95)',
                 display: 'flex', flexDirection: 'column', gap: 14,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: isDark ? 'rgba(107,138,58,0.20)' : 'rgba(61,80,22,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Video size={15} style={{ color: '#6B8A3A' }} />
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: isDark ? 'rgba(107,138,58,0.20)' : 'rgba(61,80,22,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Video size={15} style={{ color: isDark ? '#a3c55a' : '#3D5016' }} />
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>AI Interview</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#F0EDE4' : '#1A1F0E' }}>AI Interview</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, background: 'rgba(74,124,63,0.15)', border: '1px solid rgba(74,124,63,0.25)' }}>
-                <Check size={12} strokeWidth={3} style={{ color: '#4A7C3F' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#4A7C3F' }}>Completed</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, background: isDark ? 'rgba(74,124,63,0.20)' : 'rgba(61,80,22,0.08)', border: isDark ? '1px solid rgba(107,138,58,0.30)' : '1px solid rgba(61,80,22,0.18)' }}>
+                <Check size={12} strokeWidth={3} style={{ color: isDark ? '#a3c55a' : '#2D4B16' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#a3c55a' : '#2D4B16' }}>Completed</span>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: isDark ? 'rgba(240,237,228,0.80)' : '#2D351E', lineHeight: 1.5 }}>
                 12 Q&A evaluated<br />Score: 87/100
               </div>
             </motion.div>
@@ -369,14 +369,14 @@ const LandingPage = () => {
             {/* Card: Pipeline */}
             <div className="bento-card-pipeline" style={{
               gridColumn: '1 / 8', gridRow: '2',
-              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
-              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+              background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.70)',
+              border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
               borderRadius: 20, padding: 22, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
               boxShadow: isDark
                 ? '0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.08)'
-                : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                : '0 20px 48px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.95)',
             }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 18 }}>Hiring Pipeline</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#F0EDE4' : '#1A1F0E', marginBottom: 18 }}>Hiring Pipeline</div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0 clamp(2px, 1vw, 8px)', overflowX: 'auto' }}>
                 <div style={{
                   position: 'absolute', top: 16, left: 20, right: 20, height: 2,
@@ -395,15 +395,15 @@ const LandingPage = () => {
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 1, minWidth: 44 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10,
-                      background: s.current ? '#3D5016' : s.done ? (isDark ? 'rgba(61,80,22,0.30)' : 'rgba(61,80,22,0.12)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.04)'),
-                      border: `1px solid ${s.current ? '#6B8A3A' : s.done ? (isDark ? 'rgba(107,138,58,0.35)' : 'rgba(61,80,22,0.25)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(61,80,22,0.08)')}`,
+                      background: s.current ? '#3D5016' : s.done ? (isDark ? 'rgba(61,80,22,0.30)' : 'rgba(61,80,22,0.10)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(61,80,22,0.04)'),
+                      border: `1px solid ${s.current ? '#6B8A3A' : s.done ? (isDark ? 'rgba(107,138,58,0.35)' : 'rgba(61,80,22,0.22)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(61,80,22,0.10)')}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: s.current ? '#fff' : s.done ? '#6B8A3A' : 'var(--text-muted)',
+                      color: s.current ? '#fff' : s.done ? (isDark ? '#a3c55a' : '#3D5016') : 'var(--text-muted)',
                       boxShadow: s.current ? '0 0 20px rgba(107,138,58,0.5)' : 'none',
                     }}>
                       <s.icon size={14} />
                     </div>
-                    <span style={{ fontSize: 9, fontWeight: s.done ? 700 : 500, color: s.done ? 'var(--text-primary)' : 'var(--text-muted)', textAlign: 'center', maxWidth: 52 }}>{s.label}</span>
+                    <span style={{ fontSize: 9, fontWeight: s.done ? 700 : 600, color: s.done ? (isDark ? '#F0EDE4' : '#1A1F0E') : (isDark ? 'rgba(240,237,228,0.50)' : '#4A5239'), textAlign: 'center', maxWidth: 52 }}>{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -415,16 +415,16 @@ const LandingPage = () => {
               className="bento-card-stats"
               style={{
                 gridColumn: '8 / 13', gridRow: '2',
-                background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.72)',
-                border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.14)',
+                background: isDark ? 'rgba(18,24,10,0.68)' : 'rgba(250,249,245,0.70)',
+                border: isDark ? '1px solid rgba(107,138,58,0.22)' : '1px solid rgba(61,80,22,0.12)',
                 borderRadius: 20, padding: 22, backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
                 boxShadow: isDark
                   ? '0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.08)'
-                  : '0 20px 50px rgba(61,80,22,0.08), inset 0 1px 0 0 rgba(255,255,255,0.90)',
+                  : '0 20px 48px rgba(61,80,22,0.06), inset 0 1px 0 0 rgba(255,255,255,0.95)',
                 display: 'flex', flexDirection: 'column', gap: 16,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? 'rgba(163,197,90,0.85)' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: isDark ? '#a3c55a' : '#3D5016', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recent Activity</div>
               {[
                 { text: '120 resumes screened', time: '2m ago', color: '#4A7C3F' },
                 { text: 'AI interviews completed', time: '15m ago', color: '#4A7C3F' },
@@ -432,10 +432,10 @@ const LandingPage = () => {
               ].map((act, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: act.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{act.text}</span>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: act.color === '#4A7C3F' ? (isDark ? '#a3c55a' : '#3D5016') : (isDark ? 'rgba(240,237,228,0.40)' : '#7A8468'), flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: isDark ? '#F0EDE4' : '#1A1F0E', fontWeight: 600 }}>{act.text}</span>
                   </div>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{act.time}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: isDark ? 'rgba(240,237,228,0.50)' : '#4A5239', whiteSpace: 'nowrap' }}>{act.time}</span>
                 </div>
               ))}
             </motion.div>
