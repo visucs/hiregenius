@@ -38,7 +38,8 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "role", nullable = false, length = 20)
     private Role role;
 
     @Enumerated(EnumType.STRING)
