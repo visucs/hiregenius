@@ -22,12 +22,14 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setCredentials(state, action) {
-      const { token, user } = action.payload;
+      const { token, user, role } = action.payload;
+      const resolvedRole = user?.role || role || 'CANDIDATE';
+      const resolvedUser = user ? { ...user, role: resolvedRole } : { role: resolvedRole };
       state.token = token;
-      state.user = user;
+      state.user = resolvedUser;
       state.error = null;
       localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      localStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     },
     setLoading(state, action) {
       state.isLoading = action.payload;
