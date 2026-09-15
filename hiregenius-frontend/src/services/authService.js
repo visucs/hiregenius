@@ -42,8 +42,15 @@ export const authService = {
 
   /**
    * Google OAuth Login/Registration
+   * Calls Spring Boot POST /api/auth/google-login with Firebase ID token and optional role
    * @param {{ idToken: string, role?: string }} payload
    */
-  // TODO: replace with real POST /api/auth/google-login once the Auth Service's Google endpoint is built
-  googleLogin: (payload) => mockGoogleLoginApiCall(payload),
+  googleLogin: async (payload) => {
+    const res = await api.post('/auth/google-login', payload);
+    const data = res?.data || res;
+    return {
+      ...data,
+      data,
+    };
+  },
 };
