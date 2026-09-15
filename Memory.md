@@ -599,3 +599,15 @@ pm run build (0 errors in 1.22s).
   - Updated CI workflow (.github/workflows/auth-service-ci.yml) with fallback JWT secret and MySQL service container.
   - Documented complete Render deployment instructions and dashboard environment variables in DevOps.md.
   - Branch: eature/auth-service-deploy prepared and pushed to GitHub.
+
+### 2026-09-16 — Fix Auth Service Test Datasource (H2 in MySQL-compatibility mode)
+- **Problem**: In GitHub Actions CI, an environment variable SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/testdb in the runner caused Spring's test bootstrap to pair org.h2.Driver with the MySQL JDBC URL, failing all 11 tests in AuthControllerTest.java with Driver org.h2.Driver claims to not accept jdbcUrl, jdbc:mysql://localhost:3306/testdb.
+- **Root Cause & Fix**:
+  1. Configured pplication-test.yml and pplication-test.properties with:
+     - spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+     - spring.datasource.driver-class-name=org.h2.Driver
+     - spring.jpa.hibernate.ddl-auto=create-drop
+     - spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+  2. Annotated AuthControllerTest.java with @SpringBootTest(properties = { spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1, spring.datasource.driver-class-name=org.h2.Driver }) and @ActiveProfiles(test) so test execution is immutable against external OS environment overrides.
+  3. Ensured com.h2database:h2 in pom.xml has <scope>test</scope>.
+- **Verification**: Ran mvn clean test under simulated CI environment with SPRING_DATASOURCE_URL set. All 14 tests run with 0 failures, 0 errors, 0 skipped (including all 11 in AuthControllerTest).

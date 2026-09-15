@@ -5,13 +5,14 @@ spring:
   application:
     name: auth-service-test
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
     username: sa
     password: ''
     driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
