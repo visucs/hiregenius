@@ -619,3 +619,25 @@ pm run build (0 errors in 1.22s).
 - **Fix**: In User.java, added @JdbcTypeCode(SqlTypes.VARCHAR) and @Column(name = auth_provider, nullable = false, length = 20) alongside @Enumerated(EnumType.STRING) to instruct Hibernate 6 to validate and bind uth_provider as Types#VARCHAR.
 - **Note for other services**: hiregenius-core-api (or any other service sharing the users schema) should ensure enum fields mapped to VARCHAR columns explicitly use string/VARCHAR JDBC typing to avoid similar schema validation failures.
 - **Verification**: mvn clean verify passed with 0 errors, 14/14 tests passing.
+
+### 2026-09-16 — Align All User Entity Enum Fields (ole, uth_provider) with VARCHAR Schema
+- **Issue**: Render deployment failed during Hibernate schema validation for the ole column:
+  Schema-validation: wrong column type encountered in column [role] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('recruiter','candidate','admin') (Types#ENUM)]
+- **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both ole VARCHAR(50) and uth_provider VARCHAR(50).
+- **Fields Updated in User.java**:
+  1. ole:
+     `java
+     @Enumerated(EnumType.STRING)
+     @JdbcTypeCode(SqlTypes.VARCHAR)
+     @Column(name = role, nullable = false, length = 20)
+     private Role role;
+     `
+  2. uth_provider:
+     `java
+     @Enumerated(EnumType.STRING)
+     @JdbcTypeCode(SqlTypes.VARCHAR)
+     @Column(name = auth_provider, nullable = false, length = 20)
+     private AuthProvider authProvider = AuthProvider.LOCAL;
+     `
+- **Entity Scan Complete**: Audited User.java (only entity class in hiregenius-auth-service). No other enum or columnDefinition overrides remain. All fields strictly align with Flyway's users table schema.
+- **Verification**: mvn clean verify passed with 0 errors (14/14 tests passing).
