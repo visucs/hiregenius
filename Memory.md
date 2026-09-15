@@ -520,3 +520,82 @@ pm run build build command, and dist output directory for monorepo configuration
 - **ResumeScreeningPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden to prevent horizontal overflow at 320px width). Upgraded all section cards (RSHero, RSDemo, RSHowItWorks, RSAnalyzed, RSBenefits, RSShowcase, RSFAQ, RSCrossLinks, RSFinalCTA) to deep glassmorphism with scale and lift micro-interactions.
 - **AIInterviewPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden). Upgraded all section cards (AIHero, AIDemo, AIHowItWorks, AIEvaluated, AIBenefits, AIShowcase, AIFAQ, AICrossLinks, AIFinalCTA) to deep glassmorphism with specular highlights and micro-interactions.
 - **Verification**: `npm run build` passed with 0 errors in 887ms.
+
+### 2026-09-15 - Google Sign-In with Firebase Web SDK (Frontend Integration)
+
+**Scope & Execution:**
+- **Firebase Web SDK Setup (`src/lib/firebase.js`)**: Initialized Firebase app using environment variables (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, etc.), exported `auth` instance and configured `googleProvider` with `select_account` prompt. Re-exported from `src/firebase.js`.
+- **Environment Configuration**: Documented all Firebase Web SDK environment variables in `hiregenius-frontend/.env.example`.
+- **Backend Contract Mock (`src/services/authService.js`)**: Implemented `mockGoogleLoginApiCall(payload)` that logs `{ idToken, role }` to console and returns fake AuthResponse `{ token, role }`. Ready for one-line swap to `POST /api/auth/google-login` once Auth Service is live.
+- **Role Selection Gate on Register (`RegisterPage.jsx`)**: Positioned role selection ('I am...' Candidate/Recruiter) FIRST on the page. Kept 'Continue with Google' disabled with clear helper text until a role is selected, ensuring the role is strictly established before triggering the Google OAuth popup.
+- **Login Page Flow (`LoginPage.jsx`)**: Added 'Continue with Google' without a role selector (role resolved server-side for existing users), separated from password login with a visual 'or' divider.
+- **Google Button Component (`src/components/GoogleSignInButton/GoogleSignInButton.jsx`)**: Created secondary button matching `Design.md` (radius 12px, 44px min-height, official multi-color 'G' inline SVG, loading spinner, hover/tap micro-interactions).
+- **Error Handling & Routing**: Handled popup cancellation (`auth/popup-closed-by-user`, `auth/popup-blocked`) with user-facing toasts. Dispatched credentials to Redux auth slice (`setCredentials`) and redirected users to their role dashboard via `ROLE_HOME`.
+- **Status**: Google Sign-In UI is built and functional against Firebase, the backend call is currently mocked with the exact real contract documented, and it needs to be swapped to the real endpoint once the Auth Service's `/api/auth/google-login` is live.
+- **Build & Verification**: `npm run build` passed with 0 errors.
+
+### 2026-09-15 - Phase 1: Spring Boot Auth Service Implementation & Verification
+
+**Architecture & Implementation Summary:**
+- Built standalone Spring Boot 3 (3.2.3), Java 21 authentication service (`com.hiregenius.authservice`) in `hiregenius-auth-service`.
+- **Database & Persistence:**
+  - Configured JPA/Hibernate with Flyway database migrations (`V1__init_auth_schema.sql`).
+  - Table `users`: `id`, `name`, `email` (unique indexed), `password` (nullable for Google-only users), `role` (`RECRUITER`, `CANDIDATE`, `ADMIN`), `auth_provider` (`LOCAL`, `GOOGLE`), `is_active`, `created_at`, `updated_at`.
+  - Added `DataInitializer` to automatically seed system administrator (`admin@hiregenius.ai` / `AdminPassword123!`) on startup.
+- **Security & JWT:**
+  - Configured Spring Security 6 with stateless session management (`SessionCreationPolicy.STATELESS`), BCrypt password hashing (strength 12), and custom CORS policy.
+  - Custom `AuthenticationEntryPoint` returning standard 401 `ApiError` JSON (`{ status: 401, message: "Full authentication is required...", timestamp, path }`).
+  - JWT generation and validation (`io.jsonwebtoken` JJWT 0.12.5) using HS256 HMAC-SHA key derived from `JWT_SIGNING_KEY` (shared with Node.js Core API). Claims include `userId`, `sub` (email), `role`, `iat`, `exp` (24 hours).
+- **Google OAuth & Firebase Admin:**
+  - Integrated `FirebaseConfig` and `GoogleAuthService` using Firebase Admin SDK (9.2.0) to verify client ID tokens.
+  - Implemented seamless account linking policy: if a Google OAuth user signs in with an email already registered locally, the account is linked (`authProvider` updated to `GOOGLE`), preserving their existing role.
+  - Disallowed `ADMIN` role signup via public register or Google endpoints (returns 400).
+  - Explicitly blocked password login for Google-only accounts (`password == null` or `authProvider == GOOGLE`) with friendly 400 error: `"This account uses Google Sign-In — please use the Google button"`.
+  - Added mock token fallback (`mock-google-token:email:name`) for isolated offline/development integration testing.
+- **Endpoints Implemented (`com.hiregenius.authservice.auth.controller.AuthController`):**
+  - `POST /api/auth/register`: Public registration for `RECRUITER` and `CANDIDATE` roles; rejects `ADMIN` with 400; returns 201 + `AuthResponse`.
+  - `POST /api/auth/login`: Email/password verification; returns 200 + `AuthResponse` or 401/400.
+  - `POST /api/auth/google-login`: Firebase ID token exchange; creates user if new or authenticates existing; returns 200 + `AuthResponse`.
+  - `POST /api/auth/forgot-password`: Password reset initiation; returns generic 200 message without revealing account existence.
+  - `GET /api/auth/validate`: Validates Bearer token via `JwtAuthFilter`; returns 200 + `UserResponse` with role and user details; rejects unauthenticated/tampered tokens with 401.
+  - `GET /health`: Returns 200 `{"service":"auth-service","status":"UP"}`.
+  - `GET /v3/api-docs` & `/swagger-ui/index.html`: SpringDoc OpenAPI 3 documentation.
+- **Verification & Test Results:**
+  - Automated unit test suite (`mvn test`): 14 tests run, 0 failures, 0 errors across `AuthControllerTest` and `JwtServiceTest`.
+  - Live API verification test suite (`scratch/verify_auth_endpoints.mjs`): 16 tests run against live service on port 8080 with 100% pass rate:
+    1. `GET /health` -> 200 UP
+    2. `POST /api/auth/register` (RECRUITER) -> 201 with token
+    3. `POST /api/auth/register` (CANDIDATE) -> 201 with token
+    4. `POST /api/auth/register` (ADMIN) -> 400 Bad Request
+    5. `POST /api/auth/register` (duplicate email) -> 409 Conflict
+    6. `POST /api/auth/login` (valid credentials) -> 200 with JWT
+    7. `POST /api/auth/login` (wrong password) -> 401 Unauthorized
+    8. `POST /api/auth/login` (seeded system admin) -> 200 with ADMIN role
+    9. `POST /api/auth/google-login` (new email, CANDIDATE) -> 201/200 with token
+    10. `POST /api/auth/google-login` (existing email) -> 200 with token
+    11. `POST /api/auth/google-login` (signup with ADMIN role) -> 400 Bad Request
+    12. `POST /api/auth/login` on Google-only account -> 400 ("This account uses Google Sign-In — please use the Google button")
+    13. `GET /api/auth/validate` (no token) -> 401
+    14. `GET /api/auth/validate` (valid token) -> 200 with role
+    15. `GET /api/auth/validate` (tampered token) -> 401
+    16. `POST /api/auth/forgot-password` -> 200 generic success
+- **Node.js Core API Compatibility Contract:**
+  - Shared secret: `JWT_SIGNING_KEY` environment variable in `.env` (min 256 bits).
+  - Alg: HS256.
+  - Claims payload: `{ sub: "<email>", userId: <number>, role: "<RECRUITER|CANDIDATE|ADMIN>", exp: <timestamp>, iat: <timestamp> }`.
+
+### 2026-09-15 — Frontend Google Sign-In & Auth Service Deployment Setup
+- **Part 1 (Frontend Google Sign-In)**:
+  - Branch: eature/google-signin pushed to GitHub tracking origin/feature/google-signin.
+  - Validated frontend: 
+pm run lint (0 errors) and 
+pm run build (0 errors in 1.22s).
+  - Confirmed .env is gitignored and no Firebase credentials/keys exist in committed code.
+  - Preserved standard email/password login and demo buttons alongside new Google button.
+- **Part 2 (Auth Service Deployment Preparation)**:
+  - Production multi-stage Dockerfile configured with non-root user, dynamic $PORT fallback, and /health healthcheck.
+  - Created hiregenius-auth-service/.env.example documenting all database, JWT, Firebase, and CORS environment variables.
+  - Confirmed unit tests pass with zero errors (14 tests run, 0 failures, 0 errors).
+  - Updated CI workflow (.github/workflows/auth-service-ci.yml) with fallback JWT secret and MySQL service container.
+  - Documented complete Render deployment instructions and dashboard environment variables in DevOps.md.
+  - Branch: eature/auth-service-deploy prepared and pushed to GitHub.
