@@ -641,3 +641,21 @@ pm run build (0 errors in 1.22s).
      `
 - **Entity Scan Complete**: Audited User.java (only entity class in hiregenius-auth-service). No other enum or columnDefinition overrides remain. All fields strictly align with Flyway's users table schema.
 - **Verification**: mvn clean verify passed with 0 errors (14/14 tests passing).
+
+### 2026-09-16 — Wire Real Google Auth & Remove Demo Portals from Production
+- **Feature**: Connected hiregenius-frontend to the live POST /api/auth/google-login backend endpoint and removed demo/mock UI from production.
+- **Frontend Changes**:
+  1. hiregenius-frontend/src/services/authService.js:
+     - Updated googleLogin(payload) to send a real HTTP POST request to /auth/google-login via Axios with { ...data, data } normalized return.
+     - Preserved mockGoogleLoginApiCall(payload) in the file as an unreferenced fallback for offline development.
+     - Verified login, egister, and orgotPassword were already wired to real backend endpoints.
+  2. hiregenius-frontend/src/pages/Login/LoginPage.jsx:
+     - Removed demo info banner and the "Demo Portals (1-Click)" section containing Candidate, Recruiter, and Admin bypass buttons.
+     - Removed DEMO_ACCOUNTS map and devLogin handler.
+     - Cleaned up onSubmit to strictly rely on real backend authentication without demo fallbacks.
+     - Preserved essential auth links: "Forgot password?", "Continue with Google", and "Create one" (register).
+- **Verification**:
+  - 
+pm run lint exited 0 (no errors).
+  - 
+pm run build completed successfully with 0 errors.
