@@ -611,3 +611,11 @@ pm run build (0 errors in 1.22s).
   2. Annotated AuthControllerTest.java with @SpringBootTest(properties = { spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1, spring.datasource.driver-class-name=org.h2.Driver }) and @ActiveProfiles(test) so test execution is immutable against external OS environment overrides.
   3. Ensured com.h2database:h2 in pom.xml has <scope>test</scope>.
 - **Verification**: Ran mvn clean test under simulated CI environment with SPRING_DATASOURCE_URL set. All 14 tests run with 0 failures, 0 errors, 0 skipped (including all 11 in AuthControllerTest).
+
+### 2026-09-16 — Fix User Entity uth_provider Type Mismatch with Flyway Schema
+- **Issue**: Render deployment failed during Hibernate startup schema-validation:
+  Schema-validation: wrong column type encountered in column [auth_provider] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('local','google') (Types#ENUM)]
+- **Root Cause**: In Hibernate 6.x on MySQLDialect, @Enumerated(EnumType.STRING) defaults to MySQL's native ENUM type (SqlTypes.ENUM) rather than standard VARCHAR. Meanwhile, Flyway migration V1__init_auth_schema.sql defined uth_provider VARCHAR(50) NOT NULL DEFAULT 'LOCAL'. During ddl-auto: validate, Hibernate flagged the type mismatch between database Types#VARCHAR and entity expected Types#ENUM.
+- **Fix**: In User.java, added @JdbcTypeCode(SqlTypes.VARCHAR) and @Column(name = auth_provider, nullable = false, length = 20) alongside @Enumerated(EnumType.STRING) to instruct Hibernate 6 to validate and bind uth_provider as Types#VARCHAR.
+- **Note for other services**: hiregenius-core-api (or any other service sharing the users schema) should ensure enum fields mapped to VARCHAR columns explicitly use string/VARCHAR JDBC typing to avoid similar schema validation failures.
+- **Verification**: mvn clean verify passed with 0 errors, 14/14 tests passing.
