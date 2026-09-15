@@ -9,12 +9,16 @@ import { Eye, EyeOff, UserPlus, Sparkles, ArrowLeft, Briefcase, Users } from 'lu
 
 import { registerSchema } from '../../utils/validationSchemas';
 import { authService } from '../../services/authService';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../lib/firebase';
+import { ROLE_HOME } from '../../routes/RoleRedirect';
 import {
   setCredentials, setLoading, setError,
   selectIsAuthenticated, selectAuthLoading, selectAuthError, clearError,
 } from '../../features/auth/authSlice';
 import { formatError } from '../../utils/helpers';
 import GradientButton from '../../components/GradientButton/GradientButton';
+import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 
 const RegisterPage = () => {
   const dispatch = useDispatch();
@@ -24,6 +28,7 @@ const RegisterPage = () => {
   const authError = useSelector(selectAuthError);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) navigate('/dashboard', { replace: true });
@@ -32,7 +37,7 @@ const RegisterPage = () => {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: 'CANDIDATE' },
+    defaultValues: { role: '' },
   });
 
   const selectedRole = watch('role');
@@ -40,16 +45,60 @@ const RegisterPage = () => {
   const onSubmit = async (data) => {
     dispatch(setLoading(true));
     dispatch(clearError());
-    const { confirmPassword, ...payload } = data;
+    const { confirmPassword: _confirmPassword, ...payload } = data;
     try {
       const res = await authService.register(payload);
       dispatch(setCredentials({ token: res.data.token, user: res.data.user }));
       toast.success('Account created! Welcome to HireGenius AI.');
-      navigate('/dashboard');
+      navigate(ROLE_HOME[res.data.user?.role] || '/dashboard');
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));
       toast.error(msg);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!selectedRole) {
+      toast.error('Please select whether you are hiring or looking for a job before continuing with Google.');
+      return;
+    }
+    setIsGoogleLoading(true);
+    dispatch(clearError());
+    try {
+      // 1. Trigger Firebase Google popup
+      const result = await signInWithPopup(auth, googleProvider);
+      // 2. Extract ID token
+      const idToken = await result.user.getIdToken();
+      // 3. Build request payload with chosen role (required on Register)
+      const payload = { idToken, role: selectedRole };
+      // 4. Call mock API
+      const res = await authService.googleLogin(payload);
+      const { token, role: returnedRole } = res;
+      // 5. Store session in Redux & navigate to role dashboard
+      const user = {
+        id: result.user.uid,
+        name: result.user.displayName || (returnedRole === 'RECRUITER' ? 'Recruiter' : 'Candidate'),
+        email: result.user.email || '',
+        role: returnedRole,
+      };
+      dispatch(setCredentials({ token, user, role: returnedRole }));
+      toast.success(`Account created! Welcome to HireGenius AI, ${result.user.displayName || ''}`);
+      navigate(ROLE_HOME[returnedRole] ?? '/dashboard');
+    } catch (err) {
+      console.error('Google registration error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign-in cancelled. You closed the Google sign-in window.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        toast.error('Sign-in cancelled.');
+      } else if (err.code === 'auth/popup-blocked') {
+        toast.error('Pop-up blocked by browser. Please enable popups for this site.');
+      } else {
+        const msg = err.message || 'Failed to register with Google.';
+        toast.error(msg);
+      }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -137,31 +186,7 @@ const RegisterPage = () => {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {/* Full Name */}
-            <div>
-              <label htmlFor="register-name" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Full Name</label>
-              <input id="register-name" type="text" autoComplete="name" placeholder="Jane Smith"
-                {...register('name')} style={inputStyle(errors.name)}
-                onFocus={e => e.target.style.borderColor = errors.name ? 'var(--danger)' : 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = errors.name ? 'var(--danger)' : 'var(--border)'}
-              />
-              <FieldError message={errors.name?.message} />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="register-email" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Email address</label>
-              <input id="register-email" type="email" autoComplete="email" placeholder="you@company.com"
-                {...register('email')} style={inputStyle(errors.email)}
-                onFocus={e => e.target.style.borderColor = errors.email ? 'var(--danger)' : 'var(--primary)'}
-                onBlur={e => e.target.style.borderColor = errors.email ? 'var(--danger)' : 'var(--border)'}
-              />
-              <FieldError message={errors.email?.message} />
-            </div>
-
-            {/* Role — two card-style options only: Candidate or Recruiter.
-                Admin accounts are never self-created via the public form.
-                Zod schema also enforces this at the validation layer. */}
+            {/* Role — shown FIRST per backend contract before Google or password registration */}
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>
                 I am…
@@ -231,6 +256,28 @@ const RegisterPage = () => {
               )}
             </div>
 
+            {/* Full Name */}
+            <div>
+              <label htmlFor="register-name" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Full Name</label>
+              <input id="register-name" type="text" autoComplete="name" placeholder="Jane Smith"
+                {...register('name')} style={inputStyle(errors.name)}
+                onFocus={e => e.target.style.borderColor = errors.name ? 'var(--danger)' : 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = errors.name ? 'var(--danger)' : 'var(--border)'}
+              />
+              <FieldError message={errors.name?.message} />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="register-email" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Email address</label>
+              <input id="register-email" type="email" autoComplete="email" placeholder="you@company.com"
+                {...register('email')} style={inputStyle(errors.email)}
+                onFocus={e => e.target.style.borderColor = errors.email ? 'var(--danger)' : 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = errors.email ? 'var(--danger)' : 'var(--border)'}
+              />
+              <FieldError message={errors.email?.message} />
+            </div>
+
             {/* Password */}
             <div>
               <label htmlFor="register-password" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>Password</label>
@@ -271,6 +318,31 @@ const RegisterPage = () => {
               <UserPlus size={15} /> Create Account
             </GradientButton>
           </form>
+
+          {/* Visual Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px', gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>
+              or
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+
+          {/* Continue with Google (requires role selection first) */}
+          <div>
+            <GoogleSignInButton
+              id="register-google-btn"
+              isLoading={isGoogleLoading}
+              disabled={!selectedRole || isGoogleLoading}
+              onClick={handleGoogleSignIn}
+              label={selectedRole ? `Continue with Google as ${selectedRole === 'RECRUITER' ? 'Recruiter' : 'Candidate'}` : 'Continue with Google'}
+            />
+            {!selectedRole && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+                Select whether you&apos;re hiring or looking for a job above to enable Google sign up
+              </p>
+            )}
+          </div>
 
           <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
             Already have an account?{' '}

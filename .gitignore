@@ -7,6 +7,9 @@ dist/
 **/dist/
 dist-ssr/
 **/dist-ssr/
+target/
+**/target/
+*.class
 
 # Environment files (important secrets, never commit)
 .env
@@ -18,6 +21,18 @@ dist-ssr/
 **/.env
 **/.env.local
 **/.env.*.local
+application-local.yml
+**/application-local.yml
+application-local.properties
+**/application-local.properties
+
+# Firebase Service Account Credentials (secrets - never commit)
+*firebase*.json
+**/*firebase*.json
+*serviceAccount*.json
+**/*serviceAccount*.json
+serviceAccountKey.json
+**/serviceAccountKey.json
 
 # Logs
 logs

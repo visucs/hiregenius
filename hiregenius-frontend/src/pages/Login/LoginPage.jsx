@@ -9,6 +9,8 @@ import { Eye, EyeOff, LogIn, Sparkles, AlertCircle, ArrowLeft } from 'lucide-rea
 
 import { loginSchema } from '../../utils/validationSchemas';
 import { authService } from '../../services/authService';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../lib/firebase';
 import {
   setCredentials, setLoading, setError,
   selectIsAuthenticated, selectUserRole, selectAuthLoading, selectAuthError, clearError,
@@ -16,6 +18,7 @@ import {
 import { formatError } from '../../utils/helpers';
 import { ROLE_HOME } from '../../routes/RoleRedirect';
 import GradientButton from '../../components/GradientButton/GradientButton';
+import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -26,6 +29,7 @@ const LoginPage = () => {
   const isLoading = useSelector(selectAuthLoading);
   const authError = useSelector(selectAuthError);
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
@@ -101,6 +105,46 @@ const LoginPage = () => {
       const msg = formatError(err);
       dispatch(setError(msg));
       toast.error(msg);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    dispatch(clearError());
+    try {
+      // 1. Trigger Firebase Google popup
+      const result = await signInWithPopup(auth, googleProvider);
+      // 2. Extract ID token
+      const idToken = await result.user.getIdToken();
+      // 3. Build request payload (role absent on Login, as user already has role in backend)
+      const payload = { idToken };
+      // 4. Call mock API
+      const res = await authService.googleLogin(payload);
+      const { token, role: returnedRole } = res;
+      // 5. Populate Redux auth state & persist session
+      const user = {
+        id: result.user.uid,
+        name: result.user.displayName || 'Google User',
+        email: result.user.email || '',
+        role: returnedRole,
+      };
+      dispatch(setCredentials({ token, user, role: returnedRole }));
+      toast.success(`Welcome back, ${result.user.displayName || 'there'}!`);
+      navigate(redirectParam || (ROLE_HOME[returnedRole] ?? '/recruiter/dashboard'));
+    } catch (err) {
+      console.error('Google Sign-In error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign-in cancelled. You closed the Google sign-in window.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        toast.error('Sign-in cancelled.');
+      } else if (err.code === 'auth/popup-blocked') {
+        toast.error('Pop-up blocked by browser. Please enable popups for this site.');
+      } else {
+        const msg = err.message || 'Failed to sign in with Google.';
+        toast.error(msg);
+      }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -262,6 +306,24 @@ const LoginPage = () => {
               <LogIn size={15} /> Sign In
             </GradientButton>
           </form>
+
+          {/* Visual Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px', gap: 12 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>
+              or
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+
+          {/* Continue with Google */}
+          <GoogleSignInButton
+            id="login-google-btn"
+            isLoading={isGoogleLoading}
+            disabled={isGoogleLoading || isLoading}
+            onClick={handleGoogleSignIn}
+            label="Continue with Google"
+          />
 
           <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
             Don&apos;t have an account?{' '}

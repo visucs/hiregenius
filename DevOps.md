@@ -76,3 +76,36 @@ Navigate to GitHub Repository -> **Settings** -> **Secrets and variables** -> **
 - **Core API**: Node build -> Node alpine image (production dependencies only).
 - **AI/ML Service**: Python 3.11 slim image -> Uvicorn server.
 - **Security**: All runtime containers execute as non-root users and expose only their required application ports. Healthchecks are configured to ensure dependent services spin up in the correct order.
+
+## Auth Service Deployment (Render)
+
+The **hiregenius-auth-service** is deployed as a Docker Web Service on [Render](https://render.com).
+
+### Step-by-Step Deployment Instructions
+
+1. **Log in to Render Dashboard**: Navigate to [dashboard.render.com](https://dashboard.render.com).
+2. **Create New Web Service**:
+   - Click **New +** -> **Web Service**.
+   - Connect your GitHub repository (`visucs/hiregenius`).
+3. **Configure Service Settings**:
+   - **Name**: `hiregenius-auth-service`
+   - **Branch**: `main` (or `dev` for staging)
+   - **Root Directory**: `hiregenius-auth-service`
+   - **Runtime**: `Docker` (Render automatically detects `Dockerfile` inside `hiregenius-auth-service`)
+   - **Instance Type**: `Free` (or `Starter`)
+4. **Health Check**:
+   - Under **Advanced Settings**, set **Health Check Path** to: `/health`
+5. **Environment Variables**:
+   Add the following environment variables in the Render dashboard:
+   - `SPRING_DATASOURCE_URL`: Full JDBC URL for your managed MySQL database (e.g. `jdbc:mysql://<host>:<port>/<dbname>?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true`).
+   - `SPRING_DATASOURCE_USERNAME`: Database username.
+   - `SPRING_DATASOURCE_PASSWORD`: Database password.
+   - `JWT_SIGNING_KEY`: Min 256-bit (32+ character) secret string (must match `JWT_SIGNING_KEY` on `hiregenius-core-api`).
+   - `JWT_EXPIRATION_MS`: `86400000` (24 hours).
+   - `FIREBASE_CREDENTIALS_JSON`: Entire raw JSON content of your Firebase Service Account credentials file (`serviceAccountKey.json`).
+   - `CORS_ALLOWED_ORIGINS`: Comma-separated list including the deployed frontend URL (e.g. `https://hiregenius.vercel.app,http://localhost:5173`).
+6. **Deploy**:
+   - Click **Create Web Service**.
+   - Render will build the multi-stage Docker image and start the container on its assigned `$PORT`.
+   - Once healthy, Render will provide a public URL (e.g. `https://hiregenius-auth-service.onrender.com`).
+
