@@ -12,6 +12,7 @@ import LandingPage from './pages/Landing/LandingPage';
 import LoginPage from './pages/Login/LoginPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPassword/ResetPasswordPage';
 import ResumeScreeningPage    from './pages/products/ResumeScreening/ResumeScreeningPage';
 import AIInterviewPage        from './pages/products/AIInterview/AIInterviewPage';
 import AnalyticsProductPage   from './pages/products/Analytics/AnalyticsProductPage';
@@ -139,6 +140,7 @@ const App = () => {
         <Route path="/login"    element={<RoleRedirect><LoginPage /></RoleRedirect>} />
         <Route path="/register" element={<RoleRedirect><RegisterPage /></RoleRedirect>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/unauthorized"    element={<UnauthorizedPage />} />
 
         {/* ── PROTECTED: RECRUITER ──────────────────────────────────── */}
