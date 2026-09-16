@@ -41,6 +41,24 @@ export const authService = {
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
 
   /**
+   * POST /auth/reset-password
+   * @param {string | { token: string, newPassword: string }} tokenOrPayload
+   * @param {string} [newPassword]
+   */
+  resetPassword: (tokenOrPayload, newPassword) => {
+    const payload = typeof tokenOrPayload === 'object'
+      ? tokenOrPayload
+      : { token: tokenOrPayload, newPassword };
+    return api.post('/auth/reset-password', payload);
+  },
+
+  /**
+   * GET /auth/validate
+   * Validates the active JWT token with Spring Boot Auth Service
+   */
+  validate: () => api.get('/auth/validate'),
+
+  /**
    * Google OAuth Login/Registration
    * Calls Spring Boot POST /api/auth/google-login with Firebase ID token and optional role
    * @param {{ idToken: string, role?: string }} payload

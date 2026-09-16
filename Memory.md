@@ -1,6 +1,6 @@
-# Memory.md — HireGenius AI Build Log
+﻿# Memory.md â€” HireGenius AI Build Log
 
-Purpose: keep the AI coding assistant updated on real progress so it doesn't re-scan the whole codebase or re-guess decisions when a new chat/session starts. Update this file at the end of every work session or phase — keep entries short and factual.
+Purpose: keep the AI coding assistant updated on real progress so it doesn't re-scan the whole codebase or re-guess decisions when a new chat/session starts. Update this file at the end of every work session or phase â€” keep entries short and factual.
 
 ---
 
@@ -8,52 +8,52 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 1. Add a new dated entry under "Session Log" summarizing what was actually built/changed.
 2. Update "Current Status" to reflect the current phase (from `Phases.md`).
 3. Update "Key Decisions" only when a real architectural/library decision is made (not in `Rules.md` already).
-4. Update "Known Issues / TODO" — remove items once fixed.
-5. Keep this file under ~200 lines — summarize old sessions instead of letting the log grow forever.
+4. Update "Known Issues / TODO" â€” remove items once fixed.
+5. Keep this file under ~200 lines â€” summarize old sessions instead of letting the log grow forever.
 
 ---
 
 ## Current Status
-- **Active Phase:** Phase 2 complete ✓ | Recruiter Dashboard ✓ | Admin Dashboard ✓ | Candidate Dashboard color-matched ✓
+- **Active Phase:** Phase 2 complete âœ“ | Recruiter Dashboard âœ“ | Admin Dashboard âœ“ | Candidate Dashboard color-matched âœ“
 - **Last Updated:** 2026-09-07
 
 ## Repo / Service Locations
-- Frontend: `hiregenius-frontend/` ← active
-- Backend: `hiregenius-backend/` ← not started yet
-- AI Service: `hiregenius-ai-service/` ← not started yet
-- ML Service: `hiregenius-ml-service/` ← not started yet
+- Frontend: `hiregenius-frontend/` â† active
+- Backend: `hiregenius-backend/` â† not started yet
+- AI Service: `hiregenius-ai-service/` â† not started yet
+- ML Service: `hiregenius-ml-service/` â† not started yet
 
 ## Key Decisions
-- **State management:** Redux Toolkit (chosen over Context API — more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
+- **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
 - **JWT storage:** `localStorage` (keys: `hg_token`, `hg_user`) + Redux state. Both cleared on logout.
-- **Tailwind version:** v4 with `@tailwindcss/vite` plugin (Vite-native, no separate `tailwind.config.js` needed — design tokens set via CSS variables in `index.css`).
+- **Tailwind version:** v4 with `@tailwindcss/vite` plugin (Vite-native, no separate `tailwind.config.js` needed â€” design tokens set via CSS variables in `index.css`).
 - **Sidebar navigation items for Phase 2+ routes:** rendered but `pointer-events-none + opacity-40` until their phases are built. Avoids broken links.
-- **AppShell location:** `src/layouts/AppShell.jsx` — Architecture.md doesn't define a `layouts/` folder; added it to keep the shell separate from components. Minor deviation, logged below.
-- **Theme system (corrected 2026-09-07):** `:root` = off-white/olive green (light, default); `.dark` class on `<html>` = dark olive (same palette, dark variant). `useTheme.js` hook in `hooks/useTheme.js` toggles `.dark` on `<html>`. The Navbar `Moon/Sun` button calls `toggleTheme()`. The old `.app-shell` CSS class that forced a dark indigo/cyan palette (overriding `:root`) has been **removed** — authenticated pages now share the same olive/off-white design system as the landing page and correctly respond to the dark/light toggle. ALL colors in dashboard components use `var(--)` CSS tokens, not hardcoded hex.
+- **AppShell location:** `src/layouts/AppShell.jsx` â€” Architecture.md doesn't define a `layouts/` folder; added it to keep the shell separate from components. Minor deviation, logged below.
+- **Theme system (corrected 2026-09-07):** `:root` = off-white/olive green (light, default); `.dark` class on `<html>` = dark olive (same palette, dark variant). `useTheme.js` hook in `hooks/useTheme.js` toggles `.dark` on `<html>`. The Navbar `Moon/Sun` button calls `toggleTheme()`. The old `.app-shell` CSS class that forced a dark indigo/cyan palette (overriding `:root`) has been **removed** â€” authenticated pages now share the same olive/off-white design system as the landing page and correctly respond to the dark/light toggle. ALL colors in dashboard components use `var(--)` CSS tokens, not hardcoded hex.
 
 ## Known Issues / TODO
-- Chunk size advisory (559KB unminified) — add dynamic imports / code-splitting in Phase 11 polish pass.
+- Chunk size advisory (559KB unminified) â€” add dynamic imports / code-splitting in Phase 11 polish pass.
 - `useTheme` hook currently reads from `localStorage` directly; if theme toggles in Navbar don't cause a re-render, a full Redux theme slice should replace it in Phase 11.
-- Backend not started — all auth API calls will fail until Spring Boot is running. Auth pages handle errors gracefully (toast + error banner).
-- Auth pages (Login, Register, ForgotPassword) still use hardcoded dark styles — they need a CSS-vars pass in a future session.
-- Recruiter and Admin shells (`RecruiterShell.jsx`, `AdminShell.jsx`) may still have some hardcoded indigo/dark hex colors — audit in next pass.
+- Backend not started â€” all auth API calls will fail until Spring Boot is running. Auth pages handle errors gracefully (toast + error banner).
+- Auth pages (Login, Register, ForgotPassword) still use hardcoded dark styles â€” they need a CSS-vars pass in a future session.
+- Recruiter and Admin shells (`RecruiterShell.jsx`, `AdminShell.jsx`) may still have some hardcoded indigo/dark hex colors â€” audit in next pass.
 
-### 2026-09-07 — Dashboard Color System Fix + Dark/Light Mode Toggle
+### 2026-09-07 â€” Dashboard Color System Fix + Dark/Light Mode Toggle
 
-**Problem:** The `.app-shell` CSS class in `index.css` was overriding all CSS variables with a hardcoded indigo/dark palette (`#0A0E1A`, `#6366F1`, `#22D3EE`) that had nothing to do with the off-white/olive landing page design. This broke the dark/light toggle — the toggle was switching `.dark` on `<html>` but `.app-shell` always won with its hardcoded values.
+**Problem:** The `.app-shell` CSS class in `index.css` was overriding all CSS variables with a hardcoded indigo/dark palette (`#0A0E1A`, `#6366F1`, `#22D3EE`) that had nothing to do with the off-white/olive landing page design. This broke the dark/light toggle â€” the toggle was switching `.dark` on `<html>` but `.app-shell` always won with its hardcoded values.
 
 **Fixed:**
-1. `src/index.css` — Removed the entire `.app-shell { --bg-base: #0A0E1A; ... }` override block. Replaced with a minimal `.app-shell { background-color: var(--bg-base); color: var(--text-primary); }` that inherits from `:root` (light) or `.dark` on `<html>`.
-2. `src/pages/Dashboard/CandidateDashboard.jsx` — Full rewrite: all ~40 hardcoded dark hex colors (`#0F1420`, `#6366F1`, `#22D3EE`, `#F8FAFC`, `#94A3B8`, `#64748B`) replaced with CSS variable references (`var(--bg-elevated)`, `var(--primary)`, `var(--secondary)`, `var(--text-primary)`, etc.). The `card` base style object now uses `var(--bg-elevated)` and `var(--border)`. All icon backgrounds, badge chips, button states, drag-drop zone, and textarea use CSS vars.
-3. `src/components/Sidebar/Sidebar.jsx` — Replaced `navItemStyle` hardcoded indigo (`rgba(99,102,241,0.12)`, `#6366F1`) with `var(--step-active-bg)` and `var(--primary)`. Fixed CTA button `boxShadow` from indigo to olive-green rgba.
+1. `src/index.css` â€” Removed the entire `.app-shell { --bg-base: #0A0E1A; ... }` override block. Replaced with a minimal `.app-shell { background-color: var(--bg-base); color: var(--text-primary); }` that inherits from `:root` (light) or `.dark` on `<html>`.
+2. `src/pages/Dashboard/CandidateDashboard.jsx` â€” Full rewrite: all ~40 hardcoded dark hex colors (`#0F1420`, `#6366F1`, `#22D3EE`, `#F8FAFC`, `#94A3B8`, `#64748B`) replaced with CSS variable references (`var(--bg-elevated)`, `var(--primary)`, `var(--secondary)`, `var(--text-primary)`, etc.). The `card` base style object now uses `var(--bg-elevated)` and `var(--border)`. All icon backgrounds, badge chips, button states, drag-drop zone, and textarea use CSS vars.
+3. `src/components/Sidebar/Sidebar.jsx` â€” Replaced `navItemStyle` hardcoded indigo (`rgba(99,102,241,0.12)`, `#6366F1`) with `var(--step-active-bg)` and `var(--primary)`. Fixed CTA button `boxShadow` from indigo to olive-green rgba.
 
-**Result:** Candidate dashboard now shows **off-white (#F2EFE8 / #FAF9F5) backgrounds and dark olive green (#3D5016 / #6B8A3A) accents** in light mode, and a **dark olive (#0D110A / #1A1F10) palette** in dark mode — matching the landing page design system exactly. The Moon/Sun toggle in the Navbar fully switches both the landing page and dashboard.
+**Result:** Candidate dashboard now shows **off-white (#F2EFE8 / #FAF9F5) backgrounds and dark olive green (#3D5016 / #6B8A3A) accents** in light mode, and a **dark olive (#0D110A / #1A1F10) palette** in dark mode â€” matching the landing page design system exactly. The Moon/Sun toggle in the Navbar fully switches both the landing page and dashboard.
 
 
 
-### 2026-09-07 — Full Candidate Portal Destinations & Scan History Page
+### 2026-09-07 â€” Full Candidate Portal Destinations & Scan History Page
 
-**Built & Enabled Pages (under `/candidate/*` → AppShell):**
+**Built & Enabled Pages (under `/candidate/*` â†’ AppShell):**
 1. `src/components/Sidebar/Sidebar.jsx`: Added new "Scan History" nav item with `History` icon between "Resume Score" and "Settings". Enabled all Candidate nav items (removed `disabled: true`).
 2. `src/mock/candidate/candidateMock.js`: Comprehensive mock data repository matching Spring Boot DTO specs with `// TODO: replace with GET /api/candidate/...` markers:
    - `MOCK_CANDIDATE_APPLICATIONS`: `[{ id, jobTitle, company, location, appliedDate, status, resumeScore, jobDescriptionSnippet, interviewStatus, scoreBreakdown: { skillsMatch, matchedSkills, missingSkills, experienceMatch, educationMatch, projectsMatch }, timeline: [{ stage, date, completed, current }] }]`
@@ -67,216 +67,216 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 6. `src/pages/candidate/ScanHistoryPage.jsx` (`/candidate/scan-history`): Top-right "+ New Scan" CTA button and modal, searchable past scan list, score badge, and historical scan detail modal.
 7. `src/pages/candidate/CandidateSettingsPage.jsx` (`/candidate/settings`): Vertical sections for Profile (avatar, name, read-only verified email), Password (RHF + Zod validation requiring min 8 chars & 1 number), Notification preference switches, Theme toggle, and Danger Zone with Delete Account confirmation modal requiring typing "DELETE".
 
-### 2026-09-07 — Additive FeatureGate & Post-Login Redirection
+### 2026-09-07 â€” Additive FeatureGate & Post-Login Redirection
 
-**Built (Additive only — no existing page structure changed):**
-- `src/components/FeatureGate/FeatureGate.jsx` — Reusable component gating interactive widgets by role (`requiredRole="CANDIDATE"`):
+**Built (Additive only â€” no existing page structure changed):**
+- `src/components/FeatureGate/FeatureGate.jsx` â€” Reusable component gating interactive widgets by role (`requiredRole="CANDIDATE"`):
   - Unauthenticated (Guest): Renders a sleek locked card with Lock icon, "Sign in to try it" heading, descriptive subtext, and a button linking to `/login?redirect=...` preserving the current product page path.
   - Authenticated as `CANDIDATE`: Renders children (interactive demo widget) verbatim without any alteration.
-  - Authenticated as `RECRUITER` or `ADMIN`: Renders a neutral notice ("This tool is for candidates — recruiters can review results from their dashboard") with a direct link to their dashboard instead of a sign-in prompt.
-- `src/pages/products/ResumeScreening/sections/RSDemo.jsx` — Wrapped only the interactive upload/result widget (`demo-grid`) in `<FeatureGate requiredRole="CANDIDATE">`. All surrounding sections, headings, and styling remain untouched.
-- `src/pages/products/AIInterview/sections/AIDemo.jsx` — Wrapped only the interactive chat/evaluation widget (`ai-demo-grid`) in `<FeatureGate requiredRole="CANDIDATE">`. All surrounding sections, headings, and styling remain untouched.
-- `src/routes/RoleRedirect.jsx` — Updated to inspect `redirect` query parameter and location state so authenticated users visiting `/login?redirect=...` are redirected back to the requested product page instead of a generic role dashboard.
-- `src/pages/Login/LoginPage.jsx` — Updated `useEffect`, `devLogin`, and `onSubmit` to read and navigate to `redirect` parameter; added "Candidate" button to DEV quick login.
+  - Authenticated as `RECRUITER` or `ADMIN`: Renders a neutral notice ("This tool is for candidates â€” recruiters can review results from their dashboard") with a direct link to their dashboard instead of a sign-in prompt.
+- `src/pages/products/ResumeScreening/sections/RSDemo.jsx` â€” Wrapped only the interactive upload/result widget (`demo-grid`) in `<FeatureGate requiredRole="CANDIDATE">`. All surrounding sections, headings, and styling remain untouched.
+- `src/pages/products/AIInterview/sections/AIDemo.jsx` â€” Wrapped only the interactive chat/evaluation widget (`ai-demo-grid`) in `<FeatureGate requiredRole="CANDIDATE">`. All surrounding sections, headings, and styling remain untouched.
+- `src/routes/RoleRedirect.jsx` â€” Updated to inspect `redirect` query parameter and location state so authenticated users visiting `/login?redirect=...` are redirected back to the requested product page instead of a generic role dashboard.
+- `src/pages/Login/LoginPage.jsx` â€” Updated `useEffect`, `devLogin`, and `onSubmit` to read and navigate to `redirect` parameter; added "Candidate" button to DEV quick login.
 
-### 2026-09-02 — Full Recruiter & Admin Dashboards
+### 2026-09-02 â€” Full Recruiter & Admin Dashboards
 
 **Built:**
-- `src/layouts/RecruiterShell.jsx` — Forest-green collapsible sidebar (256px → 64px) + topbar (search, notifications, user avatar menu). Fully distinct from AppShell.
-- `src/layouts/AdminShell.jsx` — Navy-indigo sidebar + topbar with Shield icon. Completely separate from RecruiterShell.
-- `src/mock/recruiter/` — 7 mock data files (dashboard, jobs, candidates, screening, interview, ranking, scheduler). Every shape matches the real Spring Boot DTO structure; each has `TODO: replace with GET /api/...` markers.
-- `src/mock/admin/adminMock.js` — Platform-wide stats (MOCK_ADMIN_SUMMARY), user list (MOCK_USERS), analytics (MOCK_PLATFORM_ANALYTICS).
+- `src/layouts/RecruiterShell.jsx` â€” Forest-green collapsible sidebar (256px â†’ 64px) + topbar (search, notifications, user avatar menu). Fully distinct from AppShell.
+- `src/layouts/AdminShell.jsx` â€” Navy-indigo sidebar + topbar with Shield icon. Completely separate from RecruiterShell.
+- `src/mock/recruiter/` â€” 7 mock data files (dashboard, jobs, candidates, screening, interview, ranking, scheduler). Every shape matches the real Spring Boot DTO structure; each has `TODO: replace with GET /api/...` markers.
+- `src/mock/admin/adminMock.js` â€” Platform-wide stats (MOCK_ADMIN_SUMMARY), user list (MOCK_USERS), analytics (MOCK_PLATFORM_ANALYTICS).
 
-**Recruiter Pages (all under `/recruiter/*` → RecruiterShell):**
-- `RecruiterDashboardHome.jsx` — Animated stat cards (AnimatedCounter), activity feed, quick-action links
-- `RecruiterJobsPage.jsx` — Job card grid + RHF/Zod post-job modal + SkillTagInput
-- `RecruiterCandidatesPage.jsx` — Searchable/filterable table + slide-in detail panel with score breakdown bars
-- `RecruiterResumeScreeningPage.jsx` — Recommendation badges, matched/missing skill chips, job + rec filters
-- `RecruiterAIInterviewPage.jsx` — Generate interview flow with result panel (animated score bars)
-- `RecruiterCandidateRankingPage.jsx` — Job dropdown, medal emojis, AI reasoning per candidate
-- `RecruiterSchedulerPage.jsx` — Date-grouped interview list + schedule modal
-- `RecruiterProfilePage.jsx` — Account details + change-password (RHF/Zod)
-- `RecruiterSettingsPage.jsx` — Theme toggle + animated notification preference switches
+**Recruiter Pages (all under `/recruiter/*` â†’ RecruiterShell):**
+- `RecruiterDashboardHome.jsx` â€” Animated stat cards (AnimatedCounter), activity feed, quick-action links
+- `RecruiterJobsPage.jsx` â€” Job card grid + RHF/Zod post-job modal + SkillTagInput
+- `RecruiterCandidatesPage.jsx` â€” Searchable/filterable table + slide-in detail panel with score breakdown bars
+- `RecruiterResumeScreeningPage.jsx` â€” Recommendation badges, matched/missing skill chips, job + rec filters
+- `RecruiterAIInterviewPage.jsx` â€” Generate interview flow with result panel (animated score bars)
+- `RecruiterCandidateRankingPage.jsx` â€” Job dropdown, medal emojis, AI reasoning per candidate
+- `RecruiterSchedulerPage.jsx` â€” Date-grouped interview list + schedule modal
+- `RecruiterProfilePage.jsx` â€” Account details + change-password (RHF/Zod)
+- `RecruiterSettingsPage.jsx` â€” Theme toggle + animated notification preference switches
 
-**Admin Pages (all under `/admin/*` → AdminShell):**
-- `AdminDashboardHome.jsx` — Platform-wide stat cards (indigo/cyan palette), quick-action grid
-- `AdminUserManagementPage.jsx` — Searchable role-filtered table, enable/disable toggle per user
-- `AdminPlatformAnalyticsPage.jsx` — Recharts area+bar charts, date range filter (7d/30d/90d)
-- `AdminApiKeysPage.jsx` — LLM provider selector (OpenAI/Gemini/Anthropic/Cohere), masked API key input, model + token config
-- `AdminSystemSettingsPage.jsx` — Platform name/email, limits, feature flags (AI Screening, AI Interview, Registration, Maintenance Mode)
-- `AdminProfilePage.jsx` — Admin account details + change-password
+**Admin Pages (all under `/admin/*` â†’ AdminShell):**
+- `AdminDashboardHome.jsx` â€” Platform-wide stat cards (indigo/cyan palette), quick-action grid
+- `AdminUserManagementPage.jsx` â€” Searchable role-filtered table, enable/disable toggle per user
+- `AdminPlatformAnalyticsPage.jsx` â€” Recharts area+bar charts, date range filter (7d/30d/90d)
+- `AdminApiKeysPage.jsx` â€” LLM provider selector (OpenAI/Gemini/Anthropic/Cohere), masked API key input, model + token config
+- `AdminSystemSettingsPage.jsx` â€” Platform name/email, limits, feature flags (AI Screening, AI Interview, Registration, Maintenance Mode)
+- `AdminProfilePage.jsx` â€” Admin account details + change-password
 
-**App.jsx:** Fully rewired — RecruiterShell + AdminShell used for respective roles. Candidate still uses AppShell.
+**App.jsx:** Fully rewired â€” RecruiterShell + AdminShell used for respective roles. Candidate still uses AppShell.
 
 **Key decisions:**
 - `RoleRedirect.jsx` already had correct ROLE_HOME map; no changes needed.
 - Admin and Recruiter shells are entirely separate files (not a prop-switched AppShell) to allow independent styling evolution.
 - Every mock data file export name matches the import in the page (`MOCK_JOBS`, `MOCK_CANDIDATES`, etc.) for zero-friction backend swap.
 
-### 2026-09-02 — Analytics Dashboard (`/recruiter/analytics` + `/admin/analytics`)
+### 2026-09-02 â€” Analytics Dashboard (`/recruiter/analytics` + `/admin/analytics`)
 
 
 - **Built / Changed:**
-  - `src/services/analyticsService.js` — Axios API client for 7 analytics endpoints on Spring Boot. JWT attached via interceptor. RECRUITER = own data, ADMIN = platform-wide (server-scoped).
-  - `src/hooks/useMockAnalytics.js` — Mock data hook returning realistic data in exact API shape. Clearly labelled per Rules.md §8. Replace calls with real analyticsService when backend ships.
-  - `src/pages/Analytics/AnalyticsPage.jsx` — Root page: date-range filter (7d/30d/90d), re-fetches all data on range change, global error banner with retry, refresh button, export button stub.
-  - `src/pages/Analytics/AnalyticsStatCards.jsx` — 5 KPI cards: Total Resumes Screened, Avg Resume Score, Total Interviews, Interview Success Rate, Active Job Postings. Animated count-up, trend indicators (green/red), staggered Framer Motion entrance, shimmer skeleton.
-  - `src/pages/Analytics/AnalyticsCharts.jsx` — 6 Recharts charts: HiringTrend (AreaChart), ScoreDistribution (BarChart), InterviewOutcomes (Donut PieChart), SkillDistribution (Horizontal BarChart), CandidatesPerJob (BarChart), MonthlyHires (LineChart). All use Design.md primary/secondary gradient palette. Each: skeleton, empty state, error+retry.
-  - `src/pages/Analytics/AnalyticsInsights.jsx` — Auto-generated insight callout (pure computation from page data, no extra API/AI call). Derives 2-3 insight strings from summary trends, top skill, interview rate.
-  - `src/pages/Analytics/AnalyticsActivityTable.jsx` — Recent activity table: 6 columns (Candidate, Job, Type, Score bar, Recommendation badge, Date), live search filter, paginated (8 per page), horizontally scrollable on mobile, row skeleton, empty/error states.
-  - `App.jsx` — Added `<Route path="/recruiter/analytics" element={<AnalyticsPage />} />` and `<Route path="/admin/analytics" element={<AnalyticsPage />} />` as real (uncommented) protected routes.
-  - `Sidebar.jsx` — Removed `disabled: true` from Analytics nav item for both RECRUITER and ADMIN.
+  - `src/services/analyticsService.js` â€” Axios API client for 7 analytics endpoints on Spring Boot. JWT attached via interceptor. RECRUITER = own data, ADMIN = platform-wide (server-scoped).
+  - `src/hooks/useMockAnalytics.js` â€” Mock data hook returning realistic data in exact API shape. Clearly labelled per Rules.md Â§8. Replace calls with real analyticsService when backend ships.
+  - `src/pages/Analytics/AnalyticsPage.jsx` â€” Root page: date-range filter (7d/30d/90d), re-fetches all data on range change, global error banner with retry, refresh button, export button stub.
+  - `src/pages/Analytics/AnalyticsStatCards.jsx` â€” 5 KPI cards: Total Resumes Screened, Avg Resume Score, Total Interviews, Interview Success Rate, Active Job Postings. Animated count-up, trend indicators (green/red), staggered Framer Motion entrance, shimmer skeleton.
+  - `src/pages/Analytics/AnalyticsCharts.jsx` â€” 6 Recharts charts: HiringTrend (AreaChart), ScoreDistribution (BarChart), InterviewOutcomes (Donut PieChart), SkillDistribution (Horizontal BarChart), CandidatesPerJob (BarChart), MonthlyHires (LineChart). All use Design.md primary/secondary gradient palette. Each: skeleton, empty state, error+retry.
+  - `src/pages/Analytics/AnalyticsInsights.jsx` â€” Auto-generated insight callout (pure computation from page data, no extra API/AI call). Derives 2-3 insight strings from summary trends, top skill, interview rate.
+  - `src/pages/Analytics/AnalyticsActivityTable.jsx` â€” Recent activity table: 6 columns (Candidate, Job, Type, Score bar, Recommendation badge, Date), live search filter, paginated (8 per page), horizontally scrollable on mobile, row skeleton, empty/error states.
+  - `App.jsx` â€” Added `<Route path="/recruiter/analytics" element={<AnalyticsPage />} />` and `<Route path="/admin/analytics" element={<AnalyticsPage />} />` as real (uncommented) protected routes.
+  - `Sidebar.jsx` â€” Removed `disabled: true` from Analytics nav item for both RECRUITER and ADMIN.
 
 - **Key decisions:**
   - Mock data hook pattern: same shape as real API response so swapping to real service = 1-line change per hook call.
   - `useMockAnalytics` is range-aware: different multipliers/data shapes per 7d/30d/90d.
-  - Chart colors: all use JS constants matching Design.md tokens (PRIMARY = #6366F1, SECONDARY = #22D3EE) — no default Recharts colors.
+  - Chart colors: all use JS constants matching Design.md tokens (PRIMARY = #6366F1, SECONDARY = #22D3EE) â€” no default Recharts colors.
   - Recharts was already in package.json (installed previously).
-  - Insights: pure JS derivation from existing state — no LLM call (Rules.md §8 compliance).
+  - Insights: pure JS derivation from existing state â€” no LLM call (Rules.md Â§8 compliance).
 
 - **Next sessions:**
   - Phase 3: Spring Boot backend (REST APIs, JWT, JPA entities)
   - Phase 3: Wire analyticsService.js to real endpoints once backend is live
   - Remaining marketing pages: `/products/candidate-ranking`, `/products/analytics`
 
-### 2026-09-02 — AI Interview Product Page (`/products/ai-interview`)
+### 2026-09-02 â€” AI Interview Product Page (`/products/ai-interview`)
 
 - **Built / Changed:**
-  - New page: `src/pages/products/AIInterview/AIInterviewPage.jsx` — root component, assembles 9 section sub-components.
+  - New page: `src/pages/products/AIInterview/AIInterviewPage.jsx` â€” root component, assembles 9 section sub-components.
   - **9 section sub-components** under `sections/`:
-    1. `AIHero.jsx` — breadcrumb, gradient H1, animated interview card (question bubble + Communication/Confidence/Technical bars + floating badge)
-    2. `AIDemo.jsx` — chat-style interview panel (AI question ↔ candidate answer bubbles) + result panel with animated score bars, recommendation tag, AI note
-    3. `AIHowItWorks.jsx` — 4-step cards with connecting gradient line (Select → Generate → Answer → Evaluate)
-    4. `AIEvaluated.jsx` — 6-card grid: Communication, Confidence, Technical Performance, Final Recommendation, Per-Question Notes, Question Tailoring
-    5. `AIBenefits.jsx` — 3-column: Structured First Rounds / Consistent Evaluation Criteria / Faster Time-to-Shortlist
-    6. `AIShowcase.jsx` — full polished product screenshot mockup (browser chrome + 5-question list + score breakdown + AI summary + action buttons) in gradient border frame
-    7. `AIFAQ.jsx` — 6-item accordion: question generation, audio/video scope (MVP out-of-scope), scoring mechanics, customisation, data privacy, result latency
-    8. `AICrossLinks.jsx` — 3 cross-product cards (Resume Screening = Available now / Candidate Ranking + Analytics = Coming soon)
-    9. `AIFinalCTA.jsx` — gradient-bordered CTA band with dual Register + Sign In buttons
-  - `App.jsx` — added `<Route path="/products/ai-interview" element={<AIInterviewPage />} />`
-  - `RSCrossLinks.jsx` — AI Interview badge updated from Coming soon → Available now (green)
+    1. `AIHero.jsx` â€” breadcrumb, gradient H1, animated interview card (question bubble + Communication/Confidence/Technical bars + floating badge)
+    2. `AIDemo.jsx` â€” chat-style interview panel (AI question â†” candidate answer bubbles) + result panel with animated score bars, recommendation tag, AI note
+    3. `AIHowItWorks.jsx` â€” 4-step cards with connecting gradient line (Select â†’ Generate â†’ Answer â†’ Evaluate)
+    4. `AIEvaluated.jsx` â€” 6-card grid: Communication, Confidence, Technical Performance, Final Recommendation, Per-Question Notes, Question Tailoring
+    5. `AIBenefits.jsx` â€” 3-column: Structured First Rounds / Consistent Evaluation Criteria / Faster Time-to-Shortlist
+    6. `AIShowcase.jsx` â€” full polished product screenshot mockup (browser chrome + 5-question list + score breakdown + AI summary + action buttons) in gradient border frame
+    7. `AIFAQ.jsx` â€” 6-item accordion: question generation, audio/video scope (MVP out-of-scope), scoring mechanics, customisation, data privacy, result latency
+    8. `AICrossLinks.jsx` â€” 3 cross-product cards (Resume Screening = Available now / Candidate Ranking + Analytics = Coming soon)
+    9. `AIFinalCTA.jsx` â€” gradient-bordered CTA band with dual Register + Sign In buttons
+  - `App.jsx` â€” added `<Route path="/products/ai-interview" element={<AIInterviewPage />} />`
+  - `RSCrossLinks.jsx` â€” AI Interview badge updated from Coming soon â†’ Available now (green)
 
-- **Navigation (no changes needed — already wired from previous session):**
-  - `LandingNavbar.jsx` — PRODUCTS array already had `href: '/products/ai-interview'`
-  - `LandingPage.jsx` — FEATURE_CATS already had `href:'/products/ai-interview'` on AI Interview card
+- **Navigation (no changes needed â€” already wired from previous session):**
+  - `LandingNavbar.jsx` â€” PRODUCTS array already had `href: '/products/ai-interview'`
+  - `LandingPage.jsx` â€” FEATURE_CATS already had `href:'/products/ai-interview'` on AI Interview card
 
-- **Pattern note — next product pages:**
-  - `/products/candidate-ranking` → `src/pages/products/CandidateRanking/` (add route in App.jsx)
-  - `/products/analytics` → `src/pages/products/Analytics/` (add route in App.jsx)
+- **Pattern note â€” next product pages:**
+  - `/products/candidate-ranking` â†’ `src/pages/products/CandidateRanking/` (add route in App.jsx)
+  - `/products/analytics` â†’ `src/pages/products/Analytics/` (add route in App.jsx)
   - Phase 3: Spring Boot backend scaffold
 
-### 2026-09-02 — AI Resume Screening Product Page (`/products/resume-screening`)
+### 2026-09-02 â€” AI Resume Screening Product Page (`/products/resume-screening`)
 
 - **Built / Changed:**
-  - New page: `src/pages/products/ResumeScreening/ResumeScreeningPage.jsx` — root component, assembles 9 section sub-components.
+  - New page: `src/pages/products/ResumeScreening/ResumeScreeningPage.jsx` â€” root component, assembles 9 section sub-components.
   - **9 section sub-components** (each in its own file under `sections/`):
-    1. `RSHero.jsx` — breadcrumb pill, gradient H1, hero card with animated score ring + skills bars + chips, CTAs, micro-stats
-    2. `RSDemo.jsx` — drag-drop upload zone + animated score ring/bars counting up on scroll via Framer Motion + `useInView`
-    3. `RSHowItWorks.jsx` — 4-step cards with connecting gradient line
-    4. `RSAnalyzed.jsx` — 8-card grid covering every ML pipeline output dimension
-    5. `RSBenefits.jsx` — 3-column benefits with gradient icon circles
-    6. `RSShowcase.jsx` — full polished product screenshot mockup (browser chrome, full breakdown, AI rationale) inside gradient border glow frame
-    7. `RSFAQ.jsx` — 6-item accordion with AnimatePresence, original Q&A copy (file formats, scoring, accuracy, privacy, customisation, speed)
-    8. `RSCrossLinks.jsx` — 3 cross-product cards (AI Interview, Candidate Ranking, Analytics) with Coming Soon badges
-    9. `RSFinalCTA.jsx` — gradient-bordered full-width CTA band with dual buttons
-  - `App.jsx` — added public `<Route path="/products/resume-screening" element={<ResumeScreeningPage />} />`
-  - `LandingNavbar.jsx` — Navbar dropdown now uses React Router `<Link to>` for internal routes instead of `<a href>`. Resume Screening → `/products/resume-screening`.
-  - `LandingPage.jsx` — `FEATURE_CATS` array now has `href` per item. Each feature card renders a "Learn more →" link using React Router `<Link to={href}>`.
+    1. `RSHero.jsx` â€” breadcrumb pill, gradient H1, hero card with animated score ring + skills bars + chips, CTAs, micro-stats
+    2. `RSDemo.jsx` â€” drag-drop upload zone + animated score ring/bars counting up on scroll via Framer Motion + `useInView`
+    3. `RSHowItWorks.jsx` â€” 4-step cards with connecting gradient line
+    4. `RSAnalyzed.jsx` â€” 8-card grid covering every ML pipeline output dimension
+    5. `RSBenefits.jsx` â€” 3-column benefits with gradient icon circles
+    6. `RSShowcase.jsx` â€” full polished product screenshot mockup (browser chrome, full breakdown, AI rationale) inside gradient border glow frame
+    7. `RSFAQ.jsx` â€” 6-item accordion with AnimatePresence, original Q&A copy (file formats, scoring, accuracy, privacy, customisation, speed)
+    8. `RSCrossLinks.jsx` â€” 3 cross-product cards (AI Interview, Candidate Ranking, Analytics) with Coming Soon badges
+    9. `RSFinalCTA.jsx` â€” gradient-bordered full-width CTA band with dual buttons
+  - `App.jsx` â€” added public `<Route path="/products/resume-screening" element={<ResumeScreeningPage />} />`
+  - `LandingNavbar.jsx` â€” Navbar dropdown now uses React Router `<Link to>` for internal routes instead of `<a href>`. Resume Screening â†’ `/products/resume-screening`.
+  - `LandingPage.jsx` â€” `FEATURE_CATS` array now has `href` per item. Each feature card renders a "Learn more â†’" link using React Router `<Link to={href}>`.
 
 - **Design adherence:** Uses all existing CSS tokens, GradientButton, GlassCard, SectionHeading components. Framer Motion: staggered hero entrance, whileInView scroll reveals (once: true), animated score counter with `useInView + animate()`, hover-lift on all cards per Design.md spec.
 
 - **Pattern note for next sessions:** The same folder/component pattern should be reused for:
-  - `/products/ai-interview` → `src/pages/products/AIInterview/`
-  - `/products/candidate-ranking` → `src/pages/products/CandidateRanking/`
-  - `/products/analytics` → `src/pages/products/Analytics/`
+  - `/products/ai-interview` â†’ `src/pages/products/AIInterview/`
+  - `/products/candidate-ranking` â†’ `src/pages/products/CandidateRanking/`
+  - `/products/analytics` â†’ `src/pages/products/Analytics/`
   Each needs its own route in `App.jsx` and Navbar linking (already pre-wired in `PRODUCTS` array).
 
 - **Next session:**
   - Build AI Interview product page (same pattern)
   - Start Phase 3: Spring Boot backend scaffold
 
-### 2026-09-02 — Phase 2: Complete Color & Hero UI Overhaul (Beige/Olive Theme)
+### 2026-09-02 â€” Phase 2: Complete Color & Hero UI Overhaul (Beige/Olive Theme)
 
 - **Built / Changed:**
-  - `index.css` — **full token overhaul**: `:root` now defaults to warm beige/olive green theme matching reference design image:
+  - `index.css` â€” **full token overhaul**: `:root` now defaults to warm beige/olive green theme matching reference design image:
     - `--bg-base: #F2EFE8`, `--bg-surface: #FAF9F5`, `--bg-elevated: #FFFFFF`
     - `--primary: #3D5016`, `--secondary: #6B8A3A` (forest olive greens)
     - `--text-primary: #1A1F0E`, `--text-secondary: #4A5239`
     - `.dark` class swapped to be the dark indigo/cyan opt-in (preserves Dashboard dark theme support)
     - Added `.hero-dot-bg` utility class for warm olive dot-grid pattern
     - All glass, border, glow, chart-bar colors updated to olive tones
-  - `LandingPage.jsx` — **hero section overhaul**:
+  - `LandingPage.jsx` â€” **hero section overhaul**:
     - Background: warm beige `--bg-base` + olive dot-grid + soft olive radial glow (replaces indigo/cyan blobs)
     - Pill badge: olive border/background instead of indigo
     - Sub-feature icon circles: olive background instead of indigo
     - All 3 floating dashboard cards: white (`#FFFFFF`) background with olive-toned borders/shadows
-    - AI Resume Score ring: dark olive → lighter olive gradient (was blue → indigo)
+    - AI Resume Score ring: dark olive â†’ lighter olive gradient (was blue â†’ indigo)
     - Top Candidates candidate rows: olive-tinted row backgrounds
-    - AI Interview Completed badge: dark olive gradient (was blue → purple)
+    - AI Interview Completed badge: dark olive gradient (was blue â†’ purple)
     - Hiring Pipeline step icons: olive active/inactive states
     - Recent Activity icon backgrounds: green tones matching olive theme
     - All section cards/tags/icon-circles throughout full page: replaced `rgba(99,102,241,...)` indigo with `rgba(61,80,22,...)` olive
-  - `LandingNavbar.jsx` — **navbar color updates**:
+  - `LandingNavbar.jsx` â€” **navbar color updates**:
     - Scrolled background: `rgba(242,239,232,0.92)` warm cream (was dark `rgba(10,14,26,0.88)`)
     - Mobile drawer: cream background (was dark)
     - Logo shadow, dropdown shadow, featured-card gradient: all updated to olive
     - Pro card dark background: dark olive `#1f2d0a` (was dark purple `#1a1040`)
-  - `GradientButton.jsx` — button box-shadows updated from indigo (`rgba(99,102,241,...)`) to olive (`rgba(61,80,22,...)`)
+  - `GradientButton.jsx` â€” button box-shadows updated from indigo (`rgba(99,102,241,...)`) to olive (`rgba(61,80,22,...)`)
 
 - **Theme Architecture:**
   - Landing page is light/beige by default (`:root` tokens)
   - Dashboard/app shell uses `.dark` class for its dark mode
-  - `useTheme.js` toggles `.dark` on `<html>` — Navbar theme toggle now switches between cream and dark
+  - `useTheme.js` toggles `.dark` on `<html>` â€” Navbar theme toggle now switches between cream and dark
 
 - **Next session:**
   - Apply consistent light theme to Login/Register/ForgotPassword pages
   - Start Phase 3: Spring Boot backend scaffold + `/health` endpoint
 
 
-### 2026-08-09 — Full Landing Page & Navbar Rebuild (GoodSpace-pattern layout)
+### 2026-08-09 â€” Full Landing Page & Navbar Rebuild (GoodSpace-pattern layout)
 
 - **Built / Changed:**
-  - `LandingNavbar.jsx` — **full rebuild**: Products dropdown (Resume Screening, AI Interview, Candidate Ranking, Analytics with icons + descriptions), sticky blur-on-scroll glass effect, stat pill badge above "Get Started" button ("50,000+ Resumes Screened"), theme toggle, mobile drawer with grouped product + nav links.
-  - `LandingPage.jsx` — **full rebuild** with 11 sections following GoodSpace.ai layout pattern (all copy/data is original HireGenius AI content):
-    1. **Hero** — pill badge, gradient H1, subtext, "Start Screening Free" CTA, full mock dashboard screenshot with floating "AI Resume Score: 92%" overlay card (Framer Motion entrance).
-    2. **Demo Cards Row** — 3 sample role cards (Frontend Eng, ML Eng, PM) with company header, tags, score meta, "Start Demo" link.
-    3. **How It Works** — 4 numbered horizontal steps (Post Job → AI Screens → AI Interviews → Ranked Shortlist) with gradient icon circles.
-    4. **Feature Category Cards** — 4-card grid (Resume Screening / AI Interview / Candidate Ranking / Analytics) each with icon, title, desc, 4 chip tags.
-    5. **Social Proof Band** — stat headline + infinite-scrolling logo strip with placeholder tech names (no real company logos).
-    6. **Stats** — AnimatedCounter band (10x faster, 98% satisfaction, 60% less time-to-hire, 500+ teams).
-    7. **Benefits (3-col)** — Screen Faster / Reduce Bias / Actionable Insights with icon, heading, paragraph, 2 tag pills.
-    8. **Cross-Sell Row** — 3 cards for Analytics Dashboard, Interview Scheduler, AI Interview Suite.
-    9. **SEO Content** — 3 original paragraphs on AI-assisted recruitment, contextual scoring, and AI interview scaling.
-    10. **FAQ Accordion** — 8 Q&As with AnimatePresence expand/collapse.
-    11. **Footer** — multi-column (Product / Company / Legal), social icons (Twitter, LinkedIn, GitHub, Email), logo + tagline + copyright.
+  - `LandingNavbar.jsx` â€” **full rebuild**: Products dropdown (Resume Screening, AI Interview, Candidate Ranking, Analytics with icons + descriptions), sticky blur-on-scroll glass effect, stat pill badge above "Get Started" button ("50,000+ Resumes Screened"), theme toggle, mobile drawer with grouped product + nav links.
+  - `LandingPage.jsx` â€” **full rebuild** with 11 sections following GoodSpace.ai layout pattern (all copy/data is original HireGenius AI content):
+    1. **Hero** â€” pill badge, gradient H1, subtext, "Start Screening Free" CTA, full mock dashboard screenshot with floating "AI Resume Score: 92%" overlay card (Framer Motion entrance).
+    2. **Demo Cards Row** â€” 3 sample role cards (Frontend Eng, ML Eng, PM) with company header, tags, score meta, "Start Demo" link.
+    3. **How It Works** â€” 4 numbered horizontal steps (Post Job â†’ AI Screens â†’ AI Interviews â†’ Ranked Shortlist) with gradient icon circles.
+    4. **Feature Category Cards** â€” 4-card grid (Resume Screening / AI Interview / Candidate Ranking / Analytics) each with icon, title, desc, 4 chip tags.
+    5. **Social Proof Band** â€” stat headline + infinite-scrolling logo strip with placeholder tech names (no real company logos).
+    6. **Stats** â€” AnimatedCounter band (10x faster, 98% satisfaction, 60% less time-to-hire, 500+ teams).
+    7. **Benefits (3-col)** â€” Screen Faster / Reduce Bias / Actionable Insights with icon, heading, paragraph, 2 tag pills.
+    8. **Cross-Sell Row** â€” 3 cards for Analytics Dashboard, Interview Scheduler, AI Interview Suite.
+    9. **SEO Content** â€” 3 original paragraphs on AI-assisted recruitment, contextual scoring, and AI interview scaling.
+    10. **FAQ Accordion** â€” 8 Q&As with AnimatePresence expand/collapse.
+    11. **Footer** â€” multi-column (Product / Company / Legal), social icons (Twitter, LinkedIn, GitHub, Email), logo + tagline + copyright.
   - All sections use Design.md tokens, Framer Motion scroll reveals, stagger entrances, hover lifts. No external copy or real company logos used.
 
 - **Next session (Phase 3):**
   - Build Spring Boot backend scaffold + `/health` endpoint
   - Wire Dashboard shell with real stat widgets
 
-### 2026-08-08 — Premium UI/UX Rebuild (Landing + Auth + Design System)
+### 2026-08-08 â€” Premium UI/UX Rebuild (Landing + Auth + Design System)
 
 - **Built / Changed:**
-  - `Design.md` — completely replaced color/spacing/typography/elevation tokens with premium dark SaaS system (indigo→cyan gradient, layered dark backgrounds `#0A0E1A / #0F1420 / #151B2C`, `rgba(255,255,255,0.08)` borders, Inter font, 96–120px section padding, 8/16/24/32/48/64/96/128 spacing scale, 20px card radius, 12px button radius).
-  - `index.css` — full rewrite: dark `:root` as baseline, optional `.light` class override, `.gradient-text`, `.hero-glow`, `.section-padding`, `.glass-card`, `.skeleton` shimmer animation, scroll-bar, focus ring.
-  - `useTheme.js` — changed default to `'dark'`, switched to `.light` class for light mode (`:root` = dark baseline).
-  - `src/components/GradientButton/GradientButton.jsx` — new reusable component, indigo→cyan gradient, supports Link + button, Framer Motion hover/tap, size variants.
-  - `src/components/GlassCard/GlassCard.jsx` — new reusable component, `backdrop-blur(20px)`, scroll-reveal via `whileInView`, hover lift `-6px`.
-  - `src/components/SectionHeading/SectionHeading.jsx` — new reusable component, eyebrow + gradient word + subtitle, scroll-reveal.
-  - `src/components/AnimatedCounter/AnimatedCounter.jsx` — new reusable component, Framer Motion `animate()` count-up on scroll enter, gradient text.
-  - `src/components/Navbar/LandingNavbar.jsx` — new, transparent→glass on scroll, mobile drawer, sticky fixed, theme toggle.
-  - `pages/Landing/LandingPage.jsx` — **full rebuild** with 8 sections: Hero (full-viewport, staggered entrance, glow blobs, badge, gradient H1, trust pills), Features (2×3 glass card grid), How It Works (4-step flow with gradient icon circles), Stats band (AnimatedCounter), Testimonials (glass card grid), Final CTA (gradient-bordered card), Footer (multi-column with social icons).
-  - `pages/Login/LoginPage.jsx` — rebuilt with glass card, animated glow background, focus border transitions, GradientButton.
-  - `pages/Register/RegisterPage.jsx` — rebuilt with same glass-card aesthetic, back link, GradientButton.
-  - `App.jsx` — Toaster updated to dark glass style with colored left-border per type.
+  - `Design.md` â€” completely replaced color/spacing/typography/elevation tokens with premium dark SaaS system (indigoâ†’cyan gradient, layered dark backgrounds `#0A0E1A / #0F1420 / #151B2C`, `rgba(255,255,255,0.08)` borders, Inter font, 96â€“120px section padding, 8/16/24/32/48/64/96/128 spacing scale, 20px card radius, 12px button radius).
+  - `index.css` â€” full rewrite: dark `:root` as baseline, optional `.light` class override, `.gradient-text`, `.hero-glow`, `.section-padding`, `.glass-card`, `.skeleton` shimmer animation, scroll-bar, focus ring.
+  - `useTheme.js` â€” changed default to `'dark'`, switched to `.light` class for light mode (`:root` = dark baseline).
+  - `src/components/GradientButton/GradientButton.jsx` â€” new reusable component, indigoâ†’cyan gradient, supports Link + button, Framer Motion hover/tap, size variants.
+  - `src/components/GlassCard/GlassCard.jsx` â€” new reusable component, `backdrop-blur(20px)`, scroll-reveal via `whileInView`, hover lift `-6px`.
+  - `src/components/SectionHeading/SectionHeading.jsx` â€” new reusable component, eyebrow + gradient word + subtitle, scroll-reveal.
+  - `src/components/AnimatedCounter/AnimatedCounter.jsx` â€” new reusable component, Framer Motion `animate()` count-up on scroll enter, gradient text.
+  - `src/components/Navbar/LandingNavbar.jsx` â€” new, transparentâ†’glass on scroll, mobile drawer, sticky fixed, theme toggle.
+  - `pages/Landing/LandingPage.jsx` â€” **full rebuild** with 8 sections: Hero (full-viewport, staggered entrance, glow blobs, badge, gradient H1, trust pills), Features (2Ã—3 glass card grid), How It Works (4-step flow with gradient icon circles), Stats band (AnimatedCounter), Testimonials (glass card grid), Final CTA (gradient-bordered card), Footer (multi-column with social icons).
+  - `pages/Login/LoginPage.jsx` â€” rebuilt with glass card, animated glow background, focus border transitions, GradientButton.
+  - `pages/Register/RegisterPage.jsx` â€” rebuilt with same glass-card aesthetic, back link, GradientButton.
+  - `App.jsx` â€” Toaster updated to dark glass style with colored left-border per type.
 
-- **Routing preserved:** `/` → LandingPage, `/login` → LoginPage (with RoleRedirect), `/register` → RegisterPage (with RoleRedirect), `/recruiter/*`, `/admin/*`, `/candidate/*` protected routes all untouched.
+- **Routing preserved:** `/` â†’ LandingPage, `/login` â†’ LoginPage (with RoleRedirect), `/register` â†’ RegisterPage (with RoleRedirect), `/recruiter/*`, `/admin/*`, `/candidate/*` protected routes all untouched.
 
 - **New reusable components summary:**
   | Component | Location | Description |
   |---|---|---|
-  | `GradientButton` | `components/GradientButton/` | Primary CTA — indigo→cyan gradient, hover/tap animation |
+  | `GradientButton` | `components/GradientButton/` | Primary CTA â€” indigoâ†’cyan gradient, hover/tap animation |
   | `GlassCard` | `components/GlassCard/` | Glass card with scroll-reveal + hover lift |
   | `SectionHeading` | `components/SectionHeading/` | Section title block with gradient word + eyebrow |
   | `AnimatedCounter` | `components/AnimatedCounter/` | Scroll-triggered count-up with gradient text |
@@ -288,41 +288,41 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
   - Apply GlassCard / SectionHeading to all dashboard pages
 
 
-### 2026-08-07 — Phase 0 + Phase 1: Scaffold + Auth UI
+### 2026-08-07 â€” Phase 0 + Phase 1: Scaffold + Auth UI
 
 - **Built:**
   - Vite + React scaffold inside `hiregenius-frontend/`
   - Installed: `@reduxjs/toolkit`, `react-redux`, `react-router-dom`, `axios`, `react-hook-form`, `@hookform/resolvers`, `zod`, `recharts`, `react-hot-toast`, `framer-motion`, `lucide-react`, `tailwindcss`, `@tailwindcss/vite`
-  - `index.css` — Tailwind import + all Design.md color tokens as CSS custom properties for light and dark themes
-  - `src/store/store.js` — Redux store
-  - `src/features/auth/authSlice.js` — JWT + user state, localStorage persistence, selectors
-  - `src/services/api.js` — Axios instance, Bearer token interceptor, 401 auto-logout
-  - `src/services/authService.js` — login / register / forgotPassword API wrappers
-  - `src/hooks/useApiCall.js` — loading/error/success wrapper hook (Rules.md §4)
-  - `src/hooks/useTheme.js` — dark/light toggle with localStorage
-  - `src/utils/validationSchemas.js` — Zod schemas for loginSchema, registerSchema, forgotPasswordSchema
-  - `src/utils/helpers.js` — formatError, formatDate, truncate
-  - `src/routes/ProtectedRoute.jsx` — redirects to /login if unauthenticated
-  - `src/components/Navbar/Navbar.jsx` — sticky top bar, theme toggle, logout
-  - `src/components/Sidebar/Sidebar.jsx` — collapsible (desktop) + drawer (mobile), future nav items disabled
-  - `src/components/Footer/Footer.jsx` — minimal footer
-  - `src/components/Loader/Loader.jsx` — Framer Motion spinner
-  - `src/pages/Login/LoginPage.jsx` — RHF + Zod, Redux auth, eye toggle, error/loading/success
-  - `src/pages/Register/RegisterPage.jsx` — name/email/role/password/confirm, same pattern
-  - `src/pages/ForgotPassword/ForgotPasswordPage.jsx` — email form + success state
-  - `src/pages/Dashboard/DashboardPage.jsx` — Phase 1 placeholder showing build progress
-  - `src/pages/NotFound/NotFoundPage.jsx` — 404 catch-all
-  - `src/layouts/AppShell.jsx` — authenticated layout (Navbar + Sidebar + Footer + Outlet)
-  - `src/App.jsx` — BrowserRouter with public + protected + 404 routes
-  - `src/main.jsx` — entry point with Redux Provider
-  - `.env`, `.env.example`, `.gitignore` — no secrets hardcoded
-  - `vite.config.js` — Tailwind v4 plugin wired in
-  - `index.html` — SEO title + meta description
-  - `npm run build` passes ✓ (2295 modules, no errors)
+  - `index.css` â€” Tailwind import + all Design.md color tokens as CSS custom properties for light and dark themes
+  - `src/store/store.js` â€” Redux store
+  - `src/features/auth/authSlice.js` â€” JWT + user state, localStorage persistence, selectors
+  - `src/services/api.js` â€” Axios instance, Bearer token interceptor, 401 auto-logout
+  - `src/services/authService.js` â€” login / register / forgotPassword API wrappers
+  - `src/hooks/useApiCall.js` â€” loading/error/success wrapper hook (Rules.md Â§4)
+  - `src/hooks/useTheme.js` â€” dark/light toggle with localStorage
+  - `src/utils/validationSchemas.js` â€” Zod schemas for loginSchema, registerSchema, forgotPasswordSchema
+  - `src/utils/helpers.js` â€” formatError, formatDate, truncate
+  - `src/routes/ProtectedRoute.jsx` â€” redirects to /login if unauthenticated
+  - `src/components/Navbar/Navbar.jsx` â€” sticky top bar, theme toggle, logout
+  - `src/components/Sidebar/Sidebar.jsx` â€” collapsible (desktop) + drawer (mobile), future nav items disabled
+  - `src/components/Footer/Footer.jsx` â€” minimal footer
+  - `src/components/Loader/Loader.jsx` â€” Framer Motion spinner
+  - `src/pages/Login/LoginPage.jsx` â€” RHF + Zod, Redux auth, eye toggle, error/loading/success
+  - `src/pages/Register/RegisterPage.jsx` â€” name/email/role/password/confirm, same pattern
+  - `src/pages/ForgotPassword/ForgotPasswordPage.jsx` â€” email form + success state
+  - `src/pages/Dashboard/DashboardPage.jsx` â€” Phase 1 placeholder showing build progress
+  - `src/pages/NotFound/NotFoundPage.jsx` â€” 404 catch-all
+  - `src/layouts/AppShell.jsx` â€” authenticated layout (Navbar + Sidebar + Footer + Outlet)
+  - `src/App.jsx` â€” BrowserRouter with public + protected + 404 routes
+  - `src/main.jsx` â€” entry point with Redux Provider
+  - `.env`, `.env.example`, `.gitignore` â€” no secrets hardcoded
+  - `vite.config.js` â€” Tailwind v4 plugin wired in
+  - `index.html` â€” SEO title + meta description
+  - `npm run build` passes âœ“ (2295 modules, no errors)
 
 - **Changed (deviations from Architecture.md / Rules.md):**
-  - Added `src/layouts/` folder — Architecture.md §4 doesn't list it. Decision: keeps AppShell out of `components/` (it's a layout, not a component). Low impact, easily reversible.
-  - Tailwind v4 used (`@tailwindcss/vite`) instead of the classic v3 `tailwind.config.js` approach — same result (all tokens via CSS vars), but no separate config file needed.
+  - Added `src/layouts/` folder â€” Architecture.md Â§4 doesn't list it. Decision: keeps AppShell out of `components/` (it's a layout, not a component). Low impact, easily reversible.
+  - Tailwind v4 used (`@tailwindcss/vite`) instead of the classic v3 `tailwind.config.js` approach â€” same result (all tokens via CSS vars), but no separate config file needed.
 
 - **Next session (Phase 2):**
   - Build full Landing page (public, pre-auth)
@@ -332,45 +332,45 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 
 ### Template for new entries
 ```
-### YYYY-MM-DD — Phase X: <short title>
+### YYYY-MM-DD â€” Phase X: <short title>
 - Built: <what was implemented>
 - Changed: <any deviation from Architecture.md / Rules.md, and why>
 - Next: <what should happen next session>
 ```
 
 
-### 2026-09-07 — Candidate Dashboard Redesign + Register Role Security Fix
+### 2026-09-07 â€” Candidate Dashboard Redesign + Register Role Security Fix
 
 **Dashboard Redesign (`CandidateDashboard.jsx` + `AppShell.jsx` + `Sidebar.jsx` + `index.css`)**
 - Root cause of light/beige theme in dashboard: `:root` CSS uses olive/beige palette (for landing page); AppShell never applied the dark theme override.
 - Fix: Added `.app-shell` CSS class to `index.css` that sets all Design.md canonical dark tokens (`--bg-base: #0A0E1A`, `--primary: #6366F1`, `--secondary: #22D3EE`, etc.) scoped to authenticated shell only. Applied via `className="app-shell"` on AppShell root div. Landing page `:root` is unchanged.
-- Sidebar active indicator: replaced solid `var(--primary)` block with gradient left-bar (`3px solid #6366F1`) + indigo-tinted `rgba(99,102,241,0.12)` background. Matches Design.md §7 gradient system.
+- Sidebar active indicator: replaced solid `var(--primary)` block with gradient left-bar (`3px solid #6366F1`) + indigo-tinted `rgba(99,102,241,0.12)` background. Matches Design.md Â§7 gradient system.
 - CandidateDashboard fully rewritten with:
-  - Gradient welcome header (indigo→cyan gradient text)
-  - 3-card highlight row: Latest Resume Score (SVG progress ring with count-up), Quick Resume Check CTA (links to `/products/resume-screening#rs-demo`), Application Tracker (2×2 stat grid)
+  - Gradient welcome header (indigoâ†’cyan gradient text)
+  - 3-card highlight row: Latest Resume Score (SVG progress ring with count-up), Quick Resume Check CTA (links to `/products/resume-screening#rs-demo`), Application Tracker (2Ã—2 stat grid)
   - 4 stat cards with `AnimatedCounterInline` (count-up from 0), per-card colored icon containers, empty-state messages (no "Phase 3+ will add..." banner)
   - Two-column resume upload panel: drag-and-drop zone + JD paste textarea + gradient Analyze button (disabled until file chosen)
   - Recent activity list with mock data; empty state variant coded; `// TODO: replace with GET /api/candidate/activity` comment
-  - Framer Motion: staggered entrance (`staggerChildren: 0.08`), `whileHover={{ y: -6 }}` on highlight cards, count-up on numbers, per Design.md §9
+  - Framer Motion: staggered entrance (`staggerChildren: 0.08`), `whileHover={{ y: -6 }}` on highlight cards, count-up on numbers, per Design.md Â§9
   - `MOCK_MODE = true` flag at top of file to toggle between empty and populated states for verification
-  - Upload panel not extracted from RSDemo (too tightly coupled to product page context) — `// TODO: refactor into shared <ResumeUploadZone>` comment left
+  - Upload panel not extracted from RSDemo (too tightly coupled to product page context) â€” `// TODO: refactor into shared <ResumeUploadZone>` comment left
 
 **Register Role Security Fix (`RegisterPage.jsx` + `validationSchemas.js`)**
-- Removed `ADMIN` from the public register form entirely — two changes to guarantee this:
-  1. **Zod schema** (`validationSchemas.js`): `role: z.enum(['CANDIDATE', 'RECRUITER'])` — `ADMIN` is not in the allowed enum. Any API call with `role=ADMIN` is rejected at validation before `authService.register()` is called, even if devtools are used to manipulate form state.
-  2. **UI** (`RegisterPage.jsx`): `<select>` dropdown replaced with two card-style `<motion.button>` role pickers — "I'm looking for a job" (CANDIDATE) and "I'm hiring" (RECRUITER). The hidden `<input {...register('role')} />` keeps react-hook-form wiring. No `<option value="ADMIN">` anywhere in the component tree.
+- Removed `ADMIN` from the public register form entirely â€” two changes to guarantee this:
+  1. **Zod schema** (`validationSchemas.js`): `role: z.enum(['CANDIDATE', 'RECRUITER'])` â€” `ADMIN` is not in the allowed enum. Any API call with `role=ADMIN` is rejected at validation before `authService.register()` is called, even if devtools are used to manipulate form state.
+  2. **UI** (`RegisterPage.jsx`): `<select>` dropdown replaced with two card-style `<motion.button>` role pickers â€” "I'm looking for a job" (CANDIDATE) and "I'm hiring" (RECRUITER). The hidden `<input {...register('role')} />` keeps react-hook-form wiring. No `<option value="ADMIN">` anywhere in the component tree.
 - Default role changed from `RECRUITER` to `CANDIDATE` (job seekers are the primary registrant flow).
-- No admin-specific conditional fields existed — nothing else to remove.
-- Admin account creation remains a **backend-only concern**: when Phase 1 (Auth Service) is built, admins will be seeded or created via a protected internal endpoint. The shared Login page remains untouched — existing admin accounts can still sign in normally.
+- No admin-specific conditional fields existed â€” nothing else to remove.
+- Admin account creation remains a **backend-only concern**: when Phase 1 (Auth Service) is built, admins will be seeded or created via a protected internal endpoint. The shared Login page remains untouched â€” existing admin accounts can still sign in normally.
 - Subtitle updated to "Join thousands using AI to hire smarter and land better jobs." (inclusive of both roles).
 
-### 2026-09-07 (session 2) — Shared File Validation Hook + Candidate Sidebar Redesign
+### 2026-09-07 (session 2) â€” Shared File Validation Hook + Candidate Sidebar Redesign
 
 **Shared `useResumeFileValidation` hook (`src/hooks/useResumeFileValidation.js`) [NEW]**
 - Created per reviewer comment: centralises all resume upload validation rules in one place so both upload UIs stay in sync automatically.
 - Canonical rules: allowed MIME types (application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/msword) + allowed extensions (.pdf, .docx, .doc) as fallback, max size 5 MB (`MAX_FILE_SIZE_BYTES`).
-- Exports: default hook `useResumeFileValidation()` → `{ validateFile, fileError, clearFileError }`; named `getFileValidationError(file)` pure function; `FILE_ERRORS` message constants; `MAX_FILE_SIZE_BYTES` and `MAX_FILE_SIZE_LABEL`.
-- Both `RSDemo.jsx` and `CandidateDashboard.jsx` import and use this hook — changing the rules in one file affects both upload UIs.
+- Exports: default hook `useResumeFileValidation()` â†’ `{ validateFile, fileError, clearFileError }`; named `getFileValidationError(file)` pure function; `FILE_ERRORS` message constants; `MAX_FILE_SIZE_BYTES` and `MAX_FILE_SIZE_LABEL`.
+- Both `RSDemo.jsx` and `CandidateDashboard.jsx` import and use this hook â€” changing the rules in one file affects both upload UIs.
 - `RSDemo.jsx` updated: drag-drop `onDrop` and `onChange` now call `handleFileSelect` (which calls `validateFile`); `fileError` displayed inline in upload zone; `uploadedFile` state added with Remove button.
 - `CandidateDashboard.jsx` updated: `handleResumeFileSelect` replaces bare `setResumeFile`; `clearFileError` called on Remove and Browse; `fileError` displayed in upload zone; `id="resume-upload-panel"` added for sidebar scroll-to target.
 
@@ -384,17 +384,17 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
   4. **Divider**: `1px solid var(--border)`, 16px margins.
   5. **Secondary section**: "Coming Soon" uppercase muted label + disabled "Interview Practice" item (opacity 0.4, cursor: not-allowed) with gradient "New" pill badge (border-radius 999px per Design.md).
   6. **Help link**: pinned at bottom above border; `// TODO: wire to help route/modal` comment; inactive-item hover styling.
-- All colors use `.app-shell` scoped CSS variables (`var(--surface)`, `var(--border)`, `var(--text-primary)`, `var(--gradient-start/end)`, etc.) — no hardcoded hex values.
+- All colors use `.app-shell` scoped CSS variables (`var(--surface)`, `var(--border)`, `var(--text-primary)`, `var(--gradient-start/end)`, etc.) â€” no hardcoded hex values.
 - Desktop collapse (64px icon-only) and mobile drawer overlay behavior fully preserved from AppShell.
 - `id` attributes on CTA (`sidebar-new-resume-check`), nav items (`sidebar-nav-*`), help link (`sidebar-help-link`) for testability.
 
-### 2026-09-12 � CI/CD, Docker and 4-Piece Architecture Update
+### 2026-09-12 — CI/CD, Docker and 4-Piece Architecture Update
 - Built: Scaffolded missing backend services (auth-service, core-api, ai-ml-service), created Dockerfiles for all 4 services, root docker-compose.yml, .env.example, and 4 separate GitHub Actions workflows for CI/CD.
 - Changed: Architecture updated from 2-service backend to 4-piece (frontend, auth-service, core-api, ai-ml-service). Replaced old DevOps references.
 - Next: Deploy backend services to staging and wire frontend Axios calls to auth-service and core-api.
 
 
-### 2026-09-12 � Frontend CI/CD Verification & Vercel Deployment Setup
+### 2026-09-12 — Frontend CI/CD Verification & Vercel Deployment Setup
 
 **Verified & Fixed Local Frontend CI/CD Setup:**
 - Verified 
@@ -424,7 +424,7 @@ pm run build build command, and dist output directory for monorepo configuration
 **Pushed Branch:**
 - Pushed branch eature/frontend-cicd-setup to origin https://github.com/visucs/hiregenius.git.
 
-### 2026-09-12 � GitHub Pages Deployment Target Added (Purely Additive)
+### 2026-09-12 — GitHub Pages Deployment Target Added (Purely Additive)
 
 **Purely Additive Changes:**
 - **hiregenius-frontend/vite.config.js**: Added ase: process.env.VITE_BASE_PATH || '/'. Defaults to '/' for local dev, Docker builds, and Vercel builds. Only sets '/hiregenius/' when VITE_BASE_PATH env var is explicitly provided.
@@ -434,7 +434,7 @@ pm run build build command, and dist output directory for monorepo configuration
 - **Target URL**: https://visucs.github.io/hiregenius/
 - **Documentation**: Updated DevOps.md with GitHub Pages settings instructions.
 
-### 2026-09-13 � Comprehensive Platform-Wide Responsiveness Hardening
+### 2026-09-13 — Comprehensive Platform-Wide Responsiveness Hardening
 
 **Scope & Rules Followed:**
 - Strictly RESPONSIVENESS-ONLY: No new features, pages, components, copy, animations, or functional alterations.
@@ -470,7 +470,7 @@ pm run build build command, and dist output directory for monorepo configuration
    - Charts reflow to single column on tablet/mobile screens.
    - 44px toggle buttons, password show/hide buttons, and wrapped action rows.
 
-### 2026-09-13 � Production 1-Click Demo Portals & Graceful Offline Login
+### 2026-09-13 — Production 1-Click Demo Portals & Graceful Offline Login
 
 **Changes Implemented:**
 - **LoginPage.jsx**:
@@ -506,7 +506,7 @@ pm run build build command, and dist output directory for monorepo configuration
 - Replaced basic dropdown mobile menu with full-screen animated glass mobile drawer (`AnimatePresence`, `motion.div`, backdrop blur 24px, logo header, 44px close button).
 
 **Landing Page Deep Glassmorphism (`LandingPage.jsx`):**
-- Added fixed ambient olive glow mesh (3 blurred blobs: top-hero `#3D5016`/`#6B8A3A`, mid-page `#a3c55a`, bottom `#3D5016` with `blur(130px–140px)`, opacity 18–24% dark / 7–10% light, `pointer-events: none; z-index: 0; overflow: hidden`).
+- Added fixed ambient olive glow mesh (3 blurred blobs: top-hero `#3D5016`/`#6B8A3A`, mid-page `#a3c55a`, bottom `#3D5016` with `blur(130pxâ€“140px)`, opacity 18â€“24% dark / 7â€“10% light, `pointer-events: none; z-index: 0; overflow: hidden`).
 - Applied deep glass styling (`backdrop-filter: blur(24px) saturate(180%)`) with specular top highlight (`inset 0 1px 0 0 rgba(255,255,255,...)`) across Hero Bento cards, Stats Band, How It Works cards, Platform Features bento, Why HireGenius benefit cards, CTA band, FAQ accordion, and Footer.
 - Added hardware-accelerated micro-interactions (`whileHover={{ y: -6, scale: 1.02 }}`) on interactive cards.
 - Verified WCAG AA contrast in both light and dark modes with warm off-white and deep olive green.
@@ -517,8 +517,8 @@ pm run build build command, and dist output directory for monorepo configuration
 **Scope & Execution:**
 - **LandingNavbar.jsx**: Extended `isLanding` to include `/products/resume-screening` and `/products/ai-interview` so the floating glass pill navbar (top: clamp(10px, 2vw, 16px), border-radius 999px, specular top highlight, backdrop blur 24px) and full-screen mobile glass drawer are activated on both product landing pages.
 - **index.css**: Calibrated `--card-float-bg`, `--card-float-border`, and `--card-float-shadow` tokens in `:root` and `.dark` to deep glassmorphism (`rgba(250, 249, 245, 0.72)` light / `rgba(18, 24, 10, 0.68)` dark) with specular highlight (`inset 0 1px 0 0 rgba(255, 255, 255, ...)`) and hardware-accelerated `backdrop-filter: blur(24px) saturate(180%)`.
-- **ResumeScreeningPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden to prevent horizontal overflow at 320px width). Upgraded all section cards (RSHero, RSDemo, RSHowItWorks, RSAnalyzed, RSBenefits, RSShowcase, RSFAQ, RSCrossLinks, RSFinalCTA) to deep glassmorphism with scale and lift micro-interactions.
-- **AIInterviewPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130px–140px)`, pointer-events none, z-index 0, overflow hidden). Upgraded all section cards (AIHero, AIDemo, AIHowItWorks, AIEvaluated, AIBenefits, AIShowcase, AIFAQ, AICrossLinks, AIFinalCTA) to deep glassmorphism with specular highlights and micro-interactions.
+- **ResumeScreeningPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130pxâ€“140px)`, pointer-events none, z-index 0, overflow hidden to prevent horizontal overflow at 320px width). Upgraded all section cards (RSHero, RSDemo, RSHowItWorks, RSAnalyzed, RSBenefits, RSShowcase, RSFAQ, RSCrossLinks, RSFinalCTA) to deep glassmorphism with scale and lift micro-interactions.
+- **AIInterviewPage.jsx**: Added fixed ambient olive glow mesh (3 blurred orbs with `blur(130pxâ€“140px)`, pointer-events none, z-index 0, overflow hidden). Upgraded all section cards (AIHero, AIDemo, AIHowItWorks, AIEvaluated, AIBenefits, AIShowcase, AIFAQ, AICrossLinks, AIFinalCTA) to deep glassmorphism with specular highlights and micro-interactions.
 - **Verification**: `npm run build` passed with 0 errors in 887ms.
 
 ### 2026-09-15 - Google Sign-In with Firebase Web SDK (Frontend Integration)
@@ -550,7 +550,7 @@ pm run build build command, and dist output directory for monorepo configuration
   - Integrated `FirebaseConfig` and `GoogleAuthService` using Firebase Admin SDK (9.2.0) to verify client ID tokens.
   - Implemented seamless account linking policy: if a Google OAuth user signs in with an email already registered locally, the account is linked (`authProvider` updated to `GOOGLE`), preserving their existing role.
   - Disallowed `ADMIN` role signup via public register or Google endpoints (returns 400).
-  - Explicitly blocked password login for Google-only accounts (`password == null` or `authProvider == GOOGLE`) with friendly 400 error: `"This account uses Google Sign-In — please use the Google button"`.
+  - Explicitly blocked password login for Google-only accounts (`password == null` or `authProvider == GOOGLE`) with friendly 400 error: `"This account uses Google Sign-In â€” please use the Google button"`.
   - Added mock token fallback (`mock-google-token:email:name`) for isolated offline/development integration testing.
 - **Endpoints Implemented (`com.hiregenius.authservice.auth.controller.AuthController`):**
   - `POST /api/auth/register`: Public registration for `RECRUITER` and `CANDIDATE` roles; rejects `ADMIN` with 400; returns 201 + `AuthResponse`.
@@ -574,7 +574,7 @@ pm run build build command, and dist output directory for monorepo configuration
     9. `POST /api/auth/google-login` (new email, CANDIDATE) -> 201/200 with token
     10. `POST /api/auth/google-login` (existing email) -> 200 with token
     11. `POST /api/auth/google-login` (signup with ADMIN role) -> 400 Bad Request
-    12. `POST /api/auth/login` on Google-only account -> 400 ("This account uses Google Sign-In — please use the Google button")
+    12. `POST /api/auth/login` on Google-only account -> 400 ("This account uses Google Sign-In â€” please use the Google button")
     13. `GET /api/auth/validate` (no token) -> 401
     14. `GET /api/auth/validate` (valid token) -> 200 with role
     15. `GET /api/auth/validate` (tampered token) -> 401
@@ -584,7 +584,7 @@ pm run build build command, and dist output directory for monorepo configuration
   - Alg: HS256.
   - Claims payload: `{ sub: "<email>", userId: <number>, role: "<RECRUITER|CANDIDATE|ADMIN>", exp: <timestamp>, iat: <timestamp> }`.
 
-### 2026-09-15 — Frontend Google Sign-In & Auth Service Deployment Setup
+### 2026-09-15 â€” Frontend Google Sign-In & Auth Service Deployment Setup
 - **Part 1 (Frontend Google Sign-In)**:
   - Branch: eature/google-signin pushed to GitHub tracking origin/feature/google-signin.
   - Validated frontend: 
@@ -600,7 +600,7 @@ pm run build (0 errors in 1.22s).
   - Documented complete Render deployment instructions and dashboard environment variables in DevOps.md.
   - Branch: eature/auth-service-deploy prepared and pushed to GitHub.
 
-### 2026-09-16 — Fix Auth Service Test Datasource (H2 in MySQL-compatibility mode)
+### 2026-09-16 â€” Fix Auth Service Test Datasource (H2 in MySQL-compatibility mode)
 - **Problem**: In GitHub Actions CI, an environment variable SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/testdb in the runner caused Spring's test bootstrap to pair org.h2.Driver with the MySQL JDBC URL, failing all 11 tests in AuthControllerTest.java with Driver org.h2.Driver claims to not accept jdbcUrl, jdbc:mysql://localhost:3306/testdb.
 - **Root Cause & Fix**:
   1. Configured pplication-test.yml and pplication-test.properties with:
@@ -612,7 +612,7 @@ pm run build (0 errors in 1.22s).
   3. Ensured com.h2database:h2 in pom.xml has <scope>test</scope>.
 - **Verification**: Ran mvn clean test under simulated CI environment with SPRING_DATASOURCE_URL set. All 14 tests run with 0 failures, 0 errors, 0 skipped (including all 11 in AuthControllerTest).
 
-### 2026-09-16 — Fix User Entity uth_provider Type Mismatch with Flyway Schema
+### 2026-09-16 â€” Fix User Entity uth_provider Type Mismatch with Flyway Schema
 - **Issue**: Render deployment failed during Hibernate startup schema-validation:
   Schema-validation: wrong column type encountered in column [auth_provider] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('local','google') (Types#ENUM)]
 - **Root Cause**: In Hibernate 6.x on MySQLDialect, @Enumerated(EnumType.STRING) defaults to MySQL's native ENUM type (SqlTypes.ENUM) rather than standard VARCHAR. Meanwhile, Flyway migration V1__init_auth_schema.sql defined uth_provider VARCHAR(50) NOT NULL DEFAULT 'LOCAL'. During ddl-auto: validate, Hibernate flagged the type mismatch between database Types#VARCHAR and entity expected Types#ENUM.
@@ -620,7 +620,7 @@ pm run build (0 errors in 1.22s).
 - **Note for other services**: hiregenius-core-api (or any other service sharing the users schema) should ensure enum fields mapped to VARCHAR columns explicitly use string/VARCHAR JDBC typing to avoid similar schema validation failures.
 - **Verification**: mvn clean verify passed with 0 errors, 14/14 tests passing.
 
-### 2026-09-16 — Align All User Entity Enum Fields (ole, uth_provider) with VARCHAR Schema
+### 2026-09-16 â€” Align All User Entity Enum Fields (ole, uth_provider) with VARCHAR Schema
 - **Issue**: Render deployment failed during Hibernate schema validation for the ole column:
   Schema-validation: wrong column type encountered in column [role] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('recruiter','candidate','admin') (Types#ENUM)]
 - **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both ole VARCHAR(50) and uth_provider VARCHAR(50).
@@ -642,7 +642,7 @@ pm run build (0 errors in 1.22s).
 - **Entity Scan Complete**: Audited User.java (only entity class in hiregenius-auth-service). No other enum or columnDefinition overrides remain. All fields strictly align with Flyway's users table schema.
 - **Verification**: mvn clean verify passed with 0 errors (14/14 tests passing).
 
-### 2026-09-16 — Wire Real Google Auth & Remove Demo Portals from Production
+### 2026-09-16 â€” Wire Real Google Auth & Remove Demo Portals from Production
 - **Feature**: Connected hiregenius-frontend to the live POST /api/auth/google-login backend endpoint and removed demo/mock UI from production.
 - **Frontend Changes**:
   1. hiregenius-frontend/src/services/authService.js:
@@ -659,3 +659,115 @@ pm run build (0 errors in 1.22s).
 pm run lint exited 0 (no errors).
   - 
 pm run build completed successfully with 0 errors.
+
+### 2026-09-16 - Full End-to-End Automated Testing: Frontend â†” Auth Service Integration
+
+**Branch Verification & Sync:**
+- Branch: `dev` (updated with `git pull origin dev` â€” PRs #18, #20, #22 merged).
+- Google Login Wiring Status: Confirmed that `authService.googleLogin` in `hiregenius-frontend/src/services/authService.js` was already swapped in PR #22 (`6521d96`) to call the real Spring Boot backend (`api.post('/auth/google-login', payload)`). `mockGoogleLoginApiCall` remains only as an unused export.
+
+**Fixes Applied During Integration Run:**
+1. **Axios 401 Interceptor Hard-Reload Bug (`src/services/api.js`)**: Fixed `api.interceptors.response` which was blindly running `window.location.href = '/login'` on any 401, including failed login attempts on `/auth/login`. This wiped out React state and prevented "Invalid email or password" error toasts from displaying. Scoped the redirect to non-login endpoints.
+2. **Session Token Validation on Mount (`src/App.jsx` & `src/services/authService.js`)**: Added `validate: () => api.get('/auth/validate')` to `authService.js` and wired a `useEffect` in `App.jsx` to validate stored tokens on page reload against Spring Boot `GET /api/auth/validate`.
+3. **Cross-Role Redirect Guard (`src/routes/RoleRedirect.jsx` & `src/pages/Login/LoginPage.jsx`)**: Added `resolveRoleRedirect(target, role)` to prevent candidates from being redirected to recruiter dashboard paths (and vice-versa) when following `from.pathname` parameters.
+4. **CORS Configuration (`hiregenius-auth-service/src/main/resources/application.yml` & `application-local.yml`)**: Added Vite fallback port `http://localhost:5174` and loopback IPs (`127.0.0.1`) to `cors.allowed-origins`.
+
+**Automated Test Results:**
+
+#### Part 1 â€” Backend API Re-Verification (Port 8080)
+| Test # | Description | Result | Notes |
+| :--- | :--- | :--- | :--- |
+| B1 | `GET /health` | PASS | Returns 200 `{"service":"auth-service","status":"UP"}` |
+| B2 | `POST /api/auth/register` (RECRUITER) | PASS | 201 Created with JWT and user payload |
+| B3 | `POST /api/auth/register` (CANDIDATE) | PASS | 201 Created with JWT and user payload |
+| B4 | `POST /api/auth/register` (`role=ADMIN`) | PASS | 400 Bad Request (Admin self-registration blocked) |
+| B5 | `POST /api/auth/register` (Duplicate email) | PASS | 409 Conflict |
+| B6 | `POST /api/auth/login` (Correct credentials) | PASS | 200 OK with valid HS256 JWT |
+| B7 | `POST /api/auth/login` (Wrong password) | PASS | 401 Unauthorized (`Invalid email or password`) |
+| B8 | `POST /api/auth/login` (Seeded system admin) | PASS | 200 OK with `role=ADMIN` |
+| B9 | `POST /api/auth/google-login` (New email, CANDIDATE) | PASS | 201/200 OK with newly registered user |
+| B10 | `POST /api/auth/google-login` (Existing email) | PASS | 200 OK with authenticated session |
+| B11 | `POST /api/auth/google-login` (`role=ADMIN`) | PASS | 400 Bad Request |
+| B12 | `POST /api/auth/login` on Google account | PASS | 400 Bad Request (`This account uses Google Sign-In â€” please use the Google button`) |
+| B13 | `GET /api/auth/validate` (No token) | PASS | 401 Unauthorized |
+| B14 | `GET /api/auth/validate` (Valid token) | PASS | 200 OK with user details and role |
+| B15 | `GET /api/auth/validate` (Tampered token) | PASS | 401 Unauthorized |
+| B16 | `POST /api/auth/forgot-password` | PASS | 200 OK generic success message |
+
+#### Part 2 & 3 â€” Real UI Browser Automation (Headless Chrome + Vite Dev Server Port 5173 + Auth Service Port 8080)
+| Test # | Description | Result | Notes |
+| :--- | :--- | :--- | :--- |
+| 2.a | Register as RECRUITER via email/password form | PASS | Redirected to `/recruiter/dashboard`, token stored, welcome toast displayed |
+| 2.b | Register as CANDIDATE via email/password form | PASS | Redirected to `/candidate/dashboard`, token stored, candidate shell rendered |
+| 2.c | Register with existing email shows clear 409 error | PASS | Toast rendered: "An account with this email address already exists", form stays open |
+| 2.d | Login with correct credentials (both roles) | PASS | Recruiter redirected to `/recruiter/dashboard`; Candidate redirected to `/candidate/dashboard` |
+| 2.e | Login with wrong password shows clear error message | PASS | Toast rendered: "Invalid email or password", no page refresh or crash |
+| 2.f | Continue with Google on Register (Real backend integration) | PASS | Button disabled initially; selecting role enables it; real POST to `/api/auth/google-login` succeeded; redirected to `/candidate/dashboard` |
+| 2.g | Continue with Google on Login for existing account | PASS | Real POST to `/api/auth/google-login` succeeded; redirected to `/candidate/dashboard` |
+| 2.h | Password login on Google account rejected with clear message | PASS | Surfaced: "This account uses Google Sign-In â€” please use the Google button" |
+| 2.i | Reload page maintains session and calls `/api/auth/validate` | PASS | Verified HTTP 200 on `/api/auth/validate` during reload; user remains on `/recruiter/dashboard` |
+| 2.j | Logout clears token and reload does NOT restore session | PASS | `localStorage.getItem('hg_token')` is `null`; reload keeps user logged out on `/login` |
+| 2.k | Protected routes redirect to `/login` when logged out | PASS | Direct URL visits to `/recruiter/dashboard` and `/candidate/dashboard` redirected to `/login` |
+| 3 | Console & Network Sanity (CORS, 500s, unhandled rejections) | PASS | 0 CORS errors, 0 500s, 0 unhandled promise rejections |
+
+### 2026-09-16 - Add spring-dotenv for Automatic Local Environment Variable Loading
+- **Feature**: Added `me.paulschwarz:spring-dotenv` (version 4.0.0) dependency to `hiregenius-auth-service/pom.xml`.
+- **Purpose**: Enables local runs via `./mvnw spring-boot:run` to automatically load environment configuration from the local `.env` file (such as `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SIGNING_KEY`, `FIREBASE_CREDENTIALS_PATH`, `FIREBASE_CREDENTIALS_JSON`, etc.) into Spring's `PropertySource` without requiring developers to manually export `$env:` variables in PowerShell / bash beforehand.
+- **Production / Container Safety**: Docker and cloud environments (Render) inject actual system environment variables, which take precedence over `.env` per Twelve-Factor App and Spring precedence rules. In environments without a `.env` file, the library safely defaults to ignoring the missing file.
+- **Verification**:
+  - `mvn clean verify` passed with 0 errors (all 14 unit and integration tests passing).
+  - Executed `./mvnw spring-boot:run` in a fresh session with no manual `$env:` variables set. The service successfully loaded configuration from `.env`, connected to Clever Cloud MySQL (`bypmcpyebenomi3pdtis`), executed Flyway schema validation, initialized Firebase Admin SDK from `FIREBASE_CREDENTIALS_JSON`, bound to port 8080, and responded HTTP 200 on `/health`.
+
+### 2026-09-16 - Add OpenAPI/Swagger Documentation for Auth Service & Manual UI Testing
+- **Documentation**: Added OpenAPI 3 (SpringDoc) annotations across all endpoints in `AuthController.java` and `HealthController.java`.
+- **Endpoints Documented**:
+  1. `POST /api/auth/register`: Operation summary/description, request body examples for both RECRUITER and CANDIDATE roles, and responses (201 Created with JWT & UserResponse, 400 Bad Request with validation and role=ADMIN rejection examples, 409 Conflict with duplicate email example).
+  2. `POST /api/auth/login`: Operation summary/description, request body examples (Recruiter/Candidate and System Admin), and responses (200 OK with JWT & UserResponse, 400 Bad Request with separate Google-only account rejection example and validation error example, 401 Unauthorized with invalid credentials example).
+  3. `POST /api/auth/google-login`: Operation summary/description, request body examples showing expected payload shapes (`idToken` and `role` for new candidate/recruiter signups, and `idToken`-only for existing users), and responses (200 OK for existing user, 201 Created for new user signup, 400 Bad Request covering role=ADMIN rejection, missing role on first login, and invalid/tampered Google tokens).
+  4. `GET /api/auth/validate`: Operation summary/description, `@SecurityRequirement(name = "bearerAuth")` and header parameter documentation, and responses (200 OK with user metadata, 401 Unauthorized for missing, invalid, or expired tokens).
+  5. `POST /api/auth/forgot-password`: Operation summary/description documenting uniform response behavior without leaking account existence, request body example, and responses (200 OK generic success message, 400 Bad Request validation error).
+  6. `GET /health`: Operation summary/description, public status check with no authentication requirement, tagged under both `Authentication` and `Health`, returning 200 OK `{"service":"auth-service","status":"UP"}`.
+- **Swagger UI**: Accessible at `http://localhost:8080/swagger-ui/index.html` (and OpenAPI schema at `/v3/api-docs`).
+- **Verification**: `mvn clean verify` passed with 0 failures across all 14 unit and integration tests. Live verification confirmed Swagger UI index and Swagger config endpoints return 200 OK and live endpoints function correctly.
+
+### 2026-09-16 - Email Validation Fix (Part 1) & Real Password Reset Flow via Email (Part 2)
+- **Branch**: `feature/email-validation-password-reset`
+- **Part 1 (Email Validation Fix)**:
+  - **RFC 5322 Email Regex**: Strengthened format validation across `RegisterRequest`, `LoginRequest`, and `ForgotPasswordRequest` using `ValidationPatterns.EMAIL_REGEX` (rejecting typos like missing domain, consecutive dots, invalid TLDs, and illegal characters).
+  - **Server-Side DNS MX Record Validation**: Created `DnsValidationService` and `DnsValidationServiceImpl` using Java JNDI (`com.sun.jndi.dns.DnsContextFactory`) to query MX records for recipient domains before creating accounts. Falls back to A record check per RFC 5321. Configured via `app.email-validation.mx-check-enabled`.
+  - Registration rejects non-existent/invalid email domains with HTTP 400 (`"This email domain does not appear to be valid."`).
+- **Part 2 (Password Reset Flow & Email Service)**:
+  - **Database Migration**: Added Flyway migration `V2__add_password_reset_tokens.sql` creating table `password_reset_tokens` (`id`, `user_id` FK -> `users(id)` ON DELETE CASCADE, `token`, `expires_at`, `used`, `created_at`).
+  - **Entity & Repository**: Created `PasswordResetToken` JPA entity and `PasswordResetTokenRepository`.
+  - **Email Service**: Added `spring-boot-starter-mail` dependency and created `EmailService` / `EmailServiceImpl` using `JavaMailSender` configured via `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, and `FRONTEND_BASE_URL`. Sends responsive HTML emails with HireGenius AI branding, 30-minute expiry warning, and direct reset button link.
+  - **Environment Configuration**: Added mail and frontend URL variables to `application.yml`, `.env`, and documented in `.env.example` with setup instructions for Gmail App Passwords.
+  - **POST /api/auth/forgot-password**: Generates a secure 30-minute random UUID token, persists to `password_reset_tokens`, and sends the reset link email asynchronously via `EmailService`. Retains uniform HTTP 200 generic response without leaking account presence.
+  - **POST /api/auth/reset-password**: New public endpoint accepting `{ "token": "...", "newPassword": "..." }`. Validates token presence, expiry, and used status. Verifies user is not a Google-only account (rejects with 400 `"This account uses Google Sign-In and has no password to reset"`). Encrypts password with BCrypt, marks token as used, and returns HTTP 200. Added to `SecurityConfig` `requestMatchers(...).permitAll()`.
+  - **OpenAPI Documentation**: Added full SpringDoc Swagger annotations and request/response examples for `POST /api/auth/reset-password`.
+- **Frontend Follow-Up Note**:
+  - The backend email reset link directs users to `{FRONTEND_BASE_URL}/reset-password?token={token}`. A dedicated `ResetPasswordPage` component in `hiregenius-frontend` to read this token and submit new passwords to `POST /api/auth/reset-password` is identified as the pending frontend follow-up.
+- **Verification & Test Coverage**:
+  - 26 tests executed and passed (0 failures) via `./mvnw test` including:
+    - DNS MX validation unit tests (`DnsValidationServiceTest`).
+    - Email sender and HTML generation tests (`EmailServiceTest`).
+    - AuthController full integration tests (`resetPasswordSuccess`, `resetPasswordExpiredTokenRejected`, `resetPasswordAlreadyUsedTokenRejected`, `resetPasswordInvalidTokenRejected`, `resetPasswordGoogleOnlyAccountRejected`, `registerNonExistentDomainRejected`, `registerMalformedEmailRejected`, plus all 11 existing auth tests).
+
+### 2026-09-16 - Frontend Reset Password Page (`/reset-password`) & End-to-End Flow Completion
+- **Branch**: `feature/reset-password-frontend`
+- **Page Component**: Created [`ResetPasswordPage.jsx`](file:///C:/Users/visuc/OneDrive/Desktop/Hirelens/hiregenius-frontend/src/pages/ResetPassword/ResetPasswordPage.jsx) matching the HireGenius design system (glassmorphic surface, radial gradient glows, Framer Motion transitions, Lucide icons).
+- **Public Route**: Added `<Route path="/reset-password" element={<ResetPasswordPage />} />` in `App.jsx`.
+- **Token Handling**:
+  - Reads `token` query parameter using `useSearchParams()`.
+  - If token is missing, displays an alert state: `"Invalid or missing reset link. Please request a new password reset."` with a CTA button to `/forgot-password`.
+- **Form & Validation**:
+  - Form fields: "New Password" and "Confirm New Password" with show/hide password visibility toggles (`Eye`/`EyeOff`).
+  - Validation schema (`resetPasswordSchema` in `validationSchemas.js`): Enforces minimum 8 characters and at least 1 number (matching backend's `ValidationPatterns.PASSWORD_REGEX` exactly) plus password confirmation matching via Zod.
+- **Service Integration**: Added `authService.resetPassword({ token, newPassword })` in `authService.js` calling `POST /api/auth/reset-password`.
+- **Response & Error Handling**:
+  - **HTTP 200**: Displays green checkmark success card and toast `"Password reset successful! You can now log in with your new password."`, then redirects to `/login` after 2 seconds.
+  - **HTTP 400 (Token expired / invalid / used)**: Displays error banner `"This reset link has expired or is invalid. Please request a new one."` with CTA to `/forgot-password`.
+  - **HTTP 400 (Google-only account)**: Displays backend message `"This account uses Google Sign-In and has no password to reset"`.
+- **Verification**:
+  - `oxlint`: 0 errors, 0 warnings on `ResetPasswordPage.jsx`.
+  - `npm run build`: Production build succeeded in 956ms with 0 errors.
+  - End-to-End Flow: `POST /api/auth/forgot-password` -> HTML email with `{FRONTEND_BASE_URL}/reset-password?token={token}` -> `/reset-password` UI -> `POST /api/auth/reset-password` -> `/login` is fully implemented.

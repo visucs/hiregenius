@@ -4,11 +4,14 @@ import com.hiregenius.authservice.auth.dto.request.ForgotPasswordRequest;
 import com.hiregenius.authservice.auth.dto.request.GoogleLoginRequest;
 import com.hiregenius.authservice.auth.dto.request.LoginRequest;
 import com.hiregenius.authservice.auth.dto.request.RegisterRequest;
+import com.hiregenius.authservice.auth.dto.request.ResetPasswordRequest;
 import com.hiregenius.authservice.auth.dto.response.AuthResponse;
 import com.hiregenius.authservice.auth.dto.response.UserResponse;
 import com.hiregenius.authservice.auth.entity.AuthProvider;
+import com.hiregenius.authservice.auth.entity.PasswordResetToken;
 import com.hiregenius.authservice.auth.entity.Role;
 import com.hiregenius.authservice.auth.entity.User;
+import com.hiregenius.authservice.auth.repository.PasswordResetTokenRepository;
 import com.hiregenius.authservice.auth.repository.UserRepository;
 import com.hiregenius.authservice.common.ApiResponse;
 import com.hiregenius.authservice.exception.DuplicateEmailException;
@@ -16,15 +19,17 @@ import com.hiregenius.authservice.exception.InvalidCredentialsException;
 import com.hiregenius.authservice.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -36,19 +41,31 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final GoogleAuthService googleAuthService;
+    private final DnsValidationService dnsValidationService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
+
+    @Value("${app.frontend.base-url:https://hiregenius-delta.vercel.app}")
+    private String frontendBaseUrl;
 
     public AuthServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             AuthenticationManager authenticationManager,
-            GoogleAuthService googleAuthService
+            GoogleAuthService googleAuthService,
+            DnsValidationService dnsValidationService,
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.googleAuthService = googleAuthService;
+        this.dnsValidationService = dnsValidationService;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -59,13 +76,19 @@ public class AuthServiceImpl implements AuthService {
 
         String email = request.getEmail().toLowerCase().trim();
 
-        // Check for duplicate email
+        // 1. Verify DNS MX record for email domain
+        if (!dnsValidationService.hasValidMxRecord(email)) {
+            log.warn("Registration rejected: Email domain has no valid MX records [{}]", email);
+            throw new IllegalArgumentException("This email domain does not appear to be valid.");
+        }
+
+        // 2. Check for duplicate email
         if (userRepository.existsByEmail(email)) {
             log.warn("Registration rejected: Email already registered [{}]", email);
             throw new DuplicateEmailException("An account with this email address already exists");
         }
 
-        // Create new LOCAL user
+        // 3. Create new LOCAL user
         User user = new User(
                 request.getName().trim(),
                 email,
@@ -167,13 +190,65 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public ApiResponse<String> forgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail().toLowerCase().trim();
         log.info("Forgot password request received for email: {}", email);
 
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            // Only issue reset token if user has a password / is not purely Google OAuth
+            if (user.getPassword() != null && user.getAuthProvider() != AuthProvider.GOOGLE) {
+                String token = UUID.randomUUID().toString();
+                LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(30);
+
+                PasswordResetToken resetToken = new PasswordResetToken(user, token, expiresAt);
+                passwordResetTokenRepository.save(resetToken);
+
+                String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
+                emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
+                log.info("Password reset token generated and email dispatched for user id={}", user.getId());
+            } else {
+                log.info("Skipping password reset email for Google-only user without password [{}]", email);
+            }
+        }
+
         // Constant generic message regardless of whether the account exists or provider type
         // Prevents account enumeration and email leakage
         return ApiResponse.ok("If an account exists with this email, password reset instructions have been sent.", null);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<String> resetPassword(ResetPasswordRequest request) {
+        String tokenStr = request.getToken() != null ? request.getToken().trim() : "";
+        if (tokenStr.isEmpty()) {
+            throw new IllegalArgumentException("Invalid or expired password reset token");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(tokenStr)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset token"));
+
+        if (resetToken.isUsed() || resetToken.isExpired()) {
+            log.warn("Password reset rejected: token is used={} or expired={}", resetToken.isUsed(), resetToken.isExpired());
+            throw new IllegalArgumentException("Invalid or expired password reset token");
+        }
+
+        User user = resetToken.getUser();
+        if (user.getAuthProvider() == AuthProvider.GOOGLE && user.getPassword() == null) {
+            log.warn("Password reset rejected: User is Google-only account [{}]", user.getEmail());
+            throw new IllegalArgumentException("This account uses Google Sign-In and has no password to reset");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("Password successfully reset for user id={}, email={}", user.getId(), user.getEmail());
+        return ApiResponse.ok("Password has been reset successfully. You can now log in with your new password.", null);
     }
 
     @Override

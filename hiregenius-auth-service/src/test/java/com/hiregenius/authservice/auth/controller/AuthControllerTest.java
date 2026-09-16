@@ -5,10 +5,15 @@ import com.hiregenius.authservice.auth.dto.request.ForgotPasswordRequest;
 import com.hiregenius.authservice.auth.dto.request.GoogleLoginRequest;
 import com.hiregenius.authservice.auth.dto.request.LoginRequest;
 import com.hiregenius.authservice.auth.dto.request.RegisterRequest;
+import com.hiregenius.authservice.auth.dto.request.ResetPasswordRequest;
 import com.hiregenius.authservice.auth.entity.AuthProvider;
+import com.hiregenius.authservice.auth.entity.PasswordResetToken;
 import com.hiregenius.authservice.auth.entity.Role;
 import com.hiregenius.authservice.auth.entity.User;
+import com.hiregenius.authservice.auth.repository.PasswordResetTokenRepository;
 import com.hiregenius.authservice.auth.repository.UserRepository;
+import com.hiregenius.authservice.auth.service.DnsValidationService;
+import com.hiregenius.authservice.auth.service.EmailService;
 import com.hiregenius.authservice.auth.service.GoogleAuthService;
 import com.hiregenius.authservice.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,12 +27,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -47,6 +54,9 @@ class AuthControllerTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -58,9 +68,18 @@ class AuthControllerTest {
     @MockBean
     private GoogleAuthService googleAuthService;
 
+    @MockBean
+    private DnsValidationService dnsValidationService;
+
+    @MockBean
+    private EmailService emailService;
+
     @BeforeEach
     void setUp() {
+        passwordResetTokenRepository.deleteAll();
         userRepository.deleteAll();
+        // Default to true for unit tests unless specifically mocked to test DNS failure
+        when(dnsValidationService.hasValidMxRecord(anyString())).thenReturn(true);
     }
 
     @Test
@@ -104,14 +123,19 @@ class AuthControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.role").value("CANDIDATE"))
-                .andExpect(jsonPath("$.user.name").value("Alex Candidate"));
+                .andExpect(jsonPath("$.user.email").value("alex@hiregenius.ai"));
+
+        User saved = userRepository.findByEmail("alex@hiregenius.ai").orElseThrow();
+        assertEquals(Role.CANDIDATE, saved.getRole());
+        assertEquals(AuthProvider.LOCAL, saved.getAuthProvider());
+        assertTrue(passwordEncoder.matches("Candidate123!", saved.getPassword()));
     }
 
     @Test
-    @DisplayName("3. Register with role=ADMIN rejected (400)")
+    @DisplayName("3. Attempting to register ADMIN role publicly rejected (400)")
     void registerAdminRejected() throws Exception {
         RegisterRequest request = new RegisterRequest(
-                "Malicious User",
+                "Hacker",
                 "hacker@hiregenius.ai",
                 "Password123!",
                 "ADMIN"
@@ -122,28 +146,27 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("ADMIN role cannot be self-assigned")));
+
+        assertFalse(userRepository.findByEmail("hacker@hiregenius.ai").isPresent());
     }
 
     @Test
     @DisplayName("4. Duplicate email registration rejected (409)")
-    void duplicateEmailRejected() throws Exception {
-        RegisterRequest request = new RegisterRequest(
-                "First User",
-                "duplicate@hiregenius.ai",
-                "Password123!",
-                "CANDIDATE"
-        );
-
+    void registerDuplicateEmailRejected() throws Exception {
+        RegisterRequest first = new RegisterRequest("Duplicate User", "duplicate@hiregenius.ai", "Password123!", "CANDIDATE");
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(first)))
                 .andExpect(status().isCreated());
 
+        RegisterRequest duplicate = new RegisterRequest("Duplicate User 2", "duplicate@hiregenius.ai", "OtherPass123!", "RECRUITER");
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(duplicate)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message", containsString("already exists")));
+
+        assertEquals(1, userRepository.count());
     }
 
     @Test
@@ -278,5 +301,187 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message", containsString("password reset instructions have been sent")));
+    }
+
+    // =========================================================================
+    // PART 1 TESTS: Email Format & MX Record Validation
+    // =========================================================================
+
+    @Test
+    @DisplayName("12. Registration rejected when email format is malformed (400)")
+    void registerMalformedEmailRejected() throws Exception {
+        RegisterRequest badFormat = new RegisterRequest(
+                "Bad Email",
+                "plainaddress-no-at-sign",
+                "Password123!",
+                "CANDIDATE"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(badFormat)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("valid email address")));
+
+        RegisterRequest missingTld = new RegisterRequest(
+                "Bad TLD",
+                "user@domain",
+                "Password123!",
+                "CANDIDATE"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(missingTld)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("13. Registration rejected when email domain has no valid MX records (400)")
+    void registerInvalidMxDomainRejected() throws Exception {
+        when(dnsValidationService.hasValidMxRecord("test@nonexistent-fake-domain.xyz")).thenReturn(false);
+
+        RegisterRequest request = new RegisterRequest(
+                "Fake Domain User",
+                "test@nonexistent-fake-domain.xyz",
+                "Password123!",
+                "CANDIDATE"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("This email domain does not appear to be valid.")));
+
+        assertFalse(userRepository.findByEmail("test@nonexistent-fake-domain.xyz").isPresent());
+    }
+
+    // =========================================================================
+    // PART 2 TESTS: Real Password Reset via Email
+    // =========================================================================
+
+    @Test
+    @DisplayName("14. Forgot password generates token and dispatches reset email")
+    void forgotPasswordGeneratesTokenAndSendsEmail() throws Exception {
+        User user = new User("Reset User", "resetuser@hiregenius.ai", passwordEncoder.encode("OldPassword123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        userRepository.save(user);
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest("resetuser@hiregenius.ai");
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Verify token saved in repository
+        assertEquals(1, passwordResetTokenRepository.count());
+        PasswordResetToken token = passwordResetTokenRepository.findAll().get(0);
+        assertEquals(user.getId(), token.getUser().getId());
+        assertFalse(token.isUsed());
+        assertTrue(token.getExpiresAt().isAfter(LocalDateTime.now()));
+
+        // Verify EmailService was called
+        verify(emailService, times(1)).sendPasswordResetEmail(
+                eq("resetuser@hiregenius.ai"),
+                eq("Reset User"),
+                org.mockito.ArgumentMatchers.contains("/reset-password?token=" + token.getToken())
+        );
+    }
+
+    @Test
+    @DisplayName("15. Password reset succeeds with valid token (200)")
+    void resetPasswordSuccess() throws Exception {
+        User user = new User("Alice Reset", "alice@hiregenius.ai", passwordEncoder.encode("OldPass123!"), Role.RECRUITER, AuthProvider.LOCAL);
+        userRepository.save(user);
+
+        PasswordResetToken token = new PasswordResetToken(user, "valid-token-123", LocalDateTime.now().plusMinutes(30));
+        passwordResetTokenRepository.save(token);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("valid-token-123", "BrandNewPass123!");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message", containsString("Password has been reset successfully")));
+
+        // Verify token is now marked used
+        PasswordResetToken updatedToken = passwordResetTokenRepository.findByToken("valid-token-123").orElseThrow();
+        assertTrue(updatedToken.isUsed());
+
+        // Verify user can log in with new password
+        User updatedUser = userRepository.findByEmail("alice@hiregenius.ai").orElseThrow();
+        assertTrue(passwordEncoder.matches("BrandNewPass123!", updatedUser.getPassword()));
+    }
+
+    @Test
+    @DisplayName("16. Password reset fails when token is expired (400)")
+    void resetPasswordExpiredTokenRejected() throws Exception {
+        User user = new User("Expired User", "expired@hiregenius.ai", passwordEncoder.encode("OldPass123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        userRepository.save(user);
+
+        // Token expired 10 minutes ago
+        PasswordResetToken expiredToken = new PasswordResetToken(user, "expired-token-123", LocalDateTime.now().minusMinutes(10));
+        passwordResetTokenRepository.save(expiredToken);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("expired-token-123", "NewPassword123!");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Invalid or expired password reset token")));
+    }
+
+    @Test
+    @DisplayName("17. Password reset fails when token was already used (400)")
+    void resetPasswordAlreadyUsedTokenRejected() throws Exception {
+        User user = new User("Used Token User", "used@hiregenius.ai", passwordEncoder.encode("OldPass123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        userRepository.save(user);
+
+        PasswordResetToken usedToken = new PasswordResetToken(user, "used-token-123", LocalDateTime.now().plusMinutes(20));
+        usedToken.setUsed(true);
+        passwordResetTokenRepository.save(usedToken);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("used-token-123", "NewPassword123!");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Invalid or expired password reset token")));
+    }
+
+    @Test
+    @DisplayName("18. Password reset fails with non-existent token (400)")
+    void resetPasswordInvalidTokenRejected() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest("does-not-exist", "NewPassword123!");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Invalid or expired password reset token")));
+    }
+
+    @Test
+    @DisplayName("19. Password reset rejected for Google-only account (400)")
+    void resetPasswordGoogleOnlyAccountRejected() throws Exception {
+        User googleUser = new User("Google Only User", "googleonly@hiregenius.ai", null, Role.CANDIDATE, AuthProvider.GOOGLE);
+        userRepository.save(googleUser);
+
+        PasswordResetToken token = new PasswordResetToken(googleUser, "google-reset-token", LocalDateTime.now().plusMinutes(30));
+        passwordResetTokenRepository.save(token);
+
+        ResetPasswordRequest request = new ResetPasswordRequest("google-reset-token", "NewPassword123!");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("This account uses Google Sign-In and has no password to reset")));
     }
 }

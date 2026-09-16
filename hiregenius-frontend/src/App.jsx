@@ -1,12 +1,18 @@
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Agentation } from 'agentation';
+
+import { selectToken, setCredentials, logout } from './features/auth/authSlice';
+import { authService } from './services/authService';
 
 // ── Public pages ──────────────────────────────────────────────────
 import LandingPage from './pages/Landing/LandingPage';
 import LoginPage from './pages/Login/LoginPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPassword/ResetPasswordPage';
 import ResumeScreeningPage    from './pages/products/ResumeScreening/ResumeScreeningPage';
 import AIInterviewPage        from './pages/products/AIInterview/AIInterviewPage';
 import AnalyticsProductPage   from './pages/products/Analytics/AnalyticsProductPage';
@@ -68,6 +74,25 @@ import AdminProfilePage           from './pages/admin/AdminProfilePage';
  *   *                    → 404
  */
 const App = () => {
+  const dispatch = useDispatch();
+  const token = useSelector(selectToken);
+
+  useEffect(() => {
+    if (token) {
+      authService
+        .validate()
+        .then((res) => {
+          if (res?.data) {
+            dispatch(setCredentials({ token, user: res.data }));
+          }
+        })
+        .catch((err) => {
+          console.warn('[Session] Token validation failed on app load:', err?.response?.data || err.message);
+          dispatch(logout());
+        });
+    }
+  }, [token, dispatch]);
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Toaster
@@ -115,6 +140,7 @@ const App = () => {
         <Route path="/login"    element={<RoleRedirect><LoginPage /></RoleRedirect>} />
         <Route path="/register" element={<RoleRedirect><RegisterPage /></RoleRedirect>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/unauthorized"    element={<UnauthorizedPage />} />
 
         {/* ── PROTECTED: RECRUITER ──────────────────────────────────── */}
