@@ -16,7 +16,7 @@ import {
   selectIsAuthenticated, selectUserRole, selectAuthLoading, selectAuthError, clearError,
 } from '../../features/auth/authSlice';
 import { formatError } from '../../utils/helpers';
-import { ROLE_HOME } from '../../routes/RoleRedirect';
+import { ROLE_HOME, resolveRoleRedirect } from '../../routes/RoleRedirect';
 import GradientButton from '../../components/GradientButton/GradientButton';
 import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
 
@@ -36,7 +36,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(redirectParam || (ROLE_HOME[role] ?? '/recruiter/dashboard'), { replace: true });
+      navigate(resolveRoleRedirect(redirectParam, role), { replace: true });
     }
     return () => dispatch(clearError());
   }, [isAuthenticated, role, navigate, dispatch, redirectParam]);
@@ -51,7 +51,7 @@ const LoginPage = () => {
       const { token, user } = res.data;
       dispatch(setCredentials({ token, user }));
       toast.success(`Welcome back, ${user?.name || 'there'}!`);
-      navigate(redirectParam || (ROLE_HOME[user?.role] ?? '/recruiter/dashboard'));
+      navigate(resolveRoleRedirect(redirectParam, user?.role));
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));
@@ -64,7 +64,9 @@ const LoginPage = () => {
     dispatch(clearError());
     try {
       // 1. Trigger Firebase Google popup
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = typeof window !== 'undefined' && window.__mockSignInWithPopup
+        ? await window.__mockSignInWithPopup()
+        : await signInWithPopup(auth, googleProvider);
       // 2. Extract ID token
       const idToken = await result.user.getIdToken();
       // 3. Build request payload (role absent on Login, as user already has role in backend)
@@ -81,7 +83,7 @@ const LoginPage = () => {
       };
       dispatch(setCredentials({ token, user, role: returnedRole }));
       toast.success(`Welcome back, ${result.user.displayName || 'there'}!`);
-      navigate(redirectParam || (ROLE_HOME[returnedRole] ?? '/recruiter/dashboard'));
+      navigate(resolveRoleRedirect(redirectParam, returnedRole));
     } catch (err) {
       console.error('Google Sign-In error:', err);
       if (err.code === 'auth/popup-closed-by-user') {

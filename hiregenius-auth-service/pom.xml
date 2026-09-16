@@ -18,12 +18,19 @@
 		<jjwt.version>0.12.5</jjwt.version>
 		<firebase.version>9.2.0</firebase.version>
 		<springdoc.version>2.3.0</springdoc.version>
+		<spring-dotenv.version>4.0.0</spring-dotenv.version>
 	</properties>
 	<dependencies>
 		<!-- Web & REST -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Email Service (JavaMailSender) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
 		<!-- Security & Validation -->
@@ -86,6 +93,13 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+
+		<!-- Dotenv for local development (loads .env automatically) -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>${spring-dotenv.version}</version>
 		</dependency>
 
 		<!-- Testing (H2, Spring Test, Spring Security Test) -->

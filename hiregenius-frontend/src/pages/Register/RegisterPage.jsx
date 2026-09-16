@@ -67,7 +67,9 @@ const RegisterPage = () => {
     dispatch(clearError());
     try {
       // 1. Trigger Firebase Google popup
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = typeof window !== 'undefined' && window.__mockSignInWithPopup
+        ? await window.__mockSignInWithPopup()
+        : await signInWithPopup(auth, googleProvider);
       // 2. Extract ID token
       const idToken = await result.user.getIdToken();
       // 3. Build request payload with chosen role (required on Register)
