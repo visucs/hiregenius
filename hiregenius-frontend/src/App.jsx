@@ -1,6 +1,11 @@
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Agentation } from 'agentation';
+
+import { selectToken, setCredentials, logout } from './features/auth/authSlice';
+import { authService } from './services/authService';
 
 // ── Public pages ──────────────────────────────────────────────────
 import LandingPage from './pages/Landing/LandingPage';
@@ -68,6 +73,25 @@ import AdminProfilePage           from './pages/admin/AdminProfilePage';
  *   *                    → 404
  */
 const App = () => {
+  const dispatch = useDispatch();
+  const token = useSelector(selectToken);
+
+  useEffect(() => {
+    if (token) {
+      authService
+        .validate()
+        .then((res) => {
+          if (res?.data) {
+            dispatch(setCredentials({ token, user: res.data }));
+          }
+        })
+        .catch((err) => {
+          console.warn('[Session] Token validation failed on app load:', err?.response?.data || err.message);
+          dispatch(logout());
+        });
+    }
+  }, [token, dispatch]);
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Toaster

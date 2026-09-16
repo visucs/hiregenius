@@ -13,6 +13,19 @@ export const ROLE_HOME = {
 };
 
 /**
+ * Resolves redirect target safely against user's actual role.
+ * Prevents candidate from being redirected to recruiter dashboard and vice versa.
+ */
+export const resolveRoleRedirect = (target, role) => {
+  const fallback = ROLE_HOME[role] || (role === 'CANDIDATE' ? '/candidate/dashboard' : '/recruiter/dashboard');
+  if (!target) return fallback;
+  if (target.startsWith('/recruiter') && role !== 'RECRUITER') return fallback;
+  if (target.startsWith('/candidate') && role !== 'CANDIDATE') return fallback;
+  if (target.startsWith('/admin') && role !== 'ADMIN') return fallback;
+  return target;
+};
+
+/**
  * RoleRedirect — used on public-only routes (/, /login, /register).
  * If the user is already authenticated, send them to their role dashboard
  * or post-login redirect destination so they don't see the login/landing page again.
@@ -27,7 +40,7 @@ const RoleRedirect = ({ children }) => {
   const redirectTarget = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
 
   if (isAuthenticated) {
-    const home = redirectTarget || ROLE_HOME[role] || '/recruiter/dashboard';
+    const home = resolveRoleRedirect(redirectTarget, role);
     return <Navigate to={home} replace />;
   }
 

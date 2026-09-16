@@ -11,7 +11,8 @@ public class RegisterRequest {
     private String name;
 
     @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
+    @Email(message = ValidationPatterns.EMAIL_MESSAGE)
+    @Pattern(regexp = ValidationPatterns.EMAIL_REGEX, message = ValidationPatterns.EMAIL_MESSAGE)
     private String email;
 
     @NotBlank(message = "Password is required")
