@@ -751,3 +751,23 @@ pm run build completed successfully with 0 errors.
     - DNS MX validation unit tests (`DnsValidationServiceTest`).
     - Email sender and HTML generation tests (`EmailServiceTest`).
     - AuthController full integration tests (`resetPasswordSuccess`, `resetPasswordExpiredTokenRejected`, `resetPasswordAlreadyUsedTokenRejected`, `resetPasswordInvalidTokenRejected`, `resetPasswordGoogleOnlyAccountRejected`, `registerNonExistentDomainRejected`, `registerMalformedEmailRejected`, plus all 11 existing auth tests).
+
+### 2026-09-16 - Frontend Reset Password Page (`/reset-password`) & End-to-End Flow Completion
+- **Branch**: `feature/reset-password-frontend`
+- **Page Component**: Created [`ResetPasswordPage.jsx`](file:///C:/Users/visuc/OneDrive/Desktop/Hirelens/hiregenius-frontend/src/pages/ResetPassword/ResetPasswordPage.jsx) matching the HireGenius design system (glassmorphic surface, radial gradient glows, Framer Motion transitions, Lucide icons).
+- **Public Route**: Added `<Route path="/reset-password" element={<ResetPasswordPage />} />` in `App.jsx`.
+- **Token Handling**:
+  - Reads `token` query parameter using `useSearchParams()`.
+  - If token is missing, displays an alert state: `"Invalid or missing reset link. Please request a new password reset."` with a CTA button to `/forgot-password`.
+- **Form & Validation**:
+  - Form fields: "New Password" and "Confirm New Password" with show/hide password visibility toggles (`Eye`/`EyeOff`).
+  - Validation schema (`resetPasswordSchema` in `validationSchemas.js`): Enforces minimum 8 characters and at least 1 number (matching backend's `ValidationPatterns.PASSWORD_REGEX` exactly) plus password confirmation matching via Zod.
+- **Service Integration**: Added `authService.resetPassword({ token, newPassword })` in `authService.js` calling `POST /api/auth/reset-password`.
+- **Response & Error Handling**:
+  - **HTTP 200**: Displays green checkmark success card and toast `"Password reset successful! You can now log in with your new password."`, then redirects to `/login` after 2 seconds.
+  - **HTTP 400 (Token expired / invalid / used)**: Displays error banner `"This reset link has expired or is invalid. Please request a new one."` with CTA to `/forgot-password`.
+  - **HTTP 400 (Google-only account)**: Displays backend message `"This account uses Google Sign-In and has no password to reset"`.
+- **Verification**:
+  - `oxlint`: 0 errors, 0 warnings on `ResetPasswordPage.jsx`.
+  - `npm run build`: Production build succeeded in 956ms with 0 errors.
+  - End-to-End Flow: `POST /api/auth/forgot-password` -> HTML email with `{FRONTEND_BASE_URL}/reset-password?token={token}` -> `/reset-password` UI -> `POST /api/auth/reset-password` -> `/login` is fully implemented.
