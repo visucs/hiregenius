@@ -192,8 +192,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public ApiResponse<String> forgotPassword(ForgotPasswordRequest request) {
+        long startTime = System.currentTimeMillis();
         String email = request.getEmail().toLowerCase().trim();
-        log.info("Forgot password request received for email: {}", email);
+        log.info("[FORGOT-PASSWORD] Request started for email: {}", email);
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isPresent()) {
@@ -205,14 +206,20 @@ public class AuthServiceImpl implements AuthService {
 
                 PasswordResetToken resetToken = new PasswordResetToken(user, token, expiresAt);
                 passwordResetTokenRepository.save(resetToken);
+                long tokenSavedDuration = System.currentTimeMillis() - startTime;
+                log.info("[FORGOT-PASSWORD] Token generated and saved to DB in {}ms for user id={}", tokenSavedDuration, user.getId());
 
                 String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
                 emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
-                log.info("Password reset token generated and email dispatched for user id={}", user.getId());
+                long emailDispatchedDuration = System.currentTimeMillis() - startTime;
+                log.info("[FORGOT-PASSWORD] Async email dispatch invoked in {}ms for user id={}", emailDispatchedDuration, user.getId());
             } else {
-                log.info("Skipping password reset email for Google-only user without password [{}]", email);
+                log.info("[FORGOT-PASSWORD] Skipping password reset email for Google-only user without password [{}]", email);
             }
         }
+
+        long totalDuration = System.currentTimeMillis() - startTime;
+        log.info("[FORGOT-PASSWORD] Returning HTTP response in {}ms (total endpoint duration)", totalDuration);
 
         // Constant generic message regardless of whether the account exists or provider type
         // Prevents account enumeration and email leakage

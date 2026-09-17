@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,8 +24,11 @@ public class EmailServiceImpl implements EmailService {
         this.mailSender = mailSender;
     }
 
+    @Async("mailTaskExecutor")
     @Override
     public void sendPasswordResetEmail(String toEmail, String userName, String resetLink) {
+        long asyncStartTime = System.currentTimeMillis();
+        log.info("[ASYNC-EMAIL] Starting background email dispatch to {} on thread [{}]", toEmail, Thread.currentThread().getName());
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -37,9 +41,11 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("Password reset email successfully sent to {}", toEmail);
+            long duration = System.currentTimeMillis() - asyncStartTime;
+            log.info("[ASYNC-EMAIL] Password reset email successfully sent to {} in {}ms on thread [{}]", toEmail, duration, Thread.currentThread().getName());
         } catch (MessagingException | RuntimeException e) {
-            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
+            long duration = System.currentTimeMillis() - asyncStartTime;
+            log.error("[ASYNC-EMAIL] Failed to send password reset email to {} after {}ms on thread [{}]: {}", toEmail, duration, Thread.currentThread().getName(), e.getMessage(), e);
             // Logged server-side, do not rethrow to maintain uniform security behavior
         }
     }
