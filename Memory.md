@@ -1,4 +1,4 @@
-﻿# Memory.md â€” HireGenius AI Build Log
+# Memory.md â€” HireGenius AI Build Log
 
 Purpose: keep the AI coding assistant updated on real progress so it doesn't re-scan the whole codebase or re-guess decisions when a new chat/session starts. Update this file at the end of every work session or phase â€” keep entries short and factual.
 
@@ -771,3 +771,45 @@ pm run build completed successfully with 0 errors.
   - `oxlint`: 0 errors, 0 warnings on `ResetPasswordPage.jsx`.
   - `npm run build`: Production build succeeded in 956ms with 0 errors.
   - End-to-End Flow: `POST /api/auth/forgot-password` -> HTML email with `{FRONTEND_BASE_URL}/reset-password?token={token}` -> `/reset-password` UI -> `POST /api/auth/reset-password` -> `/login` is fully implemented.
+
+### 2026-09-17 — Render Cold-Start Optimization & Frontend Timeout Resilience
+
+- **Root Cause Analysis**:
+  - **Render Free-Tier Spin-Down**: Free-tier web services on Render spin down after 15 minutes of inactivity. When cold-started, container provisioning on heavily throttled CPU (0.1 vCPU) takes ~200 seconds for complete OS boot, JVM classloading, Hibernate schema validation, and Flyway migration execution against remote MySQL.
+  - **Lazy DispatcherServlet Initialization**: In Spring Boot / Spring MVC, `DispatcherServlet` defaults to lazy initialization (`loadOnStartup = -1`), postponing servlet context initialization, handler mapping resolution, and Jackson converter registration to the very first incoming HTTP request.
+  - **Unprimed Connection Pool & SDKs**: The HikariCP connection pool and Firebase Admin SDK were not primed until the first request arrived, compounding latency.
+  - **Frontend Timeout Premature Abortion**: The frontend Axios instance had a strict 15,000ms timeout (`timeout: 15000`), terminating requests before Render finished waking up and leaving users with "timeout of 15000ms exceeded" and a blank spinner.
+
+- **Backend Changes (`hiregenius-auth-service`)**:
+  1. **Eager DispatcherServlet Initialization (`application.yml`)**:
+     - Added `spring.mvc.servlet.load-on-startup: 1` under `spring.mvc.servlet` so the DispatcherServlet initializes eagerly during application boot rather than on the first user request.
+  2. **HikariCP Connection Pool Tuning (`application.yml`)**:
+     - Added `spring.datasource.hikari`:
+       - `max-lifetime: 240000` (4 minutes, safely retiring connections before cloud NAT/firewall idle disconnects)
+       - `connection-timeout: 20000` (20 seconds)
+       - `validation-timeout: 5000` (5 seconds)
+  3. **ApplicationReadyEvent Warm-up Listener (`ApplicationWarmupListener.java`)**:
+     - Created `@Component` listening on `ApplicationReadyEvent`. Proactively executes `SELECT 1` via `DataSource` to prime the HikariCP pool and touches `FirebaseAuth.getInstance()` to warm up Firebase Admin SDK before live traffic hits. Safely catches and logs errors without failing startup.
+  4. **Startup Timing Review (Firebase & Flyway)**:
+     - Confirmed `FirebaseConfig` `@PostConstruct` only performs local JSON credential stream parsing (~few ms).
+     - Confirmed Flyway migrations are synchronous and mandatory prior to Hibernate `ddl-auto: validate` and cannot/should not be deferred without causing `SchemaManagementException`.
+
+- **Frontend Changes (`hiregenius-frontend`)**:
+  1. **Axios Timeout Extension (`src/services/api.js`)**:
+     - Increased default Axios timeout from 15000ms to 30000ms (30 seconds).
+     - Request interceptor guarantees all auth endpoints (`/auth/login`, `/auth/register`, `/auth/google-login`, `/auth/forgot-password`, `/auth/reset-password`) have at least 30,000ms timeout.
+     - Confirmed local development requests complete immediately with zero delay.
+  2. **User-Facing Server Wake-Up Notice (`ServerWakeupNotice.jsx`)**:
+     - Created reusable animated component using Framer Motion and Lucide `Server` icon.
+     - If an auth request takes longer than 2.5 seconds, displays:
+       *"Waking up the server, this may take up to 30 seconds on first use..."*
+     - Replaces ambiguous blank spinners on `LoginPage.jsx`, `RegisterPage.jsx`, `ForgotPasswordPage.jsx`, and `ResetPasswordPage.jsx`. Disappears immediately once the request completes or if local dev responds in < 2.5s.
+
+- **Permanent Resolution Recommendation**:
+  - Upgrading the Render auth service to a paid instance ($7/month starter tier) eliminates idle spin-downs completely, ensuring 24/7 warm availability without cold-start delays.
+
+- **Verification**:
+  - `mvn clean verify` in `hiregenius-auth-service`: 29 tests run, 0 failures, 0 errors. Application warm-up logged `SELECT 1` execution on startup.
+  - `npm run lint` in `hiregenius-frontend`: 0 errors.
+  - `npm run build` in `hiregenius-frontend`: Production bundle built successfully in 1.48s with 0 errors.
+

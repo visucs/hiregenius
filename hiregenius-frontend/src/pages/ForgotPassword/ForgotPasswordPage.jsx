@@ -13,6 +13,7 @@ import { setLoading, clearError } from '../../features/auth/authSlice';
 import { formatError } from '../../utils/helpers';
 import Loader from '../../components/Loader/Loader';
 import useApiCall from '../../hooks/useApiCall';
+import ServerWakeupNotice from '../../components/ServerWakeupNotice/ServerWakeupNotice';
 
 /**
  * ForgotPasswordPage — Phase 1 Auth UI.
@@ -170,6 +171,9 @@ const ForgotPasswordPage = () => {
                     </>
                   )}
                 </motion.button>
+
+                {/* Server wake-up notice for slow cold-start requests */}
+                <ServerWakeupNotice isLoading={isLoading} />
               </form>
 
               <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>

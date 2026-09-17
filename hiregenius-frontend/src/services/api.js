@@ -13,12 +13,24 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000,
+  timeout: 30000,
 });
 
-// Request interceptor — attach JWT
+// Request interceptor — attach JWT and ensure auth requests have 30s timeout for cold starts
 api.interceptors.request.use(
   (config) => {
+    // Ensure all auth-related requests have at least 30000ms timeout
+    const isAuthRequest = config.url && (
+      config.url.includes('/auth/login') ||
+      config.url.includes('/auth/register') ||
+      config.url.includes('/auth/google-login') ||
+      config.url.includes('/auth/forgot-password') ||
+      config.url.includes('/auth/reset-password')
+    );
+    if (isAuthRequest && (!config.timeout || config.timeout < 30000)) {
+      config.timeout = 30000;
+    }
+
     const state = store.getState();
     const token = state.auth.token;
     if (token) {

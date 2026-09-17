@@ -11,6 +11,7 @@ import {
 import { resetPasswordSchema } from '../../utils/validationSchemas';
 import { authService } from '../../services/authService';
 import GradientButton from '../../components/GradientButton/GradientButton';
+import ServerWakeupNotice from '../../components/ServerWakeupNotice/ServerWakeupNotice';
 
 /**
  * ResetPasswordPage — Final phase of password reset flow.
@@ -487,6 +488,9 @@ const ResetPasswordPage = () => {
                 >
                   <Lock size={15} /> Reset Password
                 </GradientButton>
+
+                {/* Server wake-up notice for slow cold-start requests */}
+                <ServerWakeupNotice isLoading={isLoading} />
               </form>
 
               <div style={{ marginTop: 24, textAlign: 'center' }}>
