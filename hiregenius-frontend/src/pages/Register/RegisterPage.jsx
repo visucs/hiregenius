@@ -19,6 +19,7 @@ import {
 import { formatError } from '../../utils/helpers';
 import GradientButton from '../../components/GradientButton/GradientButton';
 import GoogleSignInButton from '../../components/GoogleSignInButton/GoogleSignInButton';
+import ServerWakeupNotice from '../../components/ServerWakeupNotice/ServerWakeupNotice';
 
 const RegisterPage = () => {
   const dispatch = useDispatch();
@@ -345,6 +346,9 @@ const RegisterPage = () => {
               </p>
             )}
           </div>
+
+          {/* Server wake-up notice for slow cold-start requests */}
+          <ServerWakeupNotice isLoading={isLoading || isGoogleLoading} />
 
           <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-secondary)' }}>
             Already have an account?{' '}
