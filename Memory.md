@@ -813,3 +813,39 @@ pm run build completed successfully with 0 errors.
   - `npm run lint` in `hiregenius-frontend`: 0 errors.
   - `npm run build` in `hiregenius-frontend`: Production bundle built successfully in 1.48s with 0 errors.
 
+### 2026-09-17 — Async Password Reset Email Dispatch & SMTP Socket Timeout Fix
+
+- **Root Cause Analysis (Forgot-Password Timeout)**:
+  - Even after extending Axios timeout to 30s, `POST /api/auth/forgot-password` was still timing out on production.
+  - Investigation revealed `@EnableAsync` was completely missing from Spring Boot configuration and `EmailServiceImpl.sendPasswordResetEmail()` lacked `@Async`.
+  - Consequently, connecting to Gmail SMTP (`smtp.gmail.com:587`), TLS handshake, message transfer, and server confirmation executed **synchronously on Tomcat's HTTP worker thread**, blocking the HTTP response until SMTP finished (taking 10–30+ seconds or hanging on cloud networks).
+  - Additionally, `spring.mail.properties.mail.smtp` lacked socket connection, read, and write timeouts, allowing slow or stalled connections to hang indefinitely.
+
+- **Backend Fixes (`hiregenius-auth-service`)**:
+  1. **Asynchronous Processing (`AsyncConfig.java`)**:
+     - Added `@Configuration` class with `@EnableAsync`.
+     - Defined dedicated `mailTaskExecutor` bean using `ThreadPoolTaskExecutor` (`corePoolSize=2`, `maxPoolSize=5`, `queueCapacity=50`, `threadNamePrefix="mail-async-"`).
+  2. **Asynchronous Email Service (`EmailServiceImpl.java`)**:
+     - Annotated `sendPasswordResetEmail()` with `@Async("mailTaskExecutor")`.
+     - Added high-resolution timing logs tracking background email dispatch:
+       - `[ASYNC-EMAIL] Starting background email dispatch to <email> on thread [mail-async-X]`
+       - `[ASYNC-EMAIL] Password reset email successfully sent to <email> in <ms>ms on thread [mail-async-X]`
+  3. **Non-Blocking Controller / Service Flow (`AuthServiceImpl.java`)**:
+     - Updated `forgotPassword()` to immediately return HTTP 200 after persisting the token to the database and dispatching the async email task in the background.
+     - Added high-resolution stopwatch logs:
+       - `[FORGOT-PASSWORD] Request started for email: <email>`
+       - `[FORGOT-PASSWORD] Token generated and saved to DB in <ms>ms for user id=<id>`
+       - `[FORGOT-PASSWORD] Async email dispatch invoked in <ms>ms for user id=<id>`
+       - `[FORGOT-PASSWORD] Returning HTTP response in <ms>ms (total endpoint duration)`
+  4. **SMTP Socket Timeouts (`application.yml`)**:
+     - Added explicit socket timeouts under `spring.mail.properties.mail.smtp`:
+       - `connectiontimeout: 10000` (10s connection timeout)
+       - `timeout: 10000` (10s read timeout)
+       - `writetimeout: 10000` (10s write timeout)
+     - Confirmed `port: 587` and `starttls.enable: true` remain configured.
+
+- **Verification**:
+  - `mvn clean verify` passed with 0 errors across all 29 tests.
+  - Test logs verified the HTTP endpoint response returned in **9ms**, while email sending occurred asynchronously in the background.
+
+
