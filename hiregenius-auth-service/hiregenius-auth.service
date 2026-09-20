@@ -1,0 +1,31 @@
+[Unit]
+Description=HireGenius Auth Service (Spring Boot Docker Container)
+After=docker.service network-online.target
+Requires=docker.service network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10s
+TimeoutStartSec=0
+
+# Clean up any lingering container before starting
+ExecStartPre=-/usr/bin/docker stop hiregenius-auth
+ExecStartPre=-/usr/bin/docker rm hiregenius-auth
+
+# Run Docker container attached to stdout/stderr so systemd tracks process lifecycle
+ExecStart=/usr/bin/docker run \
+  --name hiregenius-auth \
+  --restart always \
+  --env-file /var/www/hiregenius/hiregenius-auth-service/.env \
+  -p 8080:8080 \
+  hiregenius-auth-service:latest
+
+# Graceful stop
+ExecStop=/usr/bin/docker stop -t 15 hiregenius-auth
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

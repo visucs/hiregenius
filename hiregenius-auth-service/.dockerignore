@@ -1,0 +1,33 @@
+# Build targets
+target/
+*.jar
+*.war
+
+# Environment & Secrets
+.env
+.env.*
+serviceAccountKey.json
+*.pem
+*.key
+
+# Version Control
+.git/
+.gitignore
+
+# IDE & Editor Settings
+.idea/
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+
+# Documentation & Local Scripts
+*.md
+deploy-log.txt
+deploy.sh
+hiregenius-auth.service
+nginx.conf

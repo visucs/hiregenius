@@ -1,0 +1,48 @@
+name: Deploy Auth Service to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'hiregenius-auth-service/**'
+      - '.github/workflows/deploy-aws.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-to-ec2:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to AWS EC2 (Amazon Linux 2023)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }} # Set to 'ec2-user' for Amazon Linux 2023
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script_stop_on_error: true
+          script: |
+            echo "=========================================="
+            echo "Connected to AWS EC2 Server (Amazon Linux 2023)"
+            echo "=========================================="
+            
+            # Locate hiregenius-auth-service directory on host
+            if [ -d "/var/www/hiregenius/hiregenius-auth-service" ]; then
+              cd /var/www/hiregenius/hiregenius-auth-service
+            elif [ -d "$HOME/hiregenius/hiregenius-auth-service" ]; then
+              cd "$HOME/hiregenius/hiregenius-auth-service"
+            elif [ -d "$HOME/hiregenius-auth-service" ]; then
+              cd "$HOME/hiregenius-auth-service"
+            else
+              echo "ERROR: hiregenius-auth-service project directory not found on host."
+              exit 1
+            fi
+
+            echo "Working Directory: $(pwd)"
+            chmod +x deploy.sh
+            ./deploy.sh
