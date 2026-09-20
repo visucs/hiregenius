@@ -848,4 +848,26 @@ pm run build completed successfully with 0 errors.
   - `mvn clean verify` passed with 0 errors across all 29 tests.
   - Test logs verified the HTTP endpoint response returned in **9ms**, while email sending occurred asynchronously in the background.
 
+### 2026-09-19 — Production AWS EC2 Migration & Infrastructure Automation Setup
+
+- **Built / Infrastructure Added (`hiregenius-auth-service`)**:
+  1. **Production-Ready Docker Setup (`Dockerfile`, `.dockerignore`)**:
+     - Updated Dockerfile to support `ENV PORT=8080`, multi-stage build (`maven:3.9.6-eclipse-temurin-21-alpine` -> `eclipse-temurin:21.0.2_13-jre-alpine`), non-root `appuser:appgroup` security, and dynamic healthcheck for `/actuator/health` and `/health`.
+     - Created `.dockerignore` excluding build artifacts (`target/`, `*.jar`), local secrets (`.env`, `serviceAccountKey.json`), IDE configs, and git metadata.
+  2. **Deployment Automation Script (`deploy.sh`)**:
+     - Created idempotent bash deployment script in project root and service root.
+     - Automates git pull from `main`, Docker image building (`hiregenius-auth-service:latest`), graceful container stopping/removal, container execution with `--restart always` and `--env-file .env`, docker image cleanup, and audit logging to `deploy-log.txt`.
+  3. **Systemd Process Supervision (`hiregenius-auth.service`)**:
+     - Created OS-level systemd service file providing automatic container launch on server boot and auto-restart on unexpected crashes.
+  4. **Nginx Reverse Proxy & SSL Setup (`nginx.conf`)**:
+     - Created production Nginx configuration template reverse-proxying ports 80/443 to internal Spring Boot port 8080. Includes rate-limiting (`10r/s`), WebSocket headers, security headers, ACME webroot challenge location block, and certbot HTTPS integration.
+  5. **GitHub Actions CI/CD (`.github/workflows/deploy-aws.yml`)**:
+     - Created automated GitHub Actions workflow executing remote SSH deployment on push to `main` via `appleboy/ssh-action` using GitHub Secrets (`EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY`).
+  6. **Deployment Guide (`DEPLOYMENT.md`)**:
+     - Created comprehensive `DEPLOYMENT.md` covering AWS EC2 instance sizing (`t3.small`/`t3.micro`), Security Groups, manual deployment steps, environment variable specifications, SSL auto-renewal with Certbot, rollback procedures, and CloudWatch / uptime monitoring recommendations.
+
+- **Non-Breaking Deployment Note**:
+  - Purely additive infrastructure tooling. Business rules, application logic, and existing Render/Vercel configurations remain completely intact as a fallback.
+
+
 
