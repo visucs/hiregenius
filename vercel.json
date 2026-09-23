@@ -6,6 +6,10 @@
   "outputDirectory": "hiregenius-frontend/dist",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "http://13.203.243.162/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
