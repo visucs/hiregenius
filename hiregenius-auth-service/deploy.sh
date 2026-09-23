@@ -4,8 +4,8 @@ set -euo pipefail
 # Configuration
 APP_NAME="hiregenius-auth-service"
 CONTAINER_NAME="hiregenius-auth"
-IMAGE_NAME="hiregenius-auth-service:latest"
-PORT_HOST="${PORT:-8080}"
+IMAGE_NAME="hiregenius-auth"
+PORT_HOST="${PORT:-80}"
 ENV_FILE="${ENV_FILE:-.env}"
 LOG_FILE="deploy-log.txt"
 
