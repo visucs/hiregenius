@@ -5,7 +5,7 @@ set -euo pipefail
 APP_NAME="hiregenius-auth-service"
 CONTAINER_NAME="hiregenius-auth"
 IMAGE_NAME="hiregenius-auth"
-PORT_HOST="${PORT:-80}"
+PORT_HOST="${HOST_PORT:-80}"
 ENV_FILE="${ENV_FILE:-.env}"
 LOG_FILE="deploy-log.txt"
 
@@ -63,6 +63,17 @@ docker run -d \
   ${ENV_ARGS} \
   "${IMAGE_NAME}"
 
+# Post-start verification check: Verify container is running and host port is mapped
+sleep 2
+MAPPED_PORTS="$(docker ps --filter "name=^${CONTAINER_NAME}$" --format '{{.Ports}}')"
+
+if ! echo "${MAPPED_PORTS}" | grep -q "${PORT_HOST}:8080"; then
+  echo "ERROR: Container '${CONTAINER_NAME}' is not running or host port ${PORT_HOST} is not mapped!"
+  echo "Current container status:"
+  docker ps --filter "name=^${CONTAINER_NAME}$"
+  exit 1
+fi
+
 # Cleanup unused images to manage disk space on EC2
 docker image prune -f || true
 
@@ -74,6 +85,7 @@ echo "${LOG_MESSAGE}" >> "${LOG_FILE}"
 echo "=========================================="
 echo "Deployment Complete!"
 echo "Audit Log: ${LOG_MESSAGE}"
+echo "Container Port Mapping: ${MAPPED_PORTS}"
 echo "Container Status:"
-docker ps --filter "name=${CONTAINER_NAME}"
+docker ps --filter "name=^${CONTAINER_NAME}$"
 echo "=========================================="

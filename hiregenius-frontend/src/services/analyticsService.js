@@ -16,18 +16,8 @@
  * Admins receive platform-wide aggregates; recruiters see only their own data.
  */
 
-import axios from 'axios';
+import api from './api';
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-
-const api = axios.create({ baseURL: BASE });
-
-// Attach JWT from localStorage on every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('hg_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
 
 /** @param {string} range - "7d" | "30d" | "90d" */
 export const fetchSummary            = (range) => api.get('/analytics/summary',            { params: { range } });
