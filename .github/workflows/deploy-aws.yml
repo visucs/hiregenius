@@ -18,6 +18,27 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Get runner IP
+        run: echo "RUNNER_IP=$(curl -s https://checkip.amazonaws.com)" >> $GITHUB_ENV
+
+      - name: Open SSH for runner
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id sg-011d4a518af48aa67 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${RUNNER_IP}/32
+
+      - name: Wait for Security Group propagation
+        run: sleep 10
+
       - name: Deploy via SSH to AWS EC2 (Amazon Linux 2023)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -26,6 +47,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
           script_stop: true
+          timeout: 60s
+          command_timeout: 20m
           script: |
             echo "=========================================="
             echo "Connected to AWS EC2 Server (Amazon Linux 2023)"
@@ -50,3 +73,12 @@ jobs:
             echo "Working Directory: $(pwd)"
             chmod +x deploy.sh
             ./deploy.sh
+
+      - name: Close SSH for runner
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id sg-011d4a518af48aa67 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${RUNNER_IP}/32
