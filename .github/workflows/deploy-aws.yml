@@ -22,10 +22,10 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }} # Set to 'ec2-user' for Amazon Linux 2023
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
-          script_stop_on_error: true
+          script_stop: true
           script: |
             echo "=========================================="
             echo "Connected to AWS EC2 Server (Amazon Linux 2023)"
@@ -38,8 +38,12 @@ jobs:
               cd "$HOME/hiregenius/hiregenius-auth-service"
             elif [ -d "$HOME/hiregenius-auth-service" ]; then
               cd "$HOME/hiregenius-auth-service"
+            elif [ -d "/var/www/hiregenius" ]; then
+              cd /var/www/hiregenius
+            elif [ -d "$HOME/hiregenius" ]; then
+              cd "$HOME/hiregenius"
             else
-              echo "ERROR: hiregenius-auth-service project directory not found on host."
+              echo "ERROR: Project directory not found on EC2 host."
               exit 1
             fi
 

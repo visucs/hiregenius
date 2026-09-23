@@ -18,8 +18,9 @@ ExecStart=/usr/bin/docker run \
   --name hiregenius-auth \
   --restart always \
   --env-file /var/www/hiregenius/hiregenius-auth-service/.env \
-  -p 8080:8080 \
-  hiregenius-auth-service:latest
+  -p 80:8080 \
+  hiregenius-auth:latest
+
 
 # Graceful stop
 ExecStop=/usr/bin/docker stop -t 15 hiregenius-auth
