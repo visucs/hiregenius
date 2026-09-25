@@ -1187,5 +1187,32 @@ pm run build completed successfully with 0 errors.
   2. `hiregenius-frontend`:
      - `npm run build`: Passed cleanly with 0 errors.
 
+### 2026-09-26 — Core API CI Workflow Environment Fix
+
+- **Problem & Root Cause**:
+  - In GitHub Actions CI (`.github/workflows/core-api-ci.yml`), `npm test` failed with `"FATAL: JWT_SIGNING_KEY environment variable is missing"`.
+  - `.env` is correctly gitignored. The test step previously used `JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}`, which resolved to empty string when repository secrets were not configured.
+  - `src/config/env.js` strictly validates the presence of `JWT_SIGNING_KEY`, throwing a fatal error.
+- **Fix Applied**:
+  - In `.github/workflows/core-api-ci.yml`, updated the `Run tests` step with a complete `env:` block containing safe, non-production dummy placeholder values for every variable defined in `src/config/env.js`:
+    - `NODE_ENV: test`
+    - `PORT: 4000`
+    - `JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY || 'test-only-signing-key-not-for-production-use-min-32-chars' }}`
+    - `DB_HOST: localhost`
+    - `DB_PORT: 3306`
+    - `DB_USER: root`
+    - `DB_PASSWORD: root`
+    - `DB_NAME: testdb`
+    - `DB_SSL: 'false'`
+    - `DB_POOL_MIN: 1`
+    - `DB_POOL_MAX: 10`
+    - `ENABLE_SWAGGER: 'true'`
+    - `USE_SQLITE: 'true'`
+  - Updated workflow triggers to include `'feature/**'` and `.github/workflows/core-api-ci.yml` in path filters.
+  - Documented CI environment variables in `DevOps.md`.
+- **Scope & Independence**:
+  - Zero impact on local development or cloud deployments (AWS/Render), which continue to read real environment variables from their respective `.env` files and production secrets.
+  - Zero production secrets added to the workflow file.
+
 
 
