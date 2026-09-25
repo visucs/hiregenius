@@ -8,18 +8,39 @@ import { logout } from '../features/auth/authSlice';
  * Interceptor attaches "Authorization: Bearer <token>" to every request.
  * 401 responses auto-logout the user.
  */
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+const authBaseURL = rawBaseURL.endsWith('/api')
+  ? rawBaseURL
+  : `${rawBaseURL.replace(/\/+$/, '')}/api`;
 
+const rawCoreURL = import.meta.env.VITE_CORE_API_URL || 'http://localhost:4000/api';
+const coreBaseURL = rawCoreURL.endsWith('/api')
+  ? rawCoreURL
+  : `${rawCoreURL.replace(/\/+$/, '')}/api`;
+
+const api = axios.create({
+  baseURL: authBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 30000,
 });
 
-// Request interceptor — attach JWT and ensure auth requests have 30s timeout for cold starts
+// Request interceptor — attach JWT, route Core API endpoints, and ensure 30s timeout for cold starts
 api.interceptors.request.use(
   (config) => {
+    // Route jobs, candidates, and applications endpoints to Core API
+    const isCoreRequest = config.url && (
+      config.url.startsWith('/jobs') || config.url.startsWith('jobs') ||
+      config.url.startsWith('/candidates') || config.url.startsWith('candidates') ||
+      config.url.startsWith('/applications') || config.url.startsWith('applications')
+    );
+    if (isCoreRequest) {
+      config.baseURL = coreBaseURL;
+    } else {
+      config.baseURL = authBaseURL;
+    }
+
     // Ensure all auth-related requests have at least 30000ms timeout
     const isAuthRequest = config.url && (
       config.url.includes('/auth/login') ||

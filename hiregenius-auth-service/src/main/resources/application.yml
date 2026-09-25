@@ -27,6 +27,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: '0'
     locations: classpath:db/migration
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

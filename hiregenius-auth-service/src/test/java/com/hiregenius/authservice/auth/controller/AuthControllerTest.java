@@ -484,4 +484,47 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("This account uses Google Sign-In and has no password to reset")));
     }
+
+    @Test
+    @DisplayName("20. POST /auth/google-login without /api prefix succeeds (200)")
+    void googleLoginWithoutApiPrefixSucceeds() throws Exception {
+        when(googleAuthService.verifyIdToken("valid-google-token"))
+                .thenReturn(new GoogleAuthService.FirebaseUserInfo("uid-no-prefix", "noprefix@hiregenius.ai", "No Prefix Google"));
+
+        GoogleLoginRequest request = new GoogleLoginRequest("valid-google-token", "CANDIDATE");
+
+        mockMvc.perform(post("/auth/google-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.role").value("CANDIDATE"))
+                .andExpect(jsonPath("$.user.email").value("noprefix@hiregenius.ai"));
+    }
+
+    @Test
+    @DisplayName("21. POST /auth/signup without /api prefix succeeds (201)")
+    void signupWithoutApiPrefixSucceeds() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                "Signup User",
+                "signupuser@hiregenius.ai",
+                "Password123!",
+                "CANDIDATE"
+        );
+
+        mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.role").value("CANDIDATE"))
+                .andExpect(jsonPath("$.user.email").value("signupuser@hiregenius.ai"));
+    }
+
+    @Test
+    @DisplayName("22. GET /auth/validate without token still returns 401 Unauthorized")
+    void validateWithoutApiPrefixStillRequiresAuth() throws Exception {
+        mockMvc.perform(get("/auth/validate"))
+                .andExpect(status().isUnauthorized());
+    }
 }

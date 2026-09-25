@@ -1,42 +1,25 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { motion, useInView, animate } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import {
   Briefcase, Users, CalendarDays, Star,
-  PlusCircle, ArrowRight, Clock, CheckCircle2,
+  PlusCircle, Plus, ArrowRight, Clock, CheckCircle2,
   FileSearch, Sparkles, TrendingUp, Zap,
   BarChart3, Trophy, ArrowUpRight, ChevronUp,
-  Play, Target, Bell,
+  Play, Target, Bell, Info, RefreshCw,
 } from 'lucide-react';
 import { selectUser } from '../../features/auth/authSlice';
-import { MOCK_DASHBOARD_SUMMARY, MOCK_ACTIVITY } from '../../mock/recruiter/dashboardMock';
-
-/* ─── Activity config ─────────────────────────────────────── */
-const ACTIVITY_META = {
-  APPLICATION:        { icon: FileSearch,   color: '#60a5fa', label: 'Application' },
-  INTERVIEW_COMPLETE: { icon: CheckCircle2, color: '#34d399', label: 'Interview'   },
-  SCREENING:          { icon: Star,         color: '#f59e0b', label: 'Screening'   },
-  SHORTLISTED:        { icon: Sparkles,     color: '#a78bfa', label: 'Shortlisted' },
-};
+import jobsService from '../../services/jobsService';
 
 /* ─── Quick actions ───────────────────────────────────────── */
 const QUICK_ACTIONS = [
-  { label: 'Post a New Job',      to: '/recruiter/jobs',             icon: PlusCircle,  color: '#a3e635', bg: 'rgba(163,230,53,0.10)',  primary: true  },
-  { label: 'View Candidates',    to: '/recruiter/candidates',        icon: Users,       color: '#60a5fa', bg: 'rgba(96,165,250,0.10)'                   },
-  { label: 'Screen Resumes',     to: '/recruiter/resume-screening',  icon: FileSearch,  color: '#34d399', bg: 'rgba(52,211,153,0.10)'                   },
-  { label: 'Candidate Ranking',  to: '/recruiter/ranking',           icon: Trophy,      color: '#f59e0b', bg: 'rgba(245,158,11,0.10)'                   },
-  { label: 'AI Interviews',      to: '/recruiter/ai-interview',      icon: Play,        color: '#a78bfa', bg: 'rgba(167,139,250,0.10)'                   },
-  { label: 'Analytics',          to: '/recruiter/analytics',         icon: BarChart3,   color: '#ec4899', bg: 'rgba(236,72,153,0.10)'                   },
-];
-
-/* ─── Stat definitions ────────────────────────────────────── */
-const STAT_DEFS = [
-  { key: 'totalJobs',        label: 'Total Jobs',          suffix: '',  icon: Briefcase,   color: '#60a5fa', delta: '+2', deltaLabel: 'this month'   },
-  { key: 'totalCandidates',  label: 'Total Candidates',    suffix: '',  icon: Users,       color: '#a78bfa', delta: '+18', deltaLabel: 'this week'   },
-  { key: 'pendingInterviews',label: 'Pending Interviews',  suffix: '',  icon: CalendarDays,color: '#f59e0b', delta: '7',   deltaLabel: 'due today'   },
-  { key: 'avgResumeScore',   label: 'Avg Resume Score',    suffix: '%', icon: Star,        color: '#34d399', delta: '↑4', deltaLabel: 'pts'          },
+  { label: 'Post a New Job',      to: '/recruiter/jobs',             icon: PlusCircle,  color: '#a3e635', bg: 'rgba(163,230,53,0.10)',  primary: true, status: 'Active' },
+  { label: 'View Candidates',    to: '/recruiter/candidates',        icon: Users,       color: '#60a5fa', bg: 'rgba(96,165,250,0.10)',  status: 'Active' },
+  { label: 'Screen Resumes',     to: '/recruiter/resume-screening',  icon: FileSearch,  color: '#34d399', bg: 'rgba(52,211,153,0.10)',  status: 'Pending' },
+  { label: 'Candidate Ranking',  to: '/recruiter/ranking',           icon: Trophy,      color: '#f59e0b', bg: 'rgba(245,158,11,0.10)',  status: 'Pending' },
+  { label: 'AI Interviews',      to: '/recruiter/ai-interview',      icon: Play,        color: '#a78bfa', bg: 'rgba(167,139,250,0.10)',  status: 'Pending' },
+  { label: 'Analytics',          to: '/recruiter/analytics',         icon: BarChart3,   color: '#ec4899', bg: 'rgba(236,72,153,0.10)',  status: 'Pending' },
 ];
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -45,24 +28,18 @@ const greet = () => {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 };
 
-const relativeTime = (iso) => {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60)    return 'just now';
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-};
-
 /* ─── Animated counter ────────────────────────────────────── */
 const Counter = ({ to, suffix = '' }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-20px' });
   const [val, setVal] = useState(0);
   const fired = useRef(false);
-  if (inView && !fired.current) {
-    fired.current = true;
-    animate(0, to, { duration: 1.4, ease: [0.22, 1, 0.36, 1], onUpdate: v => setVal(Math.round(v)) });
-  }
+  useEffect(() => {
+    if (inView && !fired.current) {
+      fired.current = true;
+      animate(0, to, { duration: 1.2, ease: [0.22, 1, 0.36, 1], onUpdate: v => setVal(Math.round(v)) });
+    }
+  }, [inView, to]);
   return <span ref={ref}>{val}{suffix}</span>;
 };
 
@@ -86,9 +63,30 @@ const Card = ({ children, style = {}, delay = 0 }) => (
    RECRUITER DASHBOARD HOME
 ════════════════════════════════════════════════════════════ */
 const RecruiterDashboardHome = () => {
-  const user     = useSelector(selectUser);
-  const summary  = MOCK_DASHBOARD_SUMMARY;
-  const activity = MOCK_ACTIVITY;
+  const user = useSelector(selectUser);
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+
+  // Fetch real jobs from Core API (GET /api/jobs/mine)
+  useEffect(() => {
+    let isMounted = true;
+    jobsService.getMyJobs({ limit: 50 })
+      .then(res => {
+        if (isMounted) {
+          setJobs(res?.data?.jobs ?? []);
+        }
+      })
+      .catch(err => {
+        console.warn('[DashboardHome] Core API jobs query warning:', err?.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingJobs(false);
+      });
+    return () => { isMounted = false; };
+  }, []);
+
+  const totalJobs = jobs.length;
+  const openJobs = jobs.filter(j => j.status === 'OPEN').length;
 
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
@@ -120,14 +118,14 @@ const RecruiterDashboardHome = () => {
                   <Sparkles size={11} /> Recruiter Portal
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.10)', padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(74,222,128,0.22)' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 0 3px rgba(74,222,128,0.20)', display: 'inline-block', animation: 'pulse 2s infinite' }} /> Live
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 0 3px rgba(74,222,128,0.20)', display: 'inline-block' }} /> Core API Live
                 </span>
               </div>
               <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 36px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
                 {greet()}, {user?.name?.split(' ')[0] ?? 'Recruiter'}! 👋
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(190,220,140,0.65)', lineHeight: 1.6 }}>
-                Here's your hiring snapshot — track, screen, and hire smarter.
+                Here's your real-time recruitment snapshot — Jobs module is connected to live Core API.
               </p>
             </div>
 
@@ -153,37 +151,121 @@ const RecruiterDashboardHome = () => {
             </motion.div>
           </motion.div>
 
-          {/* Stat cards */}
+          {/* Stat cards — Real data for Jobs; Honest placeholder for pending backends */}
           <div className="rec-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            {STAT_DEFS.map((stat, i) => (
-              <motion.div
-                key={stat.key}
-                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
-                  cursor: 'default', transition: 'background 0.2s', position: 'relative', overflow: 'hidden',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
-              >
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${stat.color}00, ${stat.color}88, ${stat.color}00)` }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 13, background: `${stat.color}18`, border: `1px solid ${stat.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <stat.icon size={18} style={{ color: stat.color }} />
-                  </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.14)', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)' }}>
-                    <ChevronUp size={10} /> {stat.delta} {stat.deltaLabel}
-                  </span>
+            {/* Card 1: Total Jobs (REAL) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #60a5fa00, #60a5fa88, #60a5fa00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(96,165,250,0.18)', border: '1px solid rgba(96,165,250,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={18} style={{ color: '#60a5fa' }} />
                 </div>
-                <p style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
-                  <Counter to={summary[stat.key]} suffix={stat.suffix} />
-                </p>
-                <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>{stat.label}</p>
-              </motion.div>
-            ))}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.14)', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.22)' }}>
+                  <CheckCircle2 size={11} /> Real Data
+                </span>
+              </div>
+              <p style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
+                {loadingJobs ? '...' : <Counter to={totalJobs} />}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>
+                Total Jobs ({openJobs} open)
+              </p>
+            </motion.div>
+
+            {/* Card 2: Candidates & Applicants (Phase 3 Live) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.10, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #a78bfa00, #a78bfa88, #a78bfa00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(167,139,250,0.18)', border: '1px solid rgba(167,139,250,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={18} style={{ color: '#a78bfa' }} />
+                </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.22)' }}>
+                  <CheckCircle2 size={10} /> Phase 3 Live
+                </span>
+              </div>
+              <p style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
+                <Link to="/recruiter/candidates" style={{ color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  Manage <ArrowUpRight size={18} style={{ color: '#a78bfa' }} />
+                </Link>
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>
+                Candidate Pipeline
+              </p>
+            </motion.div>
+
+            {/* Card 3: Pending Interviews (Pending Phase 3 backend) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #f59e0b00, #f59e0b88, #f59e0b00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CalendarDays size={18} style={{ color: '#f59e0b' }} />
+                </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(245,158,11,0.22)' }}>
+                  <Clock size={10} /> Pending Backend
+                </span>
+              </div>
+              <p style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
+                —
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>
+                Pending Interviews (Phase 3)
+              </p>
+            </motion.div>
+
+            {/* Card 4: Avg Resume Score (Pending Phase 3 backend) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.20, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 18, padding: 'clamp(16px, 3vw, 22px) clamp(16px, 3vw, 22px) clamp(20px, 3vw, 26px)',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #34d39900, #34d39988, #34d39900)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Star size={18} style={{ color: '#34d399' }} />
+                </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(245,158,11,0.22)' }}>
+                  <Clock size={10} /> Pending Backend
+                </span>
+              </div>
+              <p style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
+                —
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>
+                Avg Resume Score (ML)
+              </p>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -193,56 +275,79 @@ const RecruiterDashboardHome = () => {
       ══════════════════════════════════════════════════════ */}
       <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
 
-        {/* ── Row A: Activity + Quick Actions ──────────────── */}
+        {/* ── Row A: Real Jobs Overview + Quick Actions ──────── */}
         <div className="rec-row-a" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginBottom: 18 }}>
 
-          {/* Recent Activity */}
+          {/* Active Job Listings (Real Data) */}
           <Card delay={0.10}>
-            <div style={{ height: 3, background: 'linear-gradient(90deg, #60a5fa, #a78bfa, #34d399)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '20px 20px 0 0' }} />
             <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Bell size={17} style={{ color: '#60a5fa' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(107,138,58,0.14)', border: '1px solid rgba(107,138,58,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={17} style={{ color: 'var(--primary)' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Recent Activity</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Your Active Jobs</p>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.10)', padding: '1px 7px', borderRadius: 999 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Live feed
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Live from Core API
                   </span>
                 </div>
               </div>
-              <Link to="/recruiter/candidates" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Link to="/recruiter/jobs" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
                 View all <ArrowRight size={13} />
               </Link>
             </div>
-            <div style={{ padding: '8px 12px 16px' }}>
-              {activity.map((act, i) => {
-                const meta = ACTIVITY_META[act.type] ?? ACTIVITY_META.APPLICATION;
-                return (
-                  <motion.div
-                    key={act.id}
-                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.28, delay: 0.12 + i * 0.055 }}
-                    style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'default', transition: 'background 0.13s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--card-row-bg)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+
+            <div style={{ padding: '12px 16px' }}>
+              {loadingJobs ? (
+                <div style={{ padding: '36px 0', textAlign: 'center' }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary)', margin: '0 auto 8px' }} />
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading active listings...</p>
+                </div>
+              ) : jobs.length === 0 ? (
+                <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                  <Briefcase size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>No jobs posted yet</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Create your first job listing to get started.</p>
+                  <Link
+                    to="/recruiter/jobs"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}
                   >
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `${meta.color}12`, border: `1px solid ${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                      <meta.icon size={15} style={{ color: meta.color }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>{act.message}</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                        <Clock size={10} style={{ color: 'var(--text-muted)' }} />
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{relativeTime(act.timestamp)}</span>
+                    <Plus size={13} /> Post First Job
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {jobs.slice(0, 4).map((j) => (
+                    <div
+                      key={j.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: 12, background: 'var(--card-row-bg)',
+                        border: '1px solid var(--border)', gap: 10,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {j.title}
+                        </p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          {j.company} • {j.location || 'Remote'}
+                        </p>
                       </div>
+                      <span
+                        style={{
+                          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 999,
+                          background: j.status === 'OPEN' ? 'rgba(52,211,153,0.12)' : 'rgba(239,68,68,0.12)',
+                          color: j.status === 'OPEN' ? '#10b981' : '#ef4444',
+                        }}
+                      >
+                        {j.status}
+                      </span>
                     </div>
-                    <span style={{ display: 'inline-flex', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: `${meta.color}12`, color: meta.color, border: `1px solid ${meta.color}22`, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      {meta.label}
-                    </span>
-                  </motion.div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
 
@@ -254,7 +359,7 @@ const RecruiterDashboardHome = () => {
               <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Quick Actions</p>
             </div>
             <div style={{ padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {QUICK_ACTIONS.map(({ label, to, icon: Icon, color, bg, primary }, i) => (
+              {QUICK_ACTIONS.map(({ label, to, icon: Icon, color, bg, primary, status }, i) => (
                 <motion.div key={label} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.26, delay: 0.20 + i * 0.05 }}>
                   <Link
                     to={to}
@@ -268,19 +373,16 @@ const RecruiterDashboardHome = () => {
                       boxShadow: primary ? '0 4px 16px rgba(61,80,22,0.30)' : 'none',
                       transition: 'all 0.16s ease',
                     }}
-                    onMouseEnter={e => {
-                      if (primary) { e.currentTarget.style.boxShadow = '0 6px 24px rgba(61,80,22,0.45)'; e.currentTarget.style.transform = 'translateY(-1px)'; }
-                      else { e.currentTarget.style.background = 'var(--step-inactive-bg)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateX(4px)'; }
-                    }}
-                    onMouseLeave={e => {
-                      if (primary) { e.currentTarget.style.boxShadow = '0 4px 16px rgba(61,80,22,0.30)'; e.currentTarget.style.transform = 'translateY(0)'; }
-                      else { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.transform = 'translateX(0)'; }
-                    }}
                   >
                     <div style={{ width: 32, height: 32, borderRadius: 9, background: primary ? 'rgba(163,230,53,0.15)' : bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Icon size={15} style={{ color: primary ? '#a3e635' : color }} />
                     </div>
                     <span style={{ fontSize: 13, fontWeight: primary ? 700 : 600, color: primary ? '#e5f5c8' : 'var(--text-primary)', flex: 1 }}>{label}</span>
+                    {status === 'Active' ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'rgba(74,222,128,0.20)', color: '#4ade80' }}>Active</span>
+                    ) : (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Pending</span>
+                    )}
                     <ArrowRight size={13} style={{ color: primary ? 'rgba(163,230,53,0.5)' : 'var(--text-muted)', flexShrink: 0 }} />
                   </Link>
                 </motion.div>
@@ -289,7 +391,7 @@ const RecruiterDashboardHome = () => {
           </Card>
         </div>
 
-        {/* ── Row B: Pipeline overview (visual funnel) ──────── */}
+        {/* ── Row B: Hiring Pipeline Placeholder (Honest State) ── */}
         <Card delay={0.22}>
           <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635, #6B8A3A)', borderRadius: '20px 20px 0 0' }} />
           <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -298,47 +400,30 @@ const RecruiterDashboardHome = () => {
                 <TrendingUp size={17} style={{ color: '#a3e635' }} />
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Hiring Pipeline</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Real-time funnel across all active roles</p>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Hiring Pipeline Funnel</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Applications & Candidates modules connection status</p>
               </div>
             </div>
-            <Link to="/recruiter/candidates" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
-              Manage <ArrowRight size={13} />
-            </Link>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(245,158,11,0.25)' }}>
+              Phase 3 Upcoming
+            </span>
           </div>
-          <div style={{ padding: 'clamp(16px, 3vw, 20px) clamp(14px, 3vw, 24px) 24px' }}>
-            <div className="rec-funnel-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-              {[
-                { label: 'Applied',      count: 148, width: 100, color: '#60a5fa', icon: Users       },
-                { label: 'Screened',     count: 86,  width: 58,  color: '#a78bfa', icon: FileSearch  },
-                { label: 'Shortlisted',  count: 34,  width: 23,  color: '#f59e0b', icon: Target      },
-                { label: 'Interviewed',  count: 12,  width: 8,   color: '#34d399', icon: Play        },
-                { label: 'Offered',      count: 3,   width: 2,   color: '#a3e635', icon: Trophy      },
-              ].map((stage, i) => (
-                <motion.div
-                  key={stage.label}
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.26 + i * 0.07 }}
-                  style={{ textAlign: 'center', padding: '16px 12px', borderRadius: 16, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--step-inactive-bg)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                >
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${stage.color}14`, border: `1px solid ${stage.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <stage.icon size={18} style={{ color: stage.color }} />
-                  </div>
-                  <p style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 900, color: stage.color, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 4 }}>{stage.count}</p>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12 }}>{stage.label}</p>
-                  <div style={{ height: 5, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${stage.width}%` }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.0, delay: 0.3 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${stage.color}, ${stage.color}70)` }}
-                    />
-                  </div>
-                </motion.div>
-              ))}
+
+          <div style={{ padding: 'clamp(24px, 4vw, 36px) 24px', textAlign: 'center' }}>
+            <div style={{ maxWidth: 520, margin: '0 auto' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(107,138,58,0.12)', border: '1px solid rgba(107,138,58,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: 'var(--primary)' }}>
+                <Clock size={22} />
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+                Hiring Funnel Activates in Phase 3
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+                The multi-stage recruitment funnel (Applied → Screened → Shortlisted → Interviewed → Offered) will populate automatically when candidate applications and screening microservices are connected.
+              </p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+                <CheckCircle2 size={14} style={{ color: 'var(--primary)' }} />
+                <span>Jobs module is live ({totalJobs} listing{totalJobs !== 1 ? 's' : ''} active)</span>
+              </div>
             </div>
           </div>
         </Card>
@@ -346,17 +431,13 @@ const RecruiterDashboardHome = () => {
 
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 1023px) {
           .rec-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .rec-row-a { grid-template-columns: 1fr !important; }
-          .rec-funnel-grid { grid-template-columns: repeat(3, 1fr) !important; }
-        }
-        @media (max-width: 600px) {
-          .rec-funnel-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (max-width: 480px) {
           .rec-stats-grid { grid-template-columns: 1fr !important; }
-          .rec-funnel-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

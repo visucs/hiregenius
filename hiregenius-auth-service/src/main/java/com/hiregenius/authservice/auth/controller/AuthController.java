@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/auth"})
 @Tag(name = "Authentication", description = "Endpoints for local & Google login, user registration, token validation, and password recovery")
 public class AuthController {
 
@@ -39,7 +39,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
+    @PostMapping({"/register", "/signup"})
     @Operation(
             summary = "Register a new user",
             description = "Registers a RECRUITER or CANDIDATE. Public ADMIN registration is rejected."

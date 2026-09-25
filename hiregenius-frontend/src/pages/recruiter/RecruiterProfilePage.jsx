@@ -142,7 +142,7 @@ const RecruiterProfilePage = () => {
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: user?.name ?? '', email: user?.email ?? '', company: 'TechCorp India' },
+    defaultValues: { name: user?.name ?? '', email: user?.email ?? '', company: user?.company ?? '' },
   });
   const pwdForm = useForm({ resolver: zodResolver(pwdSchema) });
 
@@ -224,9 +224,11 @@ const RecruiterProfilePage = () => {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(107,138,58,0.22)', color: '#a3e635', border: '1px solid rgba(107,138,58,0.35)' }}>
                     <Shield size={11} /> Recruiter
                   </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(96,165,250,0.14)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.28)' }}>
-                    <Briefcase size={11} /> TechCorp India
-                  </span>
+                  {user?.company && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(96,165,250,0.14)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.28)' }}>
+                      <Briefcase size={11} /> {user.company}
+                    </span>
+                  )}
                 </div>
               </div>
 

@@ -53,3 +53,6 @@ lerna-debug.log*
 *.sln
 *.sw?
 Thumbs.db
+
+# Scratch and temporary scripts
+scratch/
