@@ -1,113 +1,45 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { motion, useInView, animate, AnimatePresence } from 'framer-motion';
+import { motion, useInView, animate } from 'framer-motion';
 import {
-  FileText, MessageSquare, Trophy, TrendingUp, Upload,
-  Briefcase, ArrowRight, Sparkles, CheckCircle2, Clock,
-  BarChart3, ChevronRight, Target, Zap, Star,
-  ArrowUpRight, AlertCircle, Plus, BookOpen,
-  Award, Flame, ChevronUp, Eye, Send, X,
+  FileText, MessageSquare, Briefcase, ArrowRight, Sparkles,
+  CheckCircle2, Clock, BarChart3, ChevronRight, Target, Zap,
+  ArrowUpRight, Upload, Building2, RefreshCw, X, Shield,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { selectUser } from '../../features/auth/authSlice';
 import useResumeFileValidation from '../../hooks/useResumeFileValidation';
+import jobsService from '../../services/jobsService';
+import candidatesService from '../../services/candidatesService';
+import applicationsService from '../../services/applicationsService';
 
-/* ══════════════════════════════════════════════════════════════
-   MOCK DATA
-══════════════════════════════════════════════════════════════ */
-const MOCK_STATS = [
-  { key: 'apps',       label: 'Applications',    value: 7,  suffix: '',  delta: '+2',  deltaLabel: 'this week',  icon: FileText,    color: '#60a5fa' },
-  { key: 'interviews', label: 'AI Interviews',   value: 3,  suffix: '',  delta: '+1',  deltaLabel: 'new',        icon: MessageSquare, color: '#a78bfa' },
-  { key: 'score',      label: 'Resume Score',    value: 82, suffix: '%', delta: '↑6',  deltaLabel: 'pts',        icon: Star,        color: '#34d399' },
-  { key: 'pending',    label: 'Pending Actions', value: 2,  suffix: '',  delta: '!',   deltaLabel: 'urgent',     icon: AlertCircle, color: '#fbbf24' },
-];
-
-const APP_STAGES = [
-  { label: 'Saved',        count: 4,  color: '#6366f1', width: 100 },
-  { label: 'Applied',      count: 7,  color: '#60a5fa', width: 88  },
-  { label: 'Interviewing', count: 2,  color: '#f59e0b', width: 29  },
-  { label: 'Offer',        count: 1,  color: '#10b981', width: 14  },
-];
-
-const MOCK_JOBS = [
-  { id: 'j1', title: 'Senior Frontend Engineer', company: 'TechCorp',    loc: 'Remote', match: 94, tag: 'Top Match',   tagColor: '#10b981', logo: 'TC' },
-  { id: 'j2', title: 'Full Stack Developer',     company: 'StartupXYZ',  loc: 'Hybrid', match: 87, tag: 'New',         tagColor: '#6366f1', logo: 'SX' },
-  { id: 'j3', title: 'React Developer',          company: 'FinanceHub',   loc: 'Remote', match: 81, tag: 'Closing soon',tagColor: '#f59e0b', logo: 'FH' },
-];
-
-const MOCK_ACTIVITY = [
-  { id: 'a1', icon: Star,         text: 'Resume scored — Senior Frontend Eng',   meta: 'Score: 82/100',          time: '2h ago',  color: '#34d399' },
-  { id: 'a2', icon: FileText,     text: 'Applied to Product Designer at Acme',   meta: 'Application submitted',  time: '1d ago',  color: '#60a5fa' },
-  { id: 'a3', icon: MessageSquare,text: 'AI Interview: Full Stack Eng (TechStart)',meta: 'Score: 74/100',         time: '2d ago',  color: '#a78bfa' },
-  { id: 'a4', icon: Briefcase,    text: 'Saved: Data Analyst at FinanceHub',      meta: 'Saved for later',       time: '3d ago',  color: '#f59e0b' },
-  { id: 'a5', icon: Star,         text: 'Resume scored — UX Designer',            meta: 'Score: 61/100',         time: '5d ago',  color: '#ec4899' },
-];
-
-const QUICK_ACTIONS = [
-  { label: 'New Resume Check',    icon: Upload,        to: '/candidate/resume-score',  color: '#34d399', bg: 'rgba(52,211,153,0.10)', primary: true  },
-  { label: 'Start AI Interview',  icon: MessageSquare, to: '/candidate/interviews',    color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', primary: false },
-  { label: 'Browse Jobs',         icon: Briefcase,     to: '/candidate/applications',  color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', primary: false },
-  { label: 'My Scan History',     icon: BarChart3,     to: '/candidate/scan-history',  color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  primary: false },
-];
-
-/* ══════════════════════════════════════════════════════════════
-   RESUME SCORE RING
-══════════════════════════════════════════════════════════════ */
-const ScoreRing = ({ score }) => {
-  const r = 54;
-  const circ = 2 * Math.PI * r;
-  const pct  = score / 100;
-  const color = score >= 80 ? '#34d399' : score >= 60 ? '#f59e0b' : '#ef4444';
-
-  return (
-    <div style={{ position: 'relative', width: 130, height: 130, flexShrink: 0 }}>
-      <svg width="130" height="130" viewBox="0 0 130 130" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
-        <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10" />
-        <motion.circle
-          cx="65" cy="65" r={r}
-          fill="none" stroke={color} strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ - pct * circ }}
-          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-          style={{ filter: `drop-shadow(0 0 8px ${color}88)` }}
-        />
-      </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 30, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1 }}>{score}</p>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>/ 100</p>
-      </div>
-    </div>
-  );
-};
-
-/* ══════════════════════════════════════════════════════════════
-   UTILITIES
-══════════════════════════════════════════════════════════════ */
+/* ─── Helpers ─────────────────────────────────────────────── */
 const greet = () => {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 };
 
 const Counter = ({ to, suffix = '' }) => {
-  const ref    = useRef(null);
+  const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-20px' });
   const [val, setVal] = useState(0);
   const fired = useRef(false);
-  if (inView && !fired.current) {
-    fired.current = true;
-    animate(0, to, { duration: 1.4, ease: [0.22, 1, 0.36, 1], onUpdate: v => setVal(Math.round(v)) });
-  }
+  useEffect(() => {
+    if (inView && !fired.current) {
+      fired.current = true;
+      animate(0, to, { duration: 1.2, ease: [0.22, 1, 0.36, 1], onUpdate: v => setVal(Math.round(v)) });
+    }
+  }, [inView, to]);
   return <span ref={ref}>{val}{suffix}</span>;
 };
 
-/* Shared card */
+/* Shared card shell */
 const Card = ({ children, style = {}, delay = 0 }) => (
   <motion.div
     initial={{ opacity: 0, y: 18 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+    transition={{ duration: 0.38, delay, ease: [0.22, 1, 0.36, 1] }}
     style={{
       background: 'var(--bg-elevated)', border: '1px solid var(--border)',
       borderRadius: 20, boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
@@ -142,16 +74,159 @@ const ViewAll = ({ to, label = 'View all' }) => (
   </Link>
 );
 
+const QUICK_ACTIONS = [
+  { label: 'Upload Resume',       icon: Upload,        id: 'qa-upload',  color: '#34d399', bg: 'rgba(52,211,153,0.10)', primary: true  },
+  { label: 'My Applications',     icon: Briefcase,     to: '/candidate/applications',  color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', primary: false },
+  { label: 'Candidate Settings',   icon: Zap,           to: '/candidate/settings',      color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  primary: false },
+  { label: 'AI Interviews',       icon: MessageSquare, to: '/candidate/interviews',    color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', primary: false },
+];
+
 /* ══════════════════════════════════════════════════════════════
-   CANDIDATE DASHBOARD — Main component
+   CANDIDATE DASHBOARD — Real Core API Integration
 ══════════════════════════════════════════════════════════════ */
 const CandidateDashboard = () => {
   const user = useSelector(selectUser);
+
+  // Real backend states
+  const [candidateProfile, setCandidateProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile]     = useState(true);
+
+  const [applications, setApplications]         = useState([]);
+  const [loadingApps, setLoadingApps]           = useState(true);
+
+  const [openJobs, setOpenJobs]                 = useState([]);
+  const [loadingJobs, setLoadingJobs]           = useState(true);
+
+  const [applyingJobId, setApplyingJobId]       = useState(null);
+  const [uploadingResume, setUploadingResume]   = useState(false);
+
+  // Resume drag & drop hook
   const {
     file, fileInputRef, dragging,
     handleFileChange, handleDrop, handleDragOver, handleDragLeave,
     clearFile,
   } = useResumeFileValidation();
+
+  // 1. Fetch Candidate Profile (GET /api/candidates/me)
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await candidatesService.getMyProfile();
+      setCandidateProfile(res?.data ?? null);
+    } catch (err) {
+      // 404 means no resume on file yet — valid initial state
+      if (err.response?.status !== 404) {
+        console.warn('[CandidateDashboard] Profile fetch warning:', err?.message);
+      }
+      setCandidateProfile(null);
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
+
+  // 2. Fetch Candidate Applications (GET /api/applications/mine)
+  const fetchApplications = useCallback(async () => {
+    try {
+      const res = await applicationsService.getMyApplications();
+      setApplications(res?.data ?? []);
+    } catch (err) {
+      console.warn('[CandidateDashboard] Applications fetch warning:', err?.message);
+      setApplications([]);
+    } finally {
+      setLoadingApps(false);
+    }
+  }, []);
+
+  // 3. Fetch Public Open Jobs (GET /api/jobs)
+  const fetchOpenJobs = useCallback(async () => {
+    try {
+      const res = await jobsService.getPublicJobs({ status: 'OPEN', limit: 6 });
+      setOpenJobs(res?.data?.jobs ?? []);
+    } catch (err) {
+      console.warn('[CandidateDashboard] Open jobs fetch warning:', err?.message);
+      setOpenJobs([]);
+    } finally {
+      setLoadingJobs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+    fetchApplications();
+    fetchOpenJobs();
+  }, [fetchProfile, fetchApplications, fetchOpenJobs]);
+
+  // Set of job IDs the candidate has already applied to
+  const appliedJobIds = useMemo(() => {
+    return new Set(applications.map(a => Number(a.job_id)));
+  }, [applications]);
+
+  // Handle Apply to a Job
+  const handleApplyToJob = async (job) => {
+    if (!candidateProfile?.resume_path) {
+      toast.error('Please upload your resume below before applying to jobs');
+      document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    if (appliedJobIds.has(Number(job.id))) {
+      toast('You have already applied for this job', { icon: 'ℹ️' });
+      return;
+    }
+
+    setApplyingJobId(job.id);
+    try {
+      await applicationsService.applyToJob(job.id);
+      toast.success(`Successfully applied to ${job.title}!`);
+      // Refresh applications list
+      fetchApplications();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to submit application';
+      if (err.response?.status === 409) {
+        toast.error('You have already applied for this job');
+      } else if (err.response?.status === 400 && msg.toLowerCase().includes('resume')) {
+        toast.error('Please upload your resume below before applying');
+        document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setApplyingJobId(null);
+    }
+  };
+
+  // Handle Resume Upload submission
+  const handleUploadResumeSubmit = async () => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    setUploadingResume(true);
+    try {
+      const res = await candidatesService.uploadResume(formData);
+      toast.success(res?.message || 'Resume uploaded successfully!');
+      clearFile();
+      fetchProfile();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to upload resume';
+      toast.error(msg);
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
+  // Pipeline stage counts from real applications
+  const pipelineCounts = useMemo(() => {
+    const counts = { APPLIED: 0, SCREENING: 0, INTERVIEW: 0, SHORTLISTED: 0, HIRED: 0, REJECTED: 0 };
+    applications.forEach(app => {
+      const s = (app.status || 'APPLIED').toUpperCase();
+      if (counts[s] !== undefined) counts[s]++;
+    });
+    return counts;
+  }, [applications]);
+
+  const totalApplications = applications.length;
+  const activeApplications = pipelineCounts.APPLIED + pipelineCounts.SCREENING + pipelineCounts.INTERVIEW;
 
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
@@ -166,7 +241,7 @@ const CandidateDashboard = () => {
       }}>
         {/* Dot grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(107,138,58,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
-        {/* Blobs */}
+        {/* Glow blobs */}
         <div style={{ position: 'absolute', top: -80, right: '20%', width: 380, height: 380, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,138,58,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 0, left: '8%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(163,230,53,0.06) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
@@ -176,26 +251,26 @@ const CandidateDashboard = () => {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}
+            style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 28 }}
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(107,138,58,0.95)', background: 'rgba(107,138,58,0.14)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(107,138,58,0.28)' }}>
-                  <Sparkles size={11} /> Candidate Dashboard
+                  <Sparkles size={11} /> Candidate Portal
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.10)', padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(74,222,128,0.22)' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 0 3px rgba(74,222,128,0.20)', display: 'inline-block' }} /> AI-Powered
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Phase 3 Live
                 </span>
               </div>
               <h1 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
-                {greet()}, {user?.name?.split(' ')[0] ?? 'there'}! 🎯
+                {greet()}, {user?.name?.split(' ')[0] ?? 'Candidate'}! 🎯
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(190,220,140,0.65)', lineHeight: 1.6 }}>
-                Your career intelligence hub — track, improve, and land the role.
+                Track your job applications, keep your resume updated, and explore active openings.
               </p>
             </div>
 
-            {/* Hero CTA — Resume Check */}
+            {/* Hero CTA — Upload Resume */}
             <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}>
               <button
                 onClick={() => document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' })}
@@ -211,44 +286,123 @@ const CandidateDashboard = () => {
                 }}
               >
                 <Upload size={16} strokeWidth={2.5} />
-                Check My Resume
+                {candidateProfile?.resume_path ? 'Update My Resume' : 'Upload Resume'}
                 <ArrowUpRight size={14} />
               </button>
             </motion.div>
           </motion.div>
 
-          {/* Stat cards — on dark band */}
+          {/* Stat cards — Real data on dark band */}
           <div className="cand-dash-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            {MOCK_STATS.map((stat, i) => (
-              <motion.div
-                key={stat.key}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
-                  cursor: 'default', transition: 'background 0.2s', position: 'relative', overflow: 'hidden',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
-              >
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${stat.color}00, ${stat.color}88, ${stat.color}00)` }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 13, background: `${stat.color}18`, border: `1px solid ${stat.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <stat.icon size={18} style={{ color: stat.color }} />
-                  </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.14)', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)' }}>
-                    <ChevronUp size={10} /> {stat.delta} {stat.deltaLabel}
-                  </span>
+            {/* Card 1: Applications Submitted (REAL) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #60a5fa00, #60a5fa88, #60a5fa00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(96,165,250,0.18)', border: '1px solid rgba(96,165,250,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={18} style={{ color: '#60a5fa' }} />
                 </div>
-                <p style={{ fontSize: 42, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
-                  <Counter to={stat.value} suffix={stat.suffix} />
-                </p>
-                <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>{stat.label}</p>
-              </motion.div>
-            ))}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.14)', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.22)' }}>
+                  <CheckCircle2 size={11} /> Real Data
+                </span>
+              </div>
+              <p style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
+                {loadingApps ? '...' : <Counter to={totalApplications} />}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>Applications Submitted</p>
+            </motion.div>
+
+            {/* Card 2: Open Jobs Available (REAL) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.10, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #34d39900, #34d39988, #34d39900)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={18} style={{ color: '#34d399' }} />
+                </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.14)', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.22)' }}>
+                  <CheckCircle2 size={11} /> Real Data
+                </span>
+              </div>
+              <p style={{ fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
+                {loadingJobs ? '...' : <Counter to={openJobs.length} />}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>Open Roles to Apply</p>
+            </motion.div>
+
+            {/* Card 3: Resume on File (REAL) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #a78bfa00, #a78bfa88, #a78bfa00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(167,139,250,0.18)', border: '1px solid rgba(167,139,250,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Upload size={18} style={{ color: '#a78bfa' }} />
+                </div>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700,
+                  color: candidateProfile?.resume_path ? '#34d399' : '#fbbf24',
+                  background: candidateProfile?.resume_path ? 'rgba(52,211,153,0.14)' : 'rgba(251,191,36,0.14)',
+                  padding: '3px 9px', borderRadius: 999,
+                  border: `1px solid ${candidateProfile?.resume_path ? 'rgba(52,211,153,0.22)' : 'rgba(251,191,36,0.22)'}`,
+                }}>
+                  {candidateProfile?.resume_path ? 'Active' : 'Action Required'}
+                </span>
+              </div>
+              <p style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
+                {loadingProfile ? '...' : candidateProfile?.resume_path ? 'Uploaded' : 'None'}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>Resume on File</p>
+            </motion.div>
+
+            {/* Card 4: AI Interviews (Honest Pending) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.20, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '18px 18px 0 0', padding: '22px 22px 26px',
+                position: 'relative', overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #f59e0b00, #f59e0b88, #f59e0b00)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageSquare size={18} style={{ color: '#f59e0b' }} />
+                </div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(245,158,11,0.22)' }}>
+                  <Clock size={10} /> Pending Phase 5
+                </span>
+              </div>
+              <p style={{ fontSize: 36, fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
+                —
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(180,215,130,0.60)' }}>AI Interviews (Phase 5)</p>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -258,104 +412,117 @@ const CandidateDashboard = () => {
       ════════════════════════════════════════════════════ */}
       <div style={{ padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 36px) 60px' }}>
 
-        {/* ── Row A: Resume Score Card + App Tracker + Quick Actions ── */}
+        {/* ── Row A: Resume Status Card + App Tracker + Quick Actions ── */}
         <div className="cand-dash-row-a" style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr 0.8fr', gap: 18, marginBottom: 18 }}>
 
-          {/* Resume Score Card */}
+          {/* Resume Profile Status Card */}
           <Card delay={0.08}>
             <div style={{ height: 3, background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '20px 20px 0 0' }} />
             <div style={{ padding: '22px 24px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Resume Score</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Senior Frontend Engineer</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Resume Document</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Core API Candidate Profile</p>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.12)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.22)' }}>Excellent</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: candidateProfile?.resume_path ? '#34d399' : '#fbbf24',
+                  background: candidateProfile?.resume_path ? 'rgba(52,211,153,0.12)' : 'rgba(251,191,36,0.12)',
+                  padding: '3px 10px', borderRadius: 999,
+                  border: `1px solid ${candidateProfile?.resume_path ? 'rgba(52,211,153,0.22)' : 'rgba(251,191,36,0.22)'}`,
+                }}>
+                  {candidateProfile?.resume_path ? 'Ready' : 'Not Uploaded'}
+                </span>
               </div>
 
-              {/* Circular score ring on a dark mini-band */}
-              <div style={{ background: 'linear-gradient(135deg, #18280a, #0c1505)', borderRadius: 16, padding: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 18 }}>
-                <ScoreRing score={82} />
-                <p style={{ fontSize: 12, color: 'rgba(163,230,53,0.7)', fontWeight: 600, marginTop: 12 }}>Top 15% of candidates</p>
+              {/* Status block */}
+              <div style={{ background: 'linear-gradient(135deg, #18280a, #0c1505)', borderRadius: 16, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 18 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 18, background: candidateProfile?.resume_path ? 'rgba(52,211,153,0.15)' : 'rgba(251,191,36,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, border: `1px solid ${candidateProfile?.resume_path ? 'rgba(52,211,153,0.30)' : 'rgba(251,191,36,0.30)'}` }}>
+                  <FileText size={26} style={{ color: candidateProfile?.resume_path ? '#34d399' : '#fbbf24' }} />
+                </div>
+                {candidateProfile?.resume_path ? (
+                  <>
+                    <p style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 4, maxWidth: '100%', wordBreak: 'break-all' }}>
+                      {candidateProfile.resume_original_name || 'Resume Document'}
+                    </p>
+                    <p style={{ fontSize: 11, color: 'rgba(163,230,53,0.7)', fontWeight: 600 }}>Active resume attached to applications</p>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 4 }}>No Resume Uploaded</p>
+                    <p style={{ fontSize: 11, color: 'rgba(251,191,36,0.85)', fontWeight: 600 }}>Upload below before applying to jobs</p>
+                  </>
+                )}
               </div>
 
-              {/* Score breakdown bars */}
-              {[
-                { label: 'Skills match',    value: 91, color: '#34d399' },
-                { label: 'Experience',      value: 78, color: '#60a5fa' },
-                { label: 'Keywords',        value: 82, color: '#a78bfa' },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-                    <span style={{ fontSize: 11, color, fontWeight: 700 }}>{value}%</span>
-                  </div>
-                  <div style={{ height: 5, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${value}%` }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${color}, ${color}88)` }}
-                    />
-                  </div>
-                </div>
-              ))}
+              <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>
+                <Clock size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle', color: 'var(--primary)' }} />
+                <span>AI Resume Scoring & Match reports will activate here in Phase 4.</span>
+              </div>
 
-              <Link to="/candidate/resume-score"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, padding: '10px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 700, color: 'var(--primary)', textDecoration: 'none', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--step-inactive-bg)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+              <button
+                onClick={() => document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 700, color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.15s' }}
               >
-                View full report <ArrowRight size={13} />
-              </Link>
+                {candidateProfile?.resume_path ? 'Replace Resume Below' : 'Upload Resume Below'} <ArrowRight size={13} />
+              </button>
             </div>
           </Card>
 
-          {/* Application Pipeline Tracker */}
+          {/* Application Pipeline Tracker (Real) */}
           <Card delay={0.13}>
-            <CardHead icon={Target} iconColor="#60a5fa" title="Application Tracker" subtitle={`${APP_STAGES[1].count} active applications`} action={<ViewAll to="/candidate/applications" />} />
+            <CardHead
+              icon={Target}
+              iconColor="#60a5fa"
+              title="Application Tracker"
+              subtitle={`${totalApplications} total applications submitted`}
+              action={<ViewAll to="/candidate/applications" />}
+            />
             <div style={{ padding: '18px 22px 22px' }}>
-              {APP_STAGES.map((stage, i) => (
-                <motion.div
-                  key={stage.label}
-                  initial={{ opacity: 0, x: -14 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.35, delay: 0.15 + i * 0.06 }}
-                  style={{ marginBottom: i < APP_STAGES.length - 1 ? 16 : 0 }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: stage.color, boxShadow: `0 0 0 3px ${stage.color}28`, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{stage.label}</span>
+              {[
+                { label: 'Applied',      count: pipelineCounts.APPLIED,      color: '#60a5fa' },
+                { label: 'Screening',    count: pipelineCounts.SCREENING,    color: '#f59e0b' },
+                { label: 'Interview',    count: pipelineCounts.INTERVIEW,    color: '#a78bfa' },
+                { label: 'Shortlisted',  count: pipelineCounts.SHORTLISTED + pipelineCounts.HIRED,  color: '#10b981' },
+              ].map((stage, i) => {
+                const pct = totalApplications > 0 ? Math.round((stage.count / totalApplications) * 100) : 0;
+                return (
+                  <div key={stage.label} style={{ marginBottom: i < 3 ? 14 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: stage.color, boxShadow: `0 0 0 3px ${stage.color}28`, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{stage.label}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: stage.color }}>{stage.count}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--card-row-bg)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>{pct}%</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: stage.color }}>{stage.count}</span>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--card-row-bg)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>{stage.width}%</span>
+                    <div style={{ height: 6, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: 0.1 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${stage.color}, ${stage.color}88)` }}
+                      />
                     </div>
                   </div>
-                  <div style={{ height: 6, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: `${stage.width}%` }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.0, delay: 0.2 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                      style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${stage.color}, ${stage.color}88)` }}
-                    />
-                  </div>
-                </motion.div>
-              ))}
+                );
+              })}
 
-              {/* Application health */}
-              <div style={{ marginTop: 20, padding: '16px 18px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <TrendingUp size={18} style={{ color: '#10b981' }} />
+              {/* Status summary footer */}
+              <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(107,138,58,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Shield size={17} style={{ color: 'var(--primary)' }} />
                 </div>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>Strong momentum!</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>14% interview conversion rate</p>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {totalApplications > 0 ? `${activeApplications} Active In-Review` : 'Ready to begin?'}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {totalApplications > 0 ? 'Your applications are live with recruiters' : 'Apply to open listings below to start tracking'}
+                  </p>
                 </div>
-                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#10b981', flexShrink: 0 }}>Good</span>
               </div>
             </div>
           </Card>
@@ -368,27 +535,16 @@ const CandidateDashboard = () => {
               <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Quick Actions</p>
             </div>
             <div style={{ padding: '12px 12px 18px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {QUICK_ACTIONS.map(({ label, icon: Icon, to, color, bg, primary }, i) => (
-                <motion.div key={label} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.26, delay: 0.22 + i * 0.05 }}>
-                  <Link
-                    to={to}
-                    id={`cand-quick-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              {QUICK_ACTIONS.map(({ label, icon: Icon, to, color, bg, primary }, i) => {
+                const actionContent = (
+                  <div
                     style={{
                       display: 'flex', alignItems: 'center', gap: 11,
                       padding: primary ? '13px 15px' : '11px 15px', borderRadius: 14,
-                      textDecoration: 'none',
                       background: primary ? 'linear-gradient(135deg, #2d4010, #4a6b25)' : 'var(--card-row-bg)',
                       border: primary ? '1px solid rgba(107,138,58,0.30)' : '1px solid var(--card-row-border)',
                       boxShadow: primary ? '0 4px 16px rgba(61,80,22,0.30)' : 'none',
-                      transition: 'all 0.16s ease',
-                    }}
-                    onMouseEnter={e => {
-                      if (primary) { e.currentTarget.style.boxShadow = '0 6px 24px rgba(61,80,22,0.45)'; e.currentTarget.style.transform = 'translateY(-1px)'; }
-                      else { e.currentTarget.style.background = 'var(--step-inactive-bg)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateX(4px)'; }
-                    }}
-                    onMouseLeave={e => {
-                      if (primary) { e.currentTarget.style.boxShadow = '0 4px 16px rgba(61,80,22,0.30)'; e.currentTarget.style.transform = 'translateY(0)'; }
-                      else { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.transform = 'translateX(0)'; }
+                      cursor: 'pointer', transition: 'all 0.16s ease',
                     }}
                   >
                     <div style={{ width: 34, height: 34, borderRadius: 10, background: primary ? 'rgba(163,230,53,0.15)' : bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -396,52 +552,131 @@ const CandidateDashboard = () => {
                     </div>
                     <span style={{ fontSize: 13, fontWeight: primary ? 700 : 600, color: primary ? '#e5f5c8' : 'var(--text-primary)', flex: 1 }}>{label}</span>
                     <ArrowRight size={13} style={{ color: primary ? 'rgba(163,230,53,0.5)' : 'var(--text-muted)', flexShrink: 0 }} />
-                  </Link>
-                </motion.div>
-              ))}
+                  </div>
+                );
+
+                if (to) {
+                  return (
+                    <motion.div key={label} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.26, delay: 0.2 + i * 0.04 }}>
+                      <Link to={to} style={{ textDecoration: 'none' }}>
+                        {actionContent}
+                      </Link>
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <motion.div key={label} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.26, delay: 0.2 + i * 0.04 }}>
+                    <div onClick={() => document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' })}>
+                      {actionContent}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </Card>
         </div>
 
-        {/* ── Row B: Recommended Jobs + Activity ─────────────── */}
-        <div className="cand-dash-row-b" style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 18, marginBottom: 18 }}>
+        {/* ── Row B: Open Jobs to Apply (Real) + Activity Feed (Real) ── */}
+        <div className="cand-dash-row-b" style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: 18, marginBottom: 18 }}>
 
-          {/* Recommended Jobs */}
+          {/* Open Jobs List (Real Core API) */}
           <Card delay={0.23}>
-            <CardHead icon={Flame} iconColor="#f59e0b" title="Recommended Jobs" subtitle="Matched to your profile & resume" action={<ViewAll to="/candidate/applications" label="Browse all" />} />
+            <CardHead
+              icon={Briefcase}
+              iconColor="#34d399"
+              title="Open Job Openings"
+              subtitle="Browse active listings and apply directly"
+              action={<ViewAll to="/candidate/applications" label="My Applications" />}
+            />
             <div style={{ padding: '12px 14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {MOCK_JOBS.map((job, i) => (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.26 + i * 0.07 }}
-                  style={{
-                    padding: '16px 18px', borderRadius: 16,
-                    background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)',
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    cursor: 'pointer', transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--step-inactive-bg)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--card-row-bg)'; e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                >
-                  {/* Company logo */}
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #18280a, #2d4010)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a3e635', fontSize: 12, fontWeight: 900, flexShrink: 0, border: '1px solid rgba(107,138,58,0.25)' }}>
-                    {job.logo}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 3 }}>{job.title}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{job.company} · {job.loc}</p>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span style={{ display: 'block', fontSize: 10, fontWeight: 700, color: job.tagColor, background: `${job.tagColor}14`, padding: '2px 8px', borderRadius: 999, border: `1px solid ${job.tagColor}25`, marginBottom: 6 }}>{job.tag}</span>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: '#34d399' }}>{job.match}% <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>match</span></span>
-                  </div>
-                </motion.div>
-              ))}
+              {loadingJobs && (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  Loading open jobs…
+                </div>
+              )}
+
+              {!loadingJobs && openJobs.length === 0 && (
+                <div style={{ padding: 32, textAlign: 'center', background: 'var(--card-row-bg)', borderRadius: 14 }}>
+                  <Briefcase size={28} color="var(--text-muted)" style={{ margin: '0 auto 8px' }} />
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>No open jobs found</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Check back soon as recruiters publish new listings.</p>
+                </div>
+              )}
+
+              {!loadingJobs && openJobs.map((job, i) => {
+                const isApplied = appliedJobIds.has(Number(job.id));
+                const isApplyingThis = applyingJobId === job.id;
+
+                return (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 + i * 0.05 }}
+                    style={{
+                      padding: '16px 18px', borderRadius: 16,
+                      background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)',
+                      display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg, #18280a, #2d4010)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a3e635', fontSize: 14, fontWeight: 900, flexShrink: 0, border: '1px solid rgba(107,138,58,0.25)' }}>
+                      <Building2 size={20} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 160 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{job.title}</p>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.12)', padding: '2px 7px', borderRadius: 999 }}>Open</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {job.company} {job.location ? `· ${job.location}` : ''}
+                      </p>
+                      {Array.isArray(job.skills) && job.skills.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                          {job.skills.slice(0, 3).map(skill => (
+                            <span key={skill} style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(107,138,58,0.10)', color: 'var(--primary)' }}>
+                              {skill}
+                            </span>
+                          ))}
+                          {job.skills.length > 3 && (
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{job.skills.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ flexShrink: 0 }}>
+                      {isApplied ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.12)', padding: '6px 14px', borderRadius: 10, border: '1px solid rgba(52,211,153,0.24)' }}>
+                          <CheckCircle2 size={13} /> Applied
+                        </span>
+                      ) : (
+                        <motion.button
+                          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => handleApplyToJob(job)}
+                          disabled={isApplyingThis}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '7px 16px', minHeight: 36, borderRadius: 10,
+                            background: isApplyingThis ? 'rgba(107,138,58,0.30)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                            border: 'none', color: '#fff', fontSize: 12, fontWeight: 800,
+                            cursor: isApplyingThis ? 'wait' : 'pointer',
+                            boxShadow: isApplyingThis ? 'none' : '0 3px 12px rgba(61,80,22,0.35)',
+                          }}
+                        >
+                          {isApplyingThis ? <RefreshCw size={12} className="animate-spin" /> : <ArrowRight size={12} />}
+                          {isApplyingThis ? 'Applying…' : 'Apply Now'}
+                        </motion.button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </Card>
 
-          {/* Activity Feed */}
+          {/* Activity Feed (Real) */}
           <Card delay={0.28} style={{ display: 'flex', flexDirection: 'column' }}>
             <CardHead
               icon={BarChart3}
@@ -449,35 +684,48 @@ const CandidateDashboard = () => {
               title="Recent Activity"
               subtitle={
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.10)', padding: '1px 7px', borderRadius: 999 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Live
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Live Activity
                 </span>
               }
-              action={<ViewAll to="/candidate/scan-history" />}
+              action={<ViewAll to="/candidate/applications" label="History" />}
             />
             <div style={{ flex: 1, padding: '8px 10px 16px', display: 'flex', flexDirection: 'column' }}>
-              {MOCK_ACTIVITY.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.28, delay: 0.3 + i * 0.055 }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'default', transition: 'background 0.13s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--card-row-bg)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: `${item.color}12`, border: `1px solid ${item.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <item.icon size={14} style={{ color: item.color }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>{item.text}</p>
-                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{item.meta} · {item.time}</p>
-                  </div>
-                </motion.div>
-              ))}
+              {applications.length === 0 ? (
+                <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Clock size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>No applications submitted yet</p>
+                  <p style={{ fontSize: 11, marginTop: 4 }}>Apply to jobs to see your timeline activity here.</p>
+                </div>
+              ) : (
+                applications.slice(0, 5).map((app, i) => (
+                  <motion.div
+                    key={app.id}
+                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.28, delay: 0.25 + i * 0.05 }}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'default' }}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <FileText size={14} style={{ color: '#60a5fa' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                        Applied: {app.job_title}
+                      </p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {app.job_company} · Status: <strong style={{ color: 'var(--primary)' }}>{app.status}</strong>
+                      </p>
+                      <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'Recent'}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </Card>
         </div>
 
-        {/* ── Row C: Resume Upload Panel (full width) ─────────── */}
+        {/* ── Row C: Resume Upload Panel (Core API Phase 3) ─── */}
         <Card delay={0.34} style={{ overflow: 'visible' }}>
           <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635, #6B8A3A)', borderRadius: '20px 20px 0 0' }} />
           <div style={{ padding: '22px 28px 28px' }}>
@@ -485,8 +733,12 @@ const CandidateDashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Upload size={17} style={{ color: 'var(--primary)' }} />
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Resume Check</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Instant AI-powered analysis & scoring</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                    {candidateProfile?.resume_path ? 'Update Resume Document' : 'Upload Resume Document'}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    Core API Candidate Profile · PDF or DOCX format (Max 5MB)
+                  </p>
                 </div>
               </div>
               {file && (
@@ -524,14 +776,16 @@ const CandidateDashboard = () => {
               {file ? (
                 <>
                   <p style={{ fontSize: 15, fontWeight: 800, color: '#34d399', marginBottom: 4 }}>{file.name}</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(file.size / 1024).toFixed(0)} KB · Ready to analyse</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(file.size / 1024).toFixed(0)} KB · Ready to save</p>
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>Drop your resume here</p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>or click to browse — PDF, DOC, DOCX accepted</p>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+                    {candidateProfile?.resume_path ? 'Drop a new resume to update your file' : 'Drop your resume here to get started'}
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>or click to browse — PDF or DOCX accepted (Max 5MB)</p>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--pill-badge-bg)', padding: '5px 14px', borderRadius: 999, border: '1px solid var(--pill-badge-border)' }}>
-                    <Sparkles size={11} /> Instant AI analysis · Free
+                    <Sparkles size={11} /> Core API Phase 3 Storage
                   </span>
                 </>
               )}
@@ -541,24 +795,29 @@ const CandidateDashboard = () => {
               <motion.button
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }}
+                onClick={handleUploadResumeSubmit}
+                disabled={uploadingResume}
                 style={{
                   width: '100%', marginTop: 14, padding: '14px', borderRadius: 14, border: 'none',
-                  background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
-                  color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                  boxShadow: '0 6px 24px rgba(61,80,22,0.45)',
+                  background: uploadingResume ? 'rgba(61,80,22,0.40)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                  color: '#fff', fontSize: 14, fontWeight: 800, cursor: uploadingResume ? 'wait' : 'pointer',
+                  boxShadow: uploadingResume ? 'none' : '0 6px 24px rgba(61,80,22,0.45)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
                   letterSpacing: '-0.01em',
                 }}
                 id="resume-analyse-btn"
               >
-                <Sparkles size={16} />
-                Analyse Resume with AI
-                <ArrowRight size={15} />
+                {uploadingResume ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Uploading to Core API…</>
+                ) : (
+                  <><CheckCircle2 size={16} /> Save Resume to Profile <ArrowRight size={15} /></>
+                )}
               </motion.button>
             )}
           </div>
         </Card>
       </div>
+
       <style>{`
         @media (max-width: 1024px) {
           .cand-dash-stats {

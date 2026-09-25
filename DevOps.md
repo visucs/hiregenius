@@ -27,9 +27,13 @@ We use **GitHub Actions** for CI/CD. There are 4 separate workflow files in `.gi
 - `ai-ml-service-ci.yml`
 
 ### CI (Continuous Integration)
-- Triggered on `push` and `pull_request` to `dev` and `main` branches, filtered by changes in their respective service folders.
+- Triggered on `push` and `pull_request` to `dev` and `main` branches (and `feature/**` for Core API), filtered by changes in their respective service folders.
 - Runs Linting (`npm run lint`), Building (`npm run build`), and Testing.
 - The `auth-service` and `core-api` CI workflows spin up a MySQL service container for integration tests.
+- **Core API CI Environment**:
+  - The CI workflow (`core-api-ci.yml`) supplies safe, non-production dummy environment variables for the test run (`NODE_ENV=test`, `PORT=4000`, `DB_HOST=localhost`, `DB_PORT=3306`, `DB_USER=root`, `DB_PASSWORD=root`, `DB_NAME=testdb`, `DB_SSL=false`, `DB_POOL_MIN=1`, `DB_POOL_MAX=10`, `ENABLE_SWAGGER=true`, `USE_SQLITE=true`).
+  - `JWT_SIGNING_KEY` uses a safe fallback placeholder (`${{ secrets.JWT_SIGNING_KEY || 'test-only-signing-key-not-for-production-use-min-32-chars' }}`) to allow clean PR validation without exposing or requiring production secret injection.
+  - Local development (`.env`) and production hosting (Render/AWS) remain completely unaffected, using their own independent, secured configuration.
 
 ### CD (Continuous Deployment)
 

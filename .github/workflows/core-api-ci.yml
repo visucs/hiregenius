@@ -2,11 +2,15 @@ name: Core API CI/CD
 
 on:
   push:
-    branches: [ main, dev ]
-    paths: [ 'hiregenius-core-api/**' ]
+    branches: [ main, dev, 'feature/**' ]
+    paths:
+      - 'hiregenius-core-api/**'
+      - '.github/workflows/core-api-ci.yml'
   pull_request:
     branches: [ main, dev ]
-    paths: [ 'hiregenius-core-api/**' ]
+    paths:
+      - 'hiregenius-core-api/**'
+      - '.github/workflows/core-api-ci.yml'
 
 env:
   REGISTRY: ghcr.io
@@ -46,11 +50,19 @@ jobs:
       - name: Run tests
         run: npm test
         env:
+          NODE_ENV: test
+          PORT: 4000
+          JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY || 'test-only-signing-key-not-for-production-use-min-32-chars' }}
           DB_HOST: localhost
+          DB_PORT: 3306
           DB_USER: root
           DB_PASSWORD: root
           DB_NAME: testdb
-          JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+          DB_SSL: 'false'
+          DB_POOL_MIN: 1
+          DB_POOL_MAX: 10
+          ENABLE_SWAGGER: 'true'
+          USE_SQLITE: 'true'
 
   build-and-push-image:
     needs: build-and-test
