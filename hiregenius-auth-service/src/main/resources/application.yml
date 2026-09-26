@@ -47,7 +47,7 @@ spring:
 
 app:
   mail:
-    from: ${MAIL_FROM:krvisuji92@gmail.com}
+    from: ${MAIL_FROM:noreply@hiregenius.ai}
   frontend:
     base-url: ${FRONTEND_BASE_URL:https://hiregenius-delta.vercel.app}
   email-validation:

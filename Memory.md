@@ -1214,5 +1214,221 @@ pm run build completed successfully with 0 errors.
   - Zero impact on local development or cloud deployments (AWS/Render), which continue to read real environment variables from their respective `.env` files and production secrets.
   - Zero production secrets added to the workflow file.
 
+### 2026-09-26 — Phase 4: Interviews Scheduling & In-App Notifications Implementation
+
+- **Architecture & Layered Implementation (`hiregenius-core-api`)**:
+  1. **Database Schema & Migrations**:
+     - Created and executed migration `migrations/20260926_create_interviews_and_notifications_tables.js`.
+     - Table `interviews`:
+       - `id`: Auto-increment integer PK.
+       - `application_id`: Integer, foreign key to `applications.id` with `onDelete('CASCADE')`, `unique()` constraint enforcing 1:1 interview per application.
+       - `scheduled_at`: Datetime, NOT NULL.
+       - `meeting_link`: String(1024), nullable.
+       - `status`: Enum(`SCHEDULED`, `COMPLETED`, `CANCELLED`), default `SCHEDULED`.
+       - `created_by`: BigInteger/unsigned, NOT NULL (recruiter user ID).
+       - `created_at`, `updated_at`: Timestamps.
+     - Table `notifications`:
+       - `id`: Auto-increment integer PK.
+       - `user_id`: BigInteger/unsigned, NOT NULL (recipient user ID).
+       - `type`: Enum(`APPLICATION_RECEIVED`, `INTERVIEW_SCHEDULED`, `INTERVIEW_CANCELLED`, `STATUS_CHANGED`), NOT NULL.
+       - `message`: Text, NOT NULL.
+       - `related_entity_type`: String(64), nullable (`INTERVIEW`, `APPLICATION`).
+       - `related_entity_id`: Integer, nullable.
+       - `is_read`: Boolean, NOT NULL default `false`.
+       - `created_at`: Timestamp.
+  2. **Notifications Module (`src/modules/notifications/`)**:
+     - `notifications.repository.js`: Implemented `create`, `findById`, `findByUser` (with `isRead` boolean filter and pagination), `markAsRead`, and `markAllAsRead`.
+     - `notifications.service.js`: Centralized notification dispatcher (`createNotification`) supporting both positional and object arguments; `getMyNotifications` with pagination; `markAsRead` with strict ownership check (403 if `user_id !== req.user.userId`); `markAllAsRead`.
+     - `notifications.controller.js`: Exposes `getMyNotifications`, `markAsRead`, and `markAllAsRead` returning standardized `ApiResponse`.
+     - `notifications.routes.js`: Mounted at `/api/notifications` with `verifyJwt` and `requireRole('RECRUITER', 'CANDIDATE', 'ADMIN')`. Routes `/read-all` before `/:id/read` to avoid route shadowing.
+     - `notifications.validation.js` & `notifications.openapi.js`: Zod query/param schemas and registered OpenAPI 3.0 specs.
+  3. **Interviews Module (`src/modules/interviews/`)**:
+     - `interviews.repository.js`: Implemented `create`, `findById`, `findByApplicationId`, `findByRecruiter` (joins jobs, applications, candidates, users), and `findByCandidate` (ordered by `scheduled_at` ASC).
+     - `interviews.service.js`:
+       - `scheduleInterview`: Validates application existence; enforces recruiter job ownership (403); rejects past datetime with 400 Bad Request; enforces duplicate prevention via pre-check + DB unique constraint catch (409 Conflict); updates application status to `INTERVIEW`; triggers `INTERVIEW_SCHEDULED` notification for candidate.
+       - `getRecruiterInterviews`: Lists interviews for recruiter with filters and pagination.
+       - `getInterviewById`: Enforces dual-ownership access (owning recruiter or applicant candidate, 403 otherwise).
+       - `updateInterview`: Enforces recruiter ownership; rejects past dates (400); updates `scheduledAt`, `meetingLink`, `status`; triggers `INTERVIEW_CANCELLED` notification when status is changed to `CANCELLED`.
+       - `getCandidateInterviews`: Lists upcoming interviews for authenticated candidate.
+     - `interviews.routes.js`: Mounted at `/api/interviews` (`POST /`, `GET /`, `GET /:id`, `PATCH /:id`) and exports `candidatesInterviewsRouter` mounted at `/api/candidates/me/interviews`.
+     - `interviews.validation.js` & `interviews.openapi.js`: Zod validation schemas enforcing future datetime, positive integer IDs, URL format for meeting links, and registered OpenAPI specs.
+  4. **Phase 3 Retrofit & Integration**:
+     - Updated `applications.service.js` (`updateApplicationStatus`): Calls `notificationsService.createNotification` with type `STATUS_CHANGED` and message `"Your application for \"<job_title>\" has been updated to <status>."` whenever a recruiter updates an application status.
+     - Updated `errorHandler.js`: Refined unique constraint error mapping to distinguish interview duplicates from application duplicates.
+     - Mounted routes in `src/app.js`: `/api/interviews`, `/api/notifications`, `/api/candidates/me/interviews`.
+     - Updated `src/config/swagger.js`: Registered `registerInterviewsOpenApi` and `registerNotificationsOpenApi`.
+
+- **Verification Results**:
+  1. **Automated Unit & Integration Test Suites**:
+     - `npm run lint`: 0 errors across entire codebase.
+     - `npx jest`: 8/8 test suites passed, 88/88 tests passed (including 11 new tests in `notifications.test.js` and 15 new tests in `interviews.test.js`).
+  2. **Live HTTP Curl Verification (Port 4000 against MySQL)**:
+     - All 14 live scenarios verified successfully with signed tokens (Recruiter: 25, Candidate: 8):
+       - `GET /api/notifications` -> 200 (empty notifications)
+       - `POST /api/interviews` (past date) -> 400 Bad Request ("Interview cannot be scheduled in the past")
+       - `POST /api/interviews` (candidate token) -> 403 Forbidden
+       - `POST /api/interviews` (recruiter valid) -> 201 Created (ID 1, status SCHEDULED)
+       - `POST /api/interviews` (duplicate attempt) -> 409 Conflict ("An interview has already been scheduled for this application")
+       - `GET /api/interviews` (recruiter) -> 200 OK (returned interview with joined job and candidate details)
+       - `GET /api/candidates/me/interviews` (candidate) -> 200 OK
+       - `GET /api/notifications` (candidate) -> 200 OK (received `INTERVIEW_SCHEDULED` notification)
+       - `PATCH /api/interviews/1` (recruiter cancels) -> 200 OK (status CANCELLED)
+       - `GET /api/notifications` (candidate) -> 200 OK (received `INTERVIEW_CANCELLED` notification)
+       - `PATCH /api/notifications/:id/read` -> 200 OK (`is_read: true`)
+       - `PATCH /api/notifications/read-all` -> 200 OK (`updatedCount: 1`)
+       - `PATCH /api/applications/58/status` (recruiter updates to `HIRED`) -> 200 OK
+       - `GET /api/notifications` (candidate) -> 200 OK (received `STATUS_CHANGED` notification)
 
 
+
+
+
+---
+
+### 2026-09-26 - Phase 4 Frontend Integration: Interviews & Notifications
+
+- **Scope & Objective**: Complete real backend integration for the Interview Scheduler, Candidate Interviews, and system-wide Notifications on both Recruiter and Candidate roles in hiregenius-frontend. Zero mock data remaining for interviews and notifications.
+- **Frontend Implementations**:
+  1. **API Routing (hiregenius-frontend/src/services/api.js)**:
+     - Updated isCoreRequest to route /interviews and /notifications requests to coreBaseURL (port 4000).
+  2. **Interviews Service (src/services/interviewsService.js)**:
+     - scheduleInterview: POST /api/interviews (supports integer applicationId, ISO scheduledAt, optional meetingLink).
+     - getMyInterviews: GET /api/interviews/mine (supports filtering and pagination).
+     - getCandidateInterviews: GET /api/candidates/me/interviews.
+     - getInterviewById: GET /api/interviews/:id.
+     - updateInterview: PATCH /api/interviews/:id (supports rescheduling and status changes like CANCELLED).
+  3. **Notifications Service (src/services/notificationsService.js)**:
+     - getMyNotifications: GET /api/notifications/mine (supports pagination and unreadOnly / is_read filtering).
+     - markAsRead: PATCH /api/notifications/:id/read.
+     - markAllAsRead: PATCH /api/notifications/read-all.
+  4. **Reusable Notifications Component (src/components/Notifications/NotificationsDropdown.jsx)**:
+     - Glassmorphism dropdown panel with unread badge counter, notification icons per type (INTERVIEW_SCHEDULED, INTERVIEW_CANCELLED, STATUS_CHANGED, APPLICATION_RECEIVED), relative time formatting, single mark-as-read, and mark all read.
+     - Hybrid polling pattern: initial fetch on mount, refetch on dropdown open, and 30-second background polling.
+     - Replaced all mock notification implementations across all application shells:
+       - src/components/Navbar/Navbar.jsx
+       - src/layouts/AppShell.jsx (Candidate Shell)
+       - src/layouts/RecruiterShell.jsx (Recruiter Shell - removed MOCK_NOTIFS)
+       - src/layouts/AdminShell.jsx (Admin Shell - removed MOCK_ADMIN_NOTIFS)
+  5. **Recruiter Interview Scheduler (src/pages/recruiter/RecruiterSchedulerPage.jsx)**:
+     - Full real UI replacing ModulePendingState: live summary metrics (Total, Upcoming, Completed, Cancelled), status filter tabs, search by job/candidate/email, copy meeting link, edit modal, quick cancel with confirmation, and schedule new interview modal.
+     - Scheduled date validator prevents picking past dates (min={getMinDateTimeLocal()}).
+     - Distinct error handling: 201 Created, 409 Conflict ('An interview has already been scheduled for this application'), 400 Bad Request ('Interview cannot be scheduled in the past'), 403 Forbidden.
+     - Supports pre-selected applicationId via URL query param (?applicationId=...).
+  6. **Recruiter Candidates Page (src/pages/recruiter/RecruiterCandidatesPage.jsx)**:
+     - Added 'Schedule' button on candidate applicant cards and 'Schedule Interview' in candidate profile drawer footer linking directly to /recruiter/scheduler?applicationId=...
+  7. **Candidate My Interviews (src/pages/candidate/InterviewsPage.jsx)**:
+     - Full real UI replacing placeholder: wired to interviewsService.getCandidateInterviews(), displaying upcoming and past interviews, meeting link buttons, recruiter details, and status badges.
+  8. **Candidate Applications (src/pages/candidate/ApplicationsPage.jsx)**:
+     - Status INTERVIEW applications feature a direct action button linking to /candidate/interviews.
+  9. **Preserved Boundaries**:
+     - AI Interview Room (/recruiter/ai-interview) and Candidate Ranking (/recruiter/ranking) kept strictly intact with their ModulePendingState placeholders.
+- **Verification Results**:
+  1. npm run lint in hiregenius-frontend: 0 errors across 105 files.
+  2. npm run build in hiregenius-frontend: built successfully in 1.01s with 0 errors.
+  3. npm test in hiregenius-core-api: 8/8 test suites passed, 88/88 tests passed.
+  4. Live E2E automated test against Core API (port 4000) verified all 8 test scenarios.
+
+---
+
+### 2026-09-26 - Phase 4 Core API: Real SMTP Email Delivery for Notifications
+
+- **Scope & Objective**: Add real email delivery to the existing Notifications system in `hiregenius-core-api` alongside DB-backed in-app notifications. Reused the proven SMTP configuration from `hiregenius-auth-service` without reinventing email transport or risking credential leaks.
+- **Architectural Implementation**:
+  1. **Nodemailer Service (`src/modules/email/email.service.js`)**:
+     - Configured with `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` loaded via `src/config/env.js`.
+     - Supports connection verification (`verifyConnection()`) and connection timeouts (10s connection/greeting, 15s socket).
+     - Guarded test mode: returns deterministic mocks during automated unit tests to prevent network delays and external rate-limiting.
+     - Total failure isolation: errors are caught, logged with latency metrics, and returned as `{ success: false, error }`, never throwing to parent caller.
+  2. **Responsive Email Templates (`src/modules/email/email.templates.js`)**:
+     - Modern responsive inline-styled HTML templates with brand indigo-violet accents, structured details table, CTA buttons, and plain-text fallbacks.
+     - `interviewScheduledTemplate`: Includes candidate name, job title, company, formatted human-readable date/time, and direct join meeting link.
+     - `interviewCancelledTemplate`: Includes candidate name, job title, company, scheduled time that was cancelled, and cancellation note with no active link.
+     - `statusChangedTemplate`: Tailored contextual messaging and tone for terminal stages: `SHORTLISTED` (celebratory/next steps), `HIRED` (welcoming/congratulations), `REJECTED` (professional and encouraging).
+  3. **Notification Service Integration (`src/modules/notifications/notifications.service.js`)**:
+     - Extended `createNotification` with non-blocking, asynchronous email dispatch (`dispatchNotificationEmail`).
+     - Preserved in-app notifications as the immutable single source of truth.
+     - Attached `_dispatchPromise` for deterministic unit test awaiting.
+     - Email Delivery Policy:
+       - `INTERVIEW_SCHEDULED` -> Sends email to candidate.
+       - `INTERVIEW_CANCELLED` -> Sends email to candidate.
+       - `STATUS_CHANGED` -> Sends email ONLY for terminal/positive statuses: `SHORTLISTED`, `HIRED`, `REJECTED`. Non-terminal statuses (`APPLIED`, `SCREENING`, `INTERVIEW`) do not send email.
+       - `APPLICATION_RECEIVED` -> In-app notification only (no email, preventing recruiter inbox spam).
+  4. **Database Test Harness Fix (`knexfile.js`)**:
+     - Corrected SQLite in-memory test configuration to use `pool: { min: 1, max: 1 }` when `USE_SQLITE === 'true'`, preventing multi-connection in-memory database isolation issues across concurrent and background queries.
+- **Verification Results**:
+  1. `npm test` in `hiregenius-core-api`: **9/9 test suites passed, 100/100 tests passed**.
+  2. `npm run lint` in `hiregenius-core-api`: **0 lint errors**.
+  3. Real SMTP Delivery verification script (`verify-real-email.js`):
+     - `verifyConnection()` -> `true`.
+     - Real email sent for `INTERVIEW_SCHEDULED` -> Delivered (`messageId: <3600bb5a-295e-761e-2129-c69cb50395fc@gmail.com>`).
+     - Real email sent for `INTERVIEW_CANCELLED` -> Delivered (`messageId: <413ecf4b-a0be-bf34-e07f-b698a0fe914d@gmail.com>`).
+     - Real email sent for `STATUS_CHANGED` (`SHORTLISTED`) -> Delivered (`messageId: <db5284fe-eeed-5f21-9d26-406899371e35@gmail.com>`).
+     - Failure isolation verified with deliberate bad port -> `ECONNREFUSED` handled gracefully without crashing or throwing.
+
+---
+
+### 2026-09-26 - Phase 4 Core API: Email Extensions (Job Alerts, Unsubscribe, Recruiter Preferences, Resume Updates)
+
+- **Step 0 Findings**:
+  1. **Auth Service Welcome Email**: Audited `hiregenius-auth-service`. It only implements password reset emails via `EmailService.java` / `sendPasswordResetEmail`. It does NOT send a welcome email on registration. Registration happens on Auth Service without an event bus or webhook to Core API.
+  2. **Profile Update Email Ownership Split**: Core API strictly owns the candidate profile and resume upload/re-upload (`POST /api/candidates/me/resume`). Auth Service owns user credentials (name, email, password). Therefore, profile update emails in Core API trigger exclusively on candidate resume updates/re-uploads.
+  3. **Candidate Scale in DB**: Live count in MySQL revealed 4 candidates in `users` (`role = 'CANDIDATE'`) and 4 in `candidates` table.
+- **Architectural Implementation**:
+  1. **Database Schema & Migrations (`migrations/20260927_add_job_alerts_and_recruiter_preferences.js`)**:
+     - Added indexed `job_alerts_opt_in` (boolean, default: `true`) to `candidates` table.
+     - Created `recruiter_notification_preferences` table: `recruiter_user_id` (unique, FK), `notify_on_new_application` (boolean, default: `false` [opt-in to prevent spam]), `job_alert_dispatch_enabled` (boolean, default: `true`).
+  2. **Candidate Signed Unsubscribe Token & Public Endpoint**:
+     - Implemented `generateUnsubscribeToken` / `verifyUnsubscribeToken` in `CandidatesService` using HS256 signed JWT with `env.JWT_SIGNING_KEY` (90-day expiry, purpose-restricted).
+     - Public endpoints: `GET /api/candidates/job-alerts/unsubscribe?token=...` and `POST`. Validates signature (rejecting forged/tampered tokens with 400 Bad Request) and flips `job_alerts_opt_in = false` for that candidate only. Returns clean HTML confirmation or JSON.
+  3. **Batched & Opt-In Job Alerts on Job Posting**:
+     - In `JobsService.createJob`: When job is created with status `OPEN`, dispatches background job alert emails non-blockingly without delaying the 201 response.
+     - Checks recruiter preference `shouldSendForRecruiter(recruiterId, 'job_alert_dispatch_enabled')`. If false, alerts are suppressed.
+     - Batched delivery: processes opted-in candidates in batches of 10 respecting Gmail SMTP rate limits (~500/day, max ~100 recipients/burst) with per-candidate failure isolation.
+     - Email template includes job title, company, location, excerpt, direct apply link, and mandatory signed unsubscribe URL.
+  4. **Resume Upload & Security Confirmation Emails**:
+     - `POST /api/candidates/me/resume`:
+       - First-ever upload (`isNew: true`): dispatches `WELCOME_PROFILE_SETUP` email greeting the candidate and guiding next steps.
+       - Re-upload on existing profile (`isNew: false`): dispatches `RESUME_UPDATED` security notification email with filename and formatted timestamp ("Didn't make this change? Change password immediately").
+  5. **Recruiter Notification Preferences (`src/modules/recruiters/`)**:
+     - `recruiterPreferences.repository.js`, `recruiterPreferences.service.js`, `recruiterPreferences.controller.js`, `recruiterPreferences.routes.js`.
+     - Endpoints: `GET /api/recruiters/me/notification-preferences` and `PATCH /api/recruiters/me/notification-preferences` (guarded with `verifyJwt` and `requireRole('RECRUITER')`).
+     - Centralized check: `shouldSendForRecruiter(recruiterId, preferenceKey)`.
+     - `APPLICATION_RECEIVED` notification integration: remains in-app only by default (`notify_on_new_application: false`), but if recruiter toggles `notify_on_new_application: true`, dispatches email to recruiter with applicant details and review link.
+  6. **Regression Verification for Previously-Built Rules**:
+     - Confirmed `INTERVIEW_SCHEDULED` emails candidate.
+     - Confirmed `INTERVIEW_CANCELLED` emails candidate.
+     - Confirmed `STATUS_CHANGED` emails candidate ONLY for terminal statuses (`SHORTLISTED`, `HIRED`, `REJECTED`).
+     - Confirmed `APPLICATION_RECEIVED` default behavior remains in-app only (no email).
+- **Verification Results**:
+  1. `npm run lint`: **0 errors, 0 warnings** across all files.
+  2. `npm test`: **10/10 test suites passed, 116/116 tests passed** (including comprehensive tests in `test/modules/email/emailExtensions.test.js`).
+  3. Real SMTP live verification script (`verify-real-email-extensions.js`) delivering to Gmail:
+     - Real job posted $\rightarrow$ Job alert email delivered to opted-in candidate (`messageId: <3c070246-57e4-181c-952a-76250db010f5@gmail.com>`).
+     - Unsubscribe token executed $\rightarrow$ candidate `job_alerts_opt_in` flipped to `false`.
+     - Subsequent job posted $\rightarrow$ unsubscribed candidate received 0 emails.
+     - Recruiter disabled `job_alert_dispatch_enabled: false` $\rightarrow$ job alert emails suppressed.
+     - Candidate resume re-upload $\rightarrow$ security confirmation email delivered (`messageId: <3e9e66f7-ad6e-6979-3e07-f731a5ba69da@gmail.com>`).
+     - Recruiter `APPLICATION_RECEIVED` toggle: default suppressed; opted-in delivered to recruiter (`messageId: <8c042b16-1dc3-a02f-db46-cce74e49969e@gmail.com>`).
+
+
+---
+
+### 2026-09-27 - Phase 4 Core API: MySQL 3307 Service Restoration & Email Investigation
+
+- **Issue Diagnosed**:
+  - npm start failed with ECONNREFUSED 127.0.0.1:3307 and ::1:3307.
+  - Root cause: The project database is located in scratch/mysqldata running on port 3307 (to avoid collision with Windows host MySQL80 service occupying port 3306). The background mysqld process had stopped following terminal/system restart.
+- **Resolution**:
+  - Restarted MySQL daemon with datadir pointing to scratch/mysqldata:
+    & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe" --datadir="c:\Users\visuc\OneDrive\Desktop\Hirelens\scratch\mysqldata" --port=3307 --mysqlx-port=33070 --console
+  - Verified connectivity to localhost:3307 and database hiregenius (9 registered users found intact).
+  - Verified Core API server boot (node src/server.js) successfully connected to MySQL 3307, verified Knex migrations, and bound to port 4000 without errors.
+- **Email System Audit & Bug Fix**:
+  - Investigated recipient address routing across all modules (notifications.service.js, jobs.service.js, candidates.service.js, email.service.js). Confirmed that NO call sites hardcode 'to' - all dynamically pull the recipient's registered email from users.email or candidates.candidate_email.
+  - Identified that krvisuji92@gmail.com was configured as the sender credentials (MAIL_USERNAME and MAIL_FROM in .env), causing sent emails to appear in that Gmail account's 'Sent' folder.
+  - Replaced hardcoded fallback in hiregenius-auth-service/src/main/resources/application.yml line 50: changed ${MAIL_FROM:krvisuji92@gmail.com} to generic ${MAIL_FROM:noreply@hiregenius.ai}.
+  - Enhanced runtime diagnostics in src/modules/email/email.service.js with clear pre-dispatch logging of TO, FROM, TYPE, and SUBJECT.
+- **Verification Results**:
+  - npm test: 10/10 test suites passed, 116/116 tests passed.
+  - npm run lint: 0 errors, 0 warnings.
+  - Server start verified on port 4000.

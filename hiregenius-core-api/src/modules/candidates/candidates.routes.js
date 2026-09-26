@@ -11,6 +11,13 @@ const {
 const router = express.Router();
 
 /**
+ * Public Routes (Signed token required)
+ */
+// GET/POST /api/candidates/job-alerts/unsubscribe - Public endpoint to unsubscribe via signed token
+router.get('/job-alerts/unsubscribe', (req, res, next) => candidatesController.unsubscribeJobAlerts(req, res, next));
+router.post('/job-alerts/unsubscribe', (req, res, next) => candidatesController.unsubscribeJobAlerts(req, res, next));
+
+/**
  * Candidate Protected Routes
  * Note: Specific static routes (/me/resume, /me) must be registered before param route (/:id)
  */

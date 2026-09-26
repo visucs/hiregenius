@@ -19,8 +19,10 @@ const { registerCandidatesOpenApi } = require('../modules/candidates/candidates.
 registerCandidatesOpenApi(registry);
 const { registerApplicationsOpenApi } = require('../modules/applications/applications.openapi');
 registerApplicationsOpenApi(registry);
-// const { registerInterviewsOpenApi } = require('../modules/interviews/interviews.openapi');
-// registerInterviewsOpenApi(registry);
+const { registerInterviewsOpenApi } = require('../modules/interviews/interviews.openapi');
+registerInterviewsOpenApi(registry);
+const { registerNotificationsOpenApi } = require('../modules/notifications/notifications.openapi');
+registerNotificationsOpenApi(registry);
 // const { registerAnalyticsOpenApi } = require('../modules/analytics/analytics.openapi');
 // registerAnalyticsOpenApi(registry);
 
@@ -45,9 +47,10 @@ const swaggerSpec = generator.generateDocument({
   ],
   tags: [
     { name: 'Jobs', description: 'Job postings management, public listings, and recruiter dashboard' },
-    { name: 'Candidates', description: 'Candidate profile and resume management (Upcoming)' },
-    { name: 'Applications', description: 'Application workflow and status tracking (Upcoming)' },
-    { name: 'Interviews', description: 'AI interview scheduling and scoring (Upcoming)' },
+    { name: 'Candidates', description: 'Candidate profile and resume management' },
+    { name: 'Applications', description: 'Application workflow and status tracking' },
+    { name: 'Interviews', description: 'Interview scheduling and candidate interview management' },
+    { name: 'Notifications', description: 'In-app notifications for recruitment updates' },
     { name: 'Analytics', description: 'Recruitment metrics and hiring funnel insights (Upcoming)' },
   ],
 });

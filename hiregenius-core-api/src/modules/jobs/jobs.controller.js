@@ -5,6 +5,7 @@ class JobsController {
   async createJob(req, res, next) {
     try {
       const job = await jobsService.createJob(req.user.userId, req.body);
+      res.locals._dispatchPromise = job._dispatchPromise;
       return ApiResponse.created(res, job, 'Job created successfully');
     } catch (err) {
       return next(err);

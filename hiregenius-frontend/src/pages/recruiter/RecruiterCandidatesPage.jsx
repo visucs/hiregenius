@@ -5,6 +5,7 @@ import {
   Users, Briefcase, Search, Filter, Mail, User, Calendar,
   FileText, CheckCircle2, ChevronDown, ChevronRight, X,
   Clock, AlertCircle, RefreshCw, Eye, ArrowRight, ShieldCheck,
+  CalendarDays,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jobsService from '../../services/jobsService';
@@ -455,6 +456,21 @@ const RecruiterCandidatesPage = () => {
                     >
                       <Eye size={13} /> View Profile
                     </button>
+
+                    {/* Schedule Interview Button */}
+                    <Link
+                      to={`/recruiter/scheduler?applicationId=${app.id}&jobId=${selectedJobId}`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '7px 14px', minHeight: 36, borderRadius: 10,
+                        background: 'rgba(56,189,248,0.10)', border: '1px solid rgba(56,189,248,0.28)',
+                        color: '#38bdf8', fontSize: 12, fontWeight: 700,
+                        textDecoration: 'none', transition: 'all 0.15s',
+                      }}
+                      title="Schedule Interview for this candidate"
+                    >
+                      <CalendarDays size={13} /> Schedule
+                    </Link>
                   </div>
                 </motion.div>
               );
@@ -567,10 +583,21 @@ const RecruiterCandidatesPage = () => {
                   )}
                 </div>
 
-                <div style={{ padding: '14px 24px', background: 'var(--card-row-bg)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ padding: '14px 24px', background: 'var(--card-row-bg)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                   <button onClick={() => setSelectedCandidate(null)} style={{ padding: '9px 18px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer' }}>
                     Close
                   </button>
+                  <Link
+                    to={`/recruiter/scheduler?applicationId=${selectedCandidate.application_id}&jobId=${selectedCandidate.job_id || selectedJobId}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '9px 18px', borderRadius: 10, fontSize: 12, fontWeight: 800,
+                      background: 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                      color: '#fff', textDecoration: 'none', border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    <CalendarDays size={13} /> Schedule Interview
+                  </Link>
                 </div>
               </div>
             </motion.div>
