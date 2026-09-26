@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, Users, FileSearch,
   MessageSquare, Trophy, CalendarDays, BarChart3,
-  UserCircle, Settings, LogOut, Menu, X, Bell,
+  UserCircle, Settings, LogOut, Menu, X,
   Sun, Moon, Search, ChevronLeft, ChevronRight,
   Sparkles, ChevronDown, Plus, Zap, Command,
 } from 'lucide-react';
 import { logout, selectUser } from '../features/auth/authSlice';
 import useTheme from '../hooks/useTheme';
+import NotificationsDropdown from '../components/Notifications/NotificationsDropdown';
 
 /* ─── Nav configuration ──────────────────────────────────────── */
 const NAV_GROUPS = [
@@ -42,13 +43,6 @@ const NAV_GROUPS = [
 const BOTTOM_ITEMS = [
   { to: '/recruiter/profile',  label: 'Profile',  icon: UserCircle },
   { to: '/recruiter/settings', label: 'Settings', icon: Settings   },
-];
-
-const MOCK_NOTIFS = [
-  { id: 'n1', title: 'New application',   body: 'Priya S. applied to Backend Dev',       time: '5m',   unread: true  },
-  { id: 'n2', title: 'Interview complete', body: 'Anjali K. finished AI interview',        time: '1h',   unread: true  },
-  { id: 'n3', title: 'Resume scored',      body: 'Score 94 — ML Engineer position',       time: '3h',   unread: false },
-  { id: 'n4', title: 'Shortlist updated',  body: 'Rahul M. moved to offer stage',         time: '1d',   unread: false },
 ];
 
 const getInitials = (name) => {
@@ -380,19 +374,15 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
   const user                   = useSelector(selectUser);
   const dispatch               = useDispatch();
   const navigate               = useNavigate();
-  const [showNotifs,   setShowNotifs]   = useState(false);
   const [showUser,     setShowUser]     = useState(false);
   const [searchFocus,  setSearchFocus]  = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const notifRef = useRef(null);
   const userRef  = useRef(null);
   const initials = getInitials(user?.name);
-  const unread   = MOCK_NOTIFS.filter(n => n.unread).length;
 
   useEffect(() => {
     const h = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
-      if (userRef.current  && !userRef.current.contains(e.target))  setShowUser(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUser(false);
     };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -532,90 +522,8 @@ const RecruiterTopbar = ({ onMenuToggle }) => {
             </AnimatePresence>
           </motion.button>
 
-          {/* Notifications */}
-          <div ref={notifRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowNotifs(v => !v)}
-              style={{ ...iconBtnStyle, borderColor: showNotifs ? TB.accent : TB.iconBorder, background: showNotifs ? TB.accentSoft : TB.iconBg, color: showNotifs ? '#a3e635' : TB.textMuted }}
-              aria-label="Notifications"
-              id="rec-topbar-notifications"
-            >
-              <Bell size={16} />
-              {unread > 0 && (
-                <span style={{
-                  position: 'absolute', top: 6, right: 6,
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1.5px solid rgba(14,24,4,0.97)',
-                  boxShadow: '0 0 0 2px rgba(239,68,68,0.25)',
-                }}>{unread}</span>
-              )}
-            </button>
-
-            <AnimatePresence>
-              {showNotifs && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0,  scale: 1 }}
-                  exit={{   opacity: 0, y: -6, scale: 0.96 }}
-                  transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                  className="rec-dropdown-responsive"
-                  style={{
-                    position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-                    width: 'min(340px, calc(100vw - 24px))', borderRadius: 18, zIndex: 100,
-                    background: '#0f1f05',
-                    border: '1px solid rgba(107,138,58,0.22)',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Notif header */}
-                  <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid rgba(107,138,58,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: '#e8f5d4', letterSpacing: '-0.01em' }}>Notifications</p>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.22)' }}>
-                        {unread} new
-                      </span>
-                    </div>
-                    <button style={{ fontSize: 11, color: TB.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Mark all read</button>
-                  </div>
-                  {MOCK_NOTIFS.map((n, idx) => (
-                    <motion.div
-                      key={n.id}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.04 }}
-                      style={{
-                        padding: '12px 18px', display: 'flex', gap: 12, alignItems: 'flex-start',
-                        background: n.unread ? 'rgba(61,80,22,0.12)' : 'transparent',
-                        borderBottom: idx < MOCK_NOTIFS.length - 1 ? '1px solid rgba(107,138,58,0.10)' : 'none',
-                        cursor: 'pointer', transition: 'background 0.12s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.10)'}
-                      onMouseLeave={e => e.currentTarget.style.background = n.unread ? 'rgba(61,80,22,0.12)' : 'transparent'}
-                    >
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0,
-                        background: n.unread ? '#6B8A3A' : 'rgba(107,138,58,0.25)',
-                        boxShadow: n.unread ? '0 0 0 3px rgba(107,138,58,0.20)' : 'none',
-                      }} />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: n.unread ? 700 : 500, color: '#e8f5d4', lineHeight: 1.3 }}>{n.title}</p>
-                        <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.60)', marginTop: 2, lineHeight: 1.4 }}>{n.body}</p>
-                        <p style={{ fontSize: 10, color: 'rgba(163,210,90,0.40)', marginTop: 4 }}>{n.time} ago</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                  <div style={{ padding: '10px 18px' }}>
-                    <button style={{ width: '100%', fontSize: 12, fontWeight: 700, color: '#6B8A3A', background: 'rgba(107,138,58,0.10)', border: '1px solid rgba(107,138,58,0.22)', borderRadius: 10, padding: '8px', cursor: 'pointer' }}>
-                      View all notifications
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Notifications Dropdown (Phase 4 Live) */}
+          <NotificationsDropdown />
 
           <div style={{ width: 1, height: 22, background: 'rgba(107,138,58,0.20)', margin: '0 2px' }} />
 

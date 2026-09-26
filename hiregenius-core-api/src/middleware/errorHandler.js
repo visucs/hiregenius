@@ -38,7 +38,13 @@ function errorHandler(err, req, res, next) {
     (err.message && err.message.includes('UNIQUE constraint failed'))
   ) {
     status = 409;
-    message = 'You have already applied for this job';
+    if (err.message && (err.message.includes('interviews') || err.message.includes('interview'))) {
+      message = 'An interview has already been scheduled for this application';
+    } else if (err.message && (err.message.includes('applications') || err.message.includes('job'))) {
+      message = 'You have already applied for this job';
+    } else {
+      message = 'Duplicate entry: resource already exists';
+    }
   }
 
   const response = {

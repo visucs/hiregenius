@@ -36,7 +36,7 @@ module.exports = {
           database: process.env.DB_NAME || 'hiregenius',
         },
     useNullAsDefault: true,
-    pool: { min: 1, max: 5 },
+    pool: process.env.USE_SQLITE === 'true' ? { min: 1, max: 1 } : { min: 1, max: 5 },
     migrations: {
       directory: path.resolve(__dirname, 'migrations'),
       tableName: 'knex_migrations',

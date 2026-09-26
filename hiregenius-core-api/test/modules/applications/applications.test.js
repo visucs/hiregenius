@@ -39,6 +39,10 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
   });
 
   beforeEach(async () => {
+    const hasNotifications = await db.schema.hasTable('notifications');
+    if (hasNotifications) await db('notifications').del();
+    const hasInterviews = await db.schema.hasTable('interviews');
+    if (hasInterviews) await db('interviews').del();
     await db('applications').del();
     await db('candidates').del();
     await db('jobs').del();
@@ -86,6 +90,10 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
   });
 
   afterAll(async () => {
+    const hasNotifications = await db.schema.hasTable('notifications');
+    if (hasNotifications) await db('notifications').del();
+    const hasInterviews = await db.schema.hasTable('interviews');
+    if (hasInterviews) await db('interviews').del();
     await db('applications').del();
     await db('candidates').del();
     await db('jobs').del();

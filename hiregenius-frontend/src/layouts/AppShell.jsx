@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FileText, MessageSquare, Target,
   History, Settings, Mic, X, Plus, LogOut,
-  ChevronRight, ChevronLeft, Sparkles, Bell,
+  ChevronRight, ChevronLeft, Sparkles,
   Sun, Moon, Search, ChevronDown, Menu, HelpCircle,
   Command,
 } from 'lucide-react';
 import { logout, selectUser, selectUserRole } from '../features/auth/authSlice';
 import useTheme from '../hooks/useTheme';
+import NotificationsDropdown from '../components/Notifications/NotificationsDropdown';
 
 /* ─── Candidate nav groups ───────────────────────────────────── */
 const CANDIDATE_GROUPS = [
@@ -37,11 +38,6 @@ const CANDIDATE_GROUPS = [
   },
 ];
 
-const MOCK_NOTIFS = [
-  { id: 'n1', title: 'Resume scored',      body: 'Score: 82 — Senior Frontend Eng', time: '5m',  unread: true  },
-  { id: 'n2', title: 'Interview ready',    body: 'AI Interview session unlocked',   time: '1h',  unread: true  },
-  { id: 'n3', title: 'New match',          body: '3 jobs match your profile',       time: '2h',  unread: false },
-];
 
 const getInitials = (name) => {
   if (!name) return 'C';
@@ -409,19 +405,15 @@ const CandidateTopbar = ({ onMenuToggle }) => {
   const user                                 = useSelector(selectUser);
   const dispatch                             = useDispatch();
   const navigate                             = useNavigate();
-  const [showNotifs, setShowNotifs]          = useState(false);
   const [showUser,   setShowUser]            = useState(false);
   const [searchFocus, setSearchFocus]        = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const notifRef  = React.useRef(null);
   const userRef   = React.useRef(null);
   const initials  = getInitials(user?.name);
-  const unread    = MOCK_NOTIFS.filter(n => n.unread).length;
 
   React.useEffect(() => {
     const h = e => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
-      if (userRef.current  && !userRef.current.contains(e.target))  setShowUser(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUser(false);
     };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -568,58 +560,8 @@ const CandidateTopbar = ({ onMenuToggle }) => {
             </AnimatePresence>
           </motion.button>
 
-          {/* Notifications */}
-          <div ref={notifRef} style={{ position: 'relative' }}>
-            <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.06 }}
-              onClick={() => setShowNotifs(v => !v)}
-              style={{ ...iconBtnStyle, borderColor: showNotifs ? TB.accent : TB.iconBorder, background: showNotifs ? TB.accentSoft : TB.iconBg, color: showNotifs ? '#a3e635' : TB.textMuted }}
-              id="cand-topbar-notifications" aria-label="Notifications"
-            >
-              <Bell size={15} />
-              {unread > 0 && (
-                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-                  style={{ position: 'absolute', top: 5, right: 5, width: 15, height: 15, borderRadius: '50%', background: 'linear-gradient(135deg, #ef4444, #f87171)', color: '#fff', fontSize: 8, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(14,24,4,0.97)', boxShadow: '0 0 0 2px rgba(239,68,68,0.28)' }}
-                >{unread}</motion.span>
-              )}
-            </motion.button>
-
-            <AnimatePresence>
-              {showNotifs && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                  className="cand-dropdown-responsive"
-                  style={{ position: 'absolute', right: 0, top: 'calc(100% + 10px)', width: 'min(330px, calc(100vw - 24px))', borderRadius: 20, zIndex: 100, background: '#0f1f05', border: '1px solid rgba(107,138,58,0.22)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}
-                >
-                  <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)' }} />
-                  <div style={{ padding: '13px 16px 10px', borderBottom: '1px solid rgba(107,138,58,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(107,138,58,0.14)', border: '1px solid rgba(107,138,58,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bell size={13} style={{ color: '#6B8A3A' }} />
-                      </div>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: '#e8f5d4', letterSpacing: '-0.01em' }}>Notifications</p>
-                    </div>
-                    {unread > 0 && <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.22)' }}>{unread} new</span>}
-                  </div>
-                  {MOCK_NOTIFS.map((n, idx) => (
-                    <motion.div key={n.id}
-                      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
-                      style={{ padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', background: n.unread ? 'rgba(61,80,22,0.12)' : 'transparent', borderBottom: idx < MOCK_NOTIFS.length - 1 ? '1px solid rgba(107,138,58,0.10)' : 'none', cursor: 'pointer', transition: 'background 0.12s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(107,138,58,0.10)'}
-                      onMouseLeave={e => e.currentTarget.style.background = n.unread ? 'rgba(61,80,22,0.12)' : 'transparent'}
-                    >
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: n.unread ? '#6B8A3A' : 'rgba(107,138,58,0.25)', boxShadow: n.unread ? '0 0 0 3px rgba(107,138,58,0.20)' : 'none' }} />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: n.unread ? 700 : 500, color: '#e8f5d4', lineHeight: 1.4 }}>{n.title}</p>
-                        <p style={{ fontSize: 11, color: 'rgba(163,210,90,0.60)', marginTop: 2 }}>{n.body}</p>
-                        <p style={{ fontSize: 10, color: 'rgba(163,210,90,0.40)', marginTop: 5, fontWeight: 600 }}>{n.time} ago</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Notifications Dropdown (Phase 4 Live) */}
+          <NotificationsDropdown />
 
           <div style={{ width: 1, height: 24, background: 'rgba(107,138,58,0.20)', margin: '0 3px' }} />
 

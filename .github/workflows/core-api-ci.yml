@@ -63,6 +63,13 @@ jobs:
           DB_POOL_MAX: 10
           ENABLE_SWAGGER: 'true'
           USE_SQLITE: 'true'
+          MAIL_HOST: smtp.gmail.com
+          MAIL_PORT: 587
+          MAIL_USERNAME: test-user@hiregenius.ai
+          MAIL_PASSWORD: test-dummy-password
+          MAIL_FROM: noreply@hiregenius.ai
+          FRONTEND_BASE_URL: https://hiregenius-delta.vercel.app
+          CORE_API_URL: http://localhost:4000
 
   build-and-push-image:
     needs: build-and-test

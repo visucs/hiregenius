@@ -1,6 +1,7 @@
 const applicationsRepository = require('./applications.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const jobsRepository = require('../jobs/jobs.repository');
+const notificationsService = require('../notifications/notifications.service');
 const ApiError = require('../../utils/ApiError');
 
 class ApplicationsService {
@@ -34,11 +35,33 @@ class ApplicationsService {
 
     // 5. Persist application with race condition handling
     try {
-      return await applicationsRepository.create({
+      const application = await applicationsRepository.create({
         job_id: Number(jobId),
         candidate_id: Number(candidate.id),
         status: 'APPLIED',
       });
+
+      // Notify the recruiter: In-app notification always; email if recruiter opted in via preferences
+      try {
+        const notifPromise = notificationsService.createNotification({
+          userId: job.recruiter_id,
+          type: 'APPLICATION_RECEIVED',
+          message: `New application received for "${job.title}"`,
+          relatedEntityType: 'APPLICATION',
+          relatedEntityId: application.id,
+          metadata: {
+            jobId: job.id,
+            jobTitle: job.title,
+            candidateId: candidate.id,
+            candidateName: candidate.candidate_name,
+          },
+        });
+        application._dispatchPromise = notifPromise;
+      } catch (err) {
+        console.error('[ApplicationsService] Failed to create APPLICATION_RECEIVED notification:', err.message);
+      }
+
+      return application;
     } catch (err) {
       if (
         err.code === 'ER_DUP_ENTRY' ||
@@ -94,7 +117,21 @@ class ApplicationsService {
       throw ApiError.forbidden('Forbidden: You do not have permission to modify this application');
     }
 
-    return applicationsRepository.updateStatus(applicationId, status);
+    const updated = await applicationsRepository.updateStatus(applicationId, status);
+
+    // Phase 4 retrofit: notify candidate of application status update
+    if (application.candidate_user_id) {
+      await notificationsService.createNotification({
+        userId: application.candidate_user_id,
+        type: 'STATUS_CHANGED',
+        message: `Your application for "${application.job_title}" has been updated to ${status}.`,
+        relatedEntityType: 'APPLICATION',
+        relatedEntityId: Number(applicationId),
+        metadata: { status },
+      });
+    }
+
+    return updated;
   }
 
   /**

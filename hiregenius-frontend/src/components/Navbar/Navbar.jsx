@@ -1,10 +1,11 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Menu, Moon, Sun, Bell, Search, Sparkles, ChevronDown } from 'lucide-react';
+import { LogOut, Menu, Moon, Sun, Search, Sparkles, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { logout, selectUser } from '../../features/auth/authSlice';
 import useTheme from '../../hooks/useTheme';
+import NotificationsDropdown from '../Notifications/NotificationsDropdown';
 
 /* ─── Avatar initials helper ─────────────────────────────────── */
 const getInitials = (name) => {
@@ -136,21 +137,8 @@ const Navbar = ({ onMenuToggle }) => {
           </AnimatePresence>
         </motion.button>
 
-        {/* Notifications */}
-        <button
-          className="p-2 rounded-xl relative"
-          style={{
-            color: 'var(--text-secondary)',
-            background: 'var(--card-row-bg)',
-            border: '1px solid var(--border)',
-            cursor: 'pointer',
-          }}
-          aria-label="Notifications"
-          id="navbar-notifications"
-        >
-          <Bell size={17} />
-          <span className="notif-badge" aria-hidden="true" />
-        </button>
+        {/* Notifications Dropdown */}
+        <NotificationsDropdown />
 
         {/* Divider */}
         <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 4px' }} />

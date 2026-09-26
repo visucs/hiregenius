@@ -3,6 +3,9 @@ const cors = require('cors');
 const jobsRouter = require('./modules/jobs/jobs.routes');
 const candidatesRouter = require('./modules/candidates/candidates.routes');
 const applicationsRouter = require('./modules/applications/applications.routes');
+const interviewsRouter = require('./modules/interviews/interviews.routes');
+const notificationsRouter = require('./modules/notifications/notifications.routes');
+const recruiterPreferencesRouter = require('./modules/recruiters/recruiterPreferences.routes');
 const errorHandler = require('./middleware/errorHandler');
 const ApiError = require('./utils/ApiError');
 const { swaggerUi, swaggerSpec, isSwaggerEnabled } = require('./config/swagger');
@@ -52,7 +55,11 @@ if (isSwaggerEnabled) {
 app.use('/api/jobs', jobsRouter);
 app.use('/api/jobs', applicationsRouter.jobsApplicationsRouter);
 app.use('/api/candidates', candidatesRouter);
+app.use('/api/candidates', interviewsRouter.candidatesInterviewsRouter);
 app.use('/api/applications', applicationsRouter);
+app.use('/api/interviews', interviewsRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/recruiters', recruiterPreferencesRouter);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

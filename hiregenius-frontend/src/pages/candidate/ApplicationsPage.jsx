@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   Search, Briefcase, Building2, Calendar, CheckCircle2,
   ChevronRight, ArrowRight, MapPin, AlertCircle, RefreshCw,
-  Clock, Shield, ExternalLink,
+  Clock, Shield, ExternalLink, Video,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import applicationsService from '../../services/applicationsService';
@@ -391,6 +391,24 @@ const ApplicationsPage = () => {
                               <Clock size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                               <span>AI Resume scoring & interview evaluation modules will display scorecards here in Phase 4/5.</span>
                             </div>
+
+                            {app.status === 'INTERVIEW' && (
+                              <div style={{ marginTop: 10 }}>
+                                <Link
+                                  to="/candidate/interviews"
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    padding: '8px 14px', borderRadius: 10,
+                                    background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.28)',
+                                    color: '#38bdf8', fontSize: 11, fontWeight: 700,
+                                    textDecoration: 'none',
+                                  }}
+                                >
+                                  <Video size={13} /> View Scheduled Interview & Meeting Link →
+                                </Link>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>

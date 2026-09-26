@@ -4,13 +4,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, BarChart3, Key,
-  Settings, LogOut, Menu, X, Bell,
-  Sun, Moon, Shield, ChevronLeft, ChevronRight,
-  UserCircle, ChevronDown, Search, AlertTriangle,
+  Settings, LogOut, Menu, X,
+  Sun, Moon, Shield, ChevronRight,
+  UserCircle, ChevronDown, Search,
   PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { logout, selectUser } from '../features/auth/authSlice';
 import useTheme from '../hooks/useTheme';
+import NotificationsDropdown from '../components/Notifications/NotificationsDropdown';
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV_ITEMS = [
@@ -19,13 +20,6 @@ const NAV_ITEMS = [
   { to: '/admin/analytics', label: 'Platform Analytics',icon: BarChart3 },
   { to: '/admin/api-keys',  label: 'AI Provider Keys', icon: Key },
   { to: '/admin/settings',  label: 'System Settings',  icon: Settings },
-];
-
-/* ─── Mock notifications ─────────────────────────────────────── */
-const MOCK_ADMIN_NOTIFS = [
-  { id: 'n1', text: 'New recruiter account: Meena Iyer registered', time: '12m ago', read: false },
-  { id: 'n2', text: 'API quota at 80% — consider upgrading plan',   time: '2h ago',  read: false },
-  { id: 'n3', text: 'System health check passed ✓',                 time: '6h ago',  read: true  },
 ];
 
 /* ─── Avatar initials helper ─────────────────────────────────── */
@@ -374,20 +368,15 @@ const AdminTopbar = ({ onMenuToggle }) => {
   const user       = useSelector(selectUser);
   const dispatch   = useDispatch();
   const navigate   = useNavigate();
-  const [showNotifs,   setShowNotifs]   = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchValue,  setSearchValue]  = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const notifRef = useRef(null);
   const userRef  = useRef(null);
   const initials = getInitials(user?.name);
 
-  const unreadCount = MOCK_ADMIN_NOTIFS.filter((n) => !n.read).length;
-
   useEffect(() => {
     const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
-      if (userRef.current  && !userRef.current.contains(e.target))  setShowUserMenu(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUserMenu(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -520,75 +509,8 @@ const AdminTopbar = ({ onMenuToggle }) => {
             </AnimatePresence>
           </motion.button>
 
-          {/* Notifications */}
-          <div style={{ position: 'relative' }} ref={notifRef}>
-            <button
-              onClick={() => setShowNotifs((v) => !v)}
-              style={iconBtn}
-              aria-label="Notifications"
-              id="admin-topbar-notifications"
-            >
-              <Bell size={17} />
-              {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: 5, right: 5,
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: '#6366f1', color: '#fff',
-                  fontSize: 9, fontWeight: 800,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1.5px solid var(--surface)',
-                }}>
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-            <AnimatePresence>
-              {showNotifs && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0,  scale: 1 }}
-                  exit={{   opacity: 0, y: -8, scale: 0.95 }}
-                  transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                  className="admin-dropdown-responsive"
-                  style={{
-                    position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                    width: 'min(320px, calc(100vw - 24px))', borderRadius: 16, zIndex: 100,
-                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden',
-                  }}
-                >
-                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Admin Notifications</p>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(99,102,241,0.10)', color: '#6366f1' }}>
-                      {unreadCount} new
-                    </span>
-                  </div>
-                  {MOCK_ADMIN_NOTIFS.map((n) => (
-                    <div
-                      key={n.id}
-                      style={{
-                        padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'flex-start',
-                        background: n.read ? 'transparent' : 'rgba(99,102,241,0.05)',
-                        borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--card-row-bg)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(99,102,241,0.05)'; }}
-                    >
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%', marginTop: 4, flexShrink: 0,
-                        background: n.read ? 'var(--border)' : '#6366f1',
-                        boxShadow: n.read ? 'none' : '0 0 0 3px rgba(99,102,241,0.18)',
-                      }} />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{n.text}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{n.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Notifications Dropdown (Phase 4 Live) */}
+          <NotificationsDropdown />
 
           {/* Divider */}
           <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 2px' }} />
