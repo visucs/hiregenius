@@ -96,7 +96,7 @@ const AdminProfilePage = () => {
 
   const initials = (user?.name ?? 'AD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const profileForm = useForm({ resolver: zodResolver(profileSchema), defaultValues: { name: user?.name ?? 'Admin', email: user?.email ?? 'admin@hiregenius.ai' } });
+  const profileForm = useForm({ resolver: zodResolver(profileSchema), defaultValues: { name: user?.name ?? 'Admin', email: user?.email || 'admin@example.com' } });
   const pwdForm = useForm({ resolver: zodResolver(pwdSchema) });
 
   const onProfileSubmit = async () => {
@@ -145,7 +145,7 @@ const AdminProfilePage = () => {
               {/* Info */}
               <div style={{ flex: '1 1 200px', minWidth: 180 }}>
                 <p style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 4 }}>{user?.name ?? 'Admin'}</p>
-                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)', marginBottom: 10 }}>{user?.email ?? 'admin@hiregenius.ai'}</p>
+                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)', marginBottom: 10 }}>{user?.email || 'admin@example.com'}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(99,102,241,0.22)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.35)' }}>
                     <Shield size={11} /> Super Admin

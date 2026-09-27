@@ -8,9 +8,11 @@ import com.hiregenius.authservice.auth.dto.request.ResetPasswordRequest;
 import com.hiregenius.authservice.auth.dto.response.AuthResponse;
 import com.hiregenius.authservice.auth.dto.response.UserResponse;
 import com.hiregenius.authservice.auth.entity.AuthProvider;
+import com.hiregenius.authservice.auth.entity.EmailVerificationToken;
 import com.hiregenius.authservice.auth.entity.PasswordResetToken;
 import com.hiregenius.authservice.auth.entity.Role;
 import com.hiregenius.authservice.auth.entity.User;
+import com.hiregenius.authservice.auth.repository.EmailVerificationTokenRepository;
 import com.hiregenius.authservice.auth.repository.PasswordResetTokenRepository;
 import com.hiregenius.authservice.auth.repository.UserRepository;
 import com.hiregenius.authservice.common.ApiResponse;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final GoogleAuthService googleAuthService;
     private final DnsValidationService dnsValidationService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService;
 
     @Value("${app.frontend.base-url:https://hiregenius-delta.vercel.app}")
@@ -56,6 +60,7 @@ public class AuthServiceImpl implements AuthService {
             GoogleAuthService googleAuthService,
             DnsValidationService dnsValidationService,
             PasswordResetTokenRepository passwordResetTokenRepository,
+            EmailVerificationTokenRepository emailVerificationTokenRepository,
             EmailService emailService
     ) {
         this.userRepository = userRepository;
@@ -65,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
         this.googleAuthService = googleAuthService;
         this.dnsValidationService = dnsValidationService;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.emailService = emailService;
     }
 
@@ -99,6 +105,20 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
         log.info("Registered new LOCAL user: id={}, email={}, role={}", savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
+
+        // Dispatch email verification link for candidate/recruiter accounts
+        if (savedUser.getRole() != Role.ADMIN && savedUser.getAuthProvider() == AuthProvider.LOCAL) {
+            String verificationToken = UUID.randomUUID().toString();
+            EmailVerificationToken evt = new EmailVerificationToken(
+                    savedUser,
+                    verificationToken,
+                    LocalDateTime.now().plusHours(24)
+            );
+            emailVerificationTokenRepository.save(evt);
+            String verificationLink = frontendBaseUrl + "/verify-email?token=" + verificationToken;
+            emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getName(), verificationLink);
+            log.info("Dispatched verification email for newly registered user [{}]: token={}", savedUser.getEmail(), verificationToken);
+        }
 
         String token = jwtService.generateToken(savedUser);
         return new AuthResponse(token, savedUser.getRole(), UserResponse.fromEntity(savedUser), "User registered successfully");
@@ -275,6 +295,85 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new InvalidCredentialsException("User not found for token"));
 
         return UserResponse.fromEntity(user);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<String> verifyEmail(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("Verification token is required");
+        }
+
+        EmailVerificationToken evt = emailVerificationTokenRepository.findByToken(token.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid verification token"));
+
+        if (evt.isUsed()) {
+            throw new IllegalArgumentException("Verification token has already been used");
+        }
+
+        if (evt.isExpired()) {
+            throw new IllegalArgumentException("Verification token has expired. Please request a new one.");
+        }
+
+        evt.setUsed(true);
+        emailVerificationTokenRepository.save(evt);
+
+        User user = evt.getUser();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        log.info("Email verified successfully for user id={}, email={}", user.getId(), user.getEmail());
+        return ApiResponse.ok("Email verified successfully. You may now access all features.", null);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<String> resendVerificationEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+
+        String normalizedEmail = email.trim().toLowerCase();
+        Optional<User> userOpt = userRepository.findByEmail(normalizedEmail);
+
+        if (userOpt.isEmpty() || userOpt.get().isEmailVerified()) {
+            // Uniform generic response to prevent account enumeration
+            return ApiResponse.ok("If an unverified account exists with this email, a verification link has been sent.", null);
+        }
+
+        User user = userOpt.get();
+
+        // Enforce rate limiting: max 1 request per 2 minutes
+        List<EmailVerificationToken> pastTokens = emailVerificationTokenRepository.findByUserOrderByCreatedAtDesc(user);
+        if (!pastTokens.isEmpty()) {
+            EmailVerificationToken latest = pastTokens.get(0);
+            if (latest.getCreatedAt() != null && latest.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(2))) {
+                throw new IllegalArgumentException("Please wait at least 2 minutes before requesting another verification email.");
+            }
+        }
+
+        // Invalidate past unused tokens
+        for (EmailVerificationToken t : pastTokens) {
+            if (!t.isUsed()) {
+                t.setUsed(true);
+                emailVerificationTokenRepository.save(t);
+            }
+        }
+
+        // Generate and dispatch new verification token
+        String token = UUID.randomUUID().toString();
+        EmailVerificationToken newToken = new EmailVerificationToken(
+                user,
+                token,
+                LocalDateTime.now().plusHours(24)
+        );
+        emailVerificationTokenRepository.save(newToken);
+
+        String verificationLink = frontendBaseUrl + "/verify-email?token=" + token;
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
+
+        log.info("Resent verification email for user [{}]: token={}", user.getEmail(), token);
+        return ApiResponse.ok("A new verification email has been sent. Please check your inbox.", null);
     }
 
     private Role parseAndValidatePublicRole(String roleStr) {

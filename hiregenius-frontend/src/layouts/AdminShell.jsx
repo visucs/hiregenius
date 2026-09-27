@@ -564,8 +564,8 @@ const AdminTopbar = ({ onMenuToggle }) => {
                 >
                   {/* User info */}
                   <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{user?.name}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{user?.email ?? 'admin@hiregenius.ai'}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{user?.name || 'Administrator'}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{user?.email || 'admin@example.com'}</p>
                   </div>
                   {[
                     { label: 'Profile',  to: '/admin/profile',  icon: UserCircle },

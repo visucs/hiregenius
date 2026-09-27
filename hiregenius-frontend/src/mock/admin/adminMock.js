@@ -80,7 +80,7 @@ export const MOCK_USERS = [
   {
     id: 'usr-006',
     name: 'Dev Admin',
-    email: 'admin@hiregenius.ai',
+    email: 'admin.mock@example.com',
     role: 'ADMIN',
     status: 'ACTIVE',
     createdAt: '2026-07-01T00:00:00Z',

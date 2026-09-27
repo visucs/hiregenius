@@ -541,7 +541,7 @@ pm run build build command, and dist output directory for monorepo configuration
 - **Database & Persistence:**
   - Configured JPA/Hibernate with Flyway database migrations (`V1__init_auth_schema.sql`).
   - Table `users`: `id`, `name`, `email` (unique indexed), `password` (nullable for Google-only users), `role` (`RECRUITER`, `CANDIDATE`, `ADMIN`), `auth_provider` (`LOCAL`, `GOOGLE`), `is_active`, `created_at`, `updated_at`.
-  - Added `DataInitializer` to automatically seed system administrator (`admin@hiregenius.ai` / `AdminPassword123!`) on startup.
+  - Added `DataInitializer` to automatically seed system administrator (`admin@hiregenius.ai` / `[ROTATED - See Security Audit]`) on startup.
 - **Security & JWT:**
   - Configured Spring Security 6 with stateless session management (`SessionCreationPolicy.STATELESS`), BCrypt password hashing (strength 12), and custom CORS policy.
   - Custom `AuthenticationEntryPoint` returning standard 401 `ApiError` JSON (`{ status: 401, message: "Full authentication is required...", timestamp, path }`).
@@ -1432,3 +1432,23 @@ pm run build completed successfully with 0 errors.
   - npm test: 10/10 test suites passed, 116/116 tests passed.
   - npm run lint: 0 errors, 0 warnings.
   - Server start verified on port 4000.
+
+### 2026-09-27 - Security Audit: Admin Credential Hardening & Email Verification Flow
+- **Security Audit & Credential Decoupling**:
+  - Completely removed hardcoded admin credentials from Flyway schema migration (`V1__init_auth_schema.sql`), `DataInitializer.java`, and OpenAPI Swagger `@ExampleObject`.
+  - Driven admin user seeding and synchronization dynamically via environment variables `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+  - Rotated the historical admin password to a strong secret stored in gitignored `.env` and updated the admin BCrypt password hash in MySQL.
+  - Diagnosed historical admin login mismatch: Swagger UI had previously displayed `"Admin123!"` while seed migration contained `"AdminPassword123!"`, causing 401 Bad Credentials upon copy-pasting from API documentation.
+- **Mandatory Email Verification Flow**:
+  - Added Flyway migration `V3__add_email_verification.sql` adding `email_verified` boolean column to `users` and creating `email_verification_tokens` table.
+  - Updated `AuthService.java` to dispatch verification emails containing secure 24-hour tokens upon candidate and recruiter registration.
+  - Added verification endpoints (`GET` / `POST` `/api/auth/verify-email`, `POST` `/api/auth/resend-verification` with 2-minute rate-limiting).
+  - Admin accounts and Google OAuth accounts are automatically marked `email_verified = true`.
+  - In `hiregenius-core-api`, added guards on `applyToJob` and `createJob`: unverified candidates and recruiters are blocked with 403 Forbidden until their email address is verified.
+  - In `hiregenius-frontend`, added `/verify-email` route and `VerifyEmailPage.jsx` supporting token verification, loading indicators, success redirection, and token resending.
+  - Sanitized hardcoded admin email fallbacks across frontend components (`AdminShell.jsx`, `AdminProfilePage.jsx`, `adminMock.js`) and test fixtures (`requireRole.test.js`).
+- **Verification Results**:
+  - `hiregenius-auth-service`: 38/38 unit and integration tests passed (`./mvnw test`).
+  - `hiregenius-core-api`: 10/10 test suites passed, 118/118 tests passed (`npm test`), ESLint clean (`npm run lint`).
+  - `hiregenius-frontend`: Production build succeeded in 1.26s (`npm run build`).
+  - Database schema: `V3` Flyway migration successfully applied, admin user synchronized and verified.

@@ -49,7 +49,9 @@ api.interceptors.request.use(
       config.url.includes('/auth/register') ||
       config.url.includes('/auth/google-login') ||
       config.url.includes('/auth/forgot-password') ||
-      config.url.includes('/auth/reset-password')
+      config.url.includes('/auth/reset-password') ||
+      config.url.includes('/auth/verify-email') ||
+      config.url.includes('/auth/resend-verification')
     );
     if (isAuthRequest && (!config.timeout || config.timeout < 30000)) {
       config.timeout = 30000;

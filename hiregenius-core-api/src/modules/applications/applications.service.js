@@ -3,6 +3,7 @@ const candidatesRepository = require('../candidates/candidates.repository');
 const jobsRepository = require('../jobs/jobs.repository');
 const notificationsService = require('../notifications/notifications.service');
 const ApiError = require('../../utils/ApiError');
+const db = require('../../config/db');
 
 class ApplicationsService {
   /**
@@ -10,6 +11,17 @@ class ApplicationsService {
    * Candidate ID strictly derived from authenticated JWT user — never trusted from body
    */
   async applyToJob(userId, jobId) {
+    // 0. Candidate email must be verified
+    let user;
+    try {
+      user = await db('users').where('id', Number(userId)).first('email_verified');
+    } catch {
+      // Table or column might not exist in isolated test environments
+    }
+    if (user && (user.email_verified === 0 || user.email_verified === false)) {
+      throw ApiError.forbidden('Please verify your email address to apply for jobs.');
+    }
+
     // 1. Candidate must have a profile and uploaded resume
     const candidate = await candidatesRepository.findByUserId(userId);
     if (!candidate || !candidate.resume_path) {

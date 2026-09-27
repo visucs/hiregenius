@@ -21,5 +21,9 @@ public interface AuthService {
 
     ApiResponse<String> resetPassword(ResetPasswordRequest request);
 
+    ApiResponse<String> verifyEmail(String token);
+
+    ApiResponse<String> resendVerificationEmail(String email);
+
     UserResponse validateToken(String authHeader);
 }

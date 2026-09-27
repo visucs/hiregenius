@@ -71,4 +71,17 @@ export const authService = {
       data,
     };
   },
+
+  /**
+   * GET /auth/verify-email?token=...
+   * POST /auth/verify-email
+   * @param {string} token
+   */
+  verifyEmail: (token) => api.get('/auth/verify-email', { params: { token } }),
+
+  /**
+   * POST /auth/resend-verification
+   * @param {{ email: string }} data
+   */
+  resendVerification: (data) => api.post('/auth/resend-verification', data),
 };
