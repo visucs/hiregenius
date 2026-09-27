@@ -15,21 +15,49 @@ function makeToken({ userId = 101, email = 'recruiter1@hiregenius.ai', role = 'R
 describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
   const recruiter1Token = makeToken({ userId: 101, email: 'recruiter1@hiregenius.ai', role: 'RECRUITER' });
   const recruiter2Token = makeToken({ userId: 202, email: 'recruiter2@hiregenius.ai', role: 'RECRUITER' });
+  const unverifiedRecruiterToken = makeToken({ userId: 105, email: 'unverified.recruiter@hiregenius.ai', role: 'RECRUITER' });
   const candidateToken = makeToken({ userId: 303, email: 'candidate@hiregenius.ai', role: 'CANDIDATE' });
 
   beforeAll(async () => {
     // Ensure migrations are run on the test DB
     await db.migrate.latest();
+    const hasUsers = await db.schema.hasTable('users');
+    if (!hasUsers) {
+      await db.schema.createTable('users', (t) => {
+        t.increments('id').primary();
+        t.string('name');
+        t.string('email').unique();
+        t.string('role');
+        t.string('password').nullable();
+        t.boolean('email_verified').defaultTo(true);
+      });
+    }
   });
 
   beforeEach(async () => {
     // Clean jobs table before each test run
     await db('jobs').del();
+    const hasUsers = await db.schema.hasTable('users');
+    if (hasUsers) {
+      await db('users').where('id', 105).del();
+      await db('users').insert({
+        id: 105,
+        name: 'Unverified Recruiter',
+        email: 'unverified.recruiter@hiregenius.ai',
+        role: 'RECRUITER',
+        password: 'hash',
+        email_verified: false,
+      });
+    }
   });
 
   afterAll(async () => {
     // Clean up connections
     await db('jobs').del();
+    const hasUsers = await db.schema.hasTable('users');
+    if (hasUsers) {
+      await db('users').where('id', 105).del();
+    }
     await db.destroy();
   });
 
@@ -65,6 +93,22 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
       expect(res.status).toBe(403);
       expect(res.body.status).toBe(403);
       expect(res.body.message).toMatch(/Requires role RECRUITER/i);
+    });
+
+    test('should reject request when recruiter email is unverified (403)', async () => {
+      const res = await request(app)
+        .post('/api/jobs')
+        .set('Authorization', `Bearer ${unverifiedRecruiterToken}`)
+        .send({
+          title: 'Senior Backend Engineer',
+          company: 'Acme Corp',
+          skills: ['Node.js', 'MySQL'],
+          description: 'Build robust enterprise APIs',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.status).toBe(403);
+      expect(res.body.message).toMatch(/Please verify your email address to post jobs/i);
     });
 
     test('should create job and enforce recruiter_id strictly from JWT (201)', async () => {

@@ -50,7 +50,7 @@ describe('requireRole Middleware', () => {
   });
 
   test('should pass when user has one of multiple allowed roles', () => {
-    req.user = { userId: 3, email: 'admin@hiregenius.ai', role: 'ADMIN' };
+    req.user = { userId: 3, email: 'admin.fixture@example.com', role: 'ADMIN' };
 
     const middleware = requireRole('RECRUITER', 'ADMIN');
     middleware(req, res, next);

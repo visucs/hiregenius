@@ -129,9 +129,9 @@ public class AuthController {
                                     value = "{\n  \"email\": \"sarah@hiregenius.ai\",\n  \"password\": \"Password123!\"\n}"
                             ),
                             @ExampleObject(
-                                    name = "System Admin Login",
-                                    summary = "Default admin credentials",
-                                    value = "{\n  \"email\": \"admin@hiregenius.ai\",\n  \"password\": \"Admin123!\"\n}"
+                                    name = "Administrator Login",
+                                    summary = "Administrator credentials example",
+                                    value = "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"YourSecurePassword123!\"\n}"
                             )
                     }
             )
@@ -420,6 +420,73 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader
     ) {
         UserResponse response = authService.validateToken(authHeader);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verify-email")
+    @Operation(
+            summary = "Verify email via link token",
+            description = "Validates the email verification token provided in query parameters, activating the user account upon success."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Email verified successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid, expired, or already-used verification token"
+            )
+    })
+    public ResponseEntity<ApiResponse<String>> verifyEmailGet(
+            @Parameter(name = "token", description = "Email verification token string", required = true)
+            @org.springframework.web.bind.annotation.RequestParam("token") String token
+    ) {
+        ApiResponse<String> response = authService.verifyEmail(token);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(
+            summary = "Verify email via JSON body token",
+            description = "Validates the email verification token passed via POST body, activating the user account upon success."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Email verified successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid, expired, or already-used verification token"
+            )
+    })
+    public ResponseEntity<ApiResponse<String>> verifyEmailPost(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.VerifyEmailRequest request
+    ) {
+        ApiResponse<String> response = authService.verifyEmail(request.getToken());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(
+            summary = "Resend email verification link",
+            description = "Issues a fresh email verification link to an unverified user. Rate limited to at most 1 dispatch every 2 minutes."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Verification link resent successfully if account is unverified"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Validation error or rate limit exceeded (wait 2 minutes)"
+            )
+    })
+    public ResponseEntity<ApiResponse<String>> resendVerification(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.ResendVerificationRequest request
+    ) {
+        ApiResponse<String> response = authService.resendVerificationEmail(request.getEmail());
         return ResponseEntity.ok(response);
     }
 }

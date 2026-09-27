@@ -120,4 +120,94 @@ public class EmailServiceImpl implements EmailService {
                 "</body>\n" +
                 "</html>";
     }
+
+    @Async("mailTaskExecutor")
+    @Override
+    public void sendVerificationEmail(String toEmail, String userName, String verificationLink) {
+        long asyncStartTime = System.currentTimeMillis();
+        log.info("[ASYNC-EMAIL] Starting verification email dispatch to {} on thread [{}]", toEmail, Thread.currentThread().getName());
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(mailFrom);
+            helper.setTo(toEmail);
+            helper.setSubject("Verify Your HireGenius AI Account");
+
+            String htmlContent = buildVerificationEmailHtml(userName, verificationLink);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            long duration = System.currentTimeMillis() - asyncStartTime;
+            log.info("[ASYNC-EMAIL] Verification email successfully sent to {} in {}ms on thread [{}]", toEmail, duration, Thread.currentThread().getName());
+        } catch (MessagingException | RuntimeException e) {
+            long duration = System.currentTimeMillis() - asyncStartTime;
+            log.error("[ASYNC-EMAIL] Failed to send verification email to {} after {}ms on thread [{}]: {}", toEmail, duration, Thread.currentThread().getName(), e.getMessage(), e);
+        }
+    }
+
+    private String buildVerificationEmailHtml(String userName, String verificationLink) {
+        String displayName = (userName != null && !userName.isBlank()) ? userName : "there";
+        return "<!DOCTYPE html>\n" +
+                "<html>\n" +
+                "<head>\n" +
+                "  <meta charset=\"UTF-8\">\n" +
+                "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "  <title>Verify Your Email</title>\n" +
+                "</head>\n" +
+                "<body style=\"margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\">\n" +
+                "  <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"table-layout: fixed; background-color: #f3f4f6; padding: 40px 0;\">\n" +
+                "    <tr>\n" +
+                "      <td align=\"center\">\n" +
+                "        <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 580px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;\">\n" +
+                "          <tr>\n" +
+                "            <td style=\"background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 36px 40px; text-align: center;\">\n" +
+                "              <h1 style=\"color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;\">HireGenius AI</h1>\n" +
+                "              <p style=\"color: #e0e7ff; margin: 6px 0 0 0; font-size: 14px;\">Next-Generation Talent Acquisition Platform</p>\n" +
+                "            </td>\n" +
+                "          </tr>\n" +
+                "          <tr>\n" +
+                "            <td style=\"padding: 40px 40px 32px 40px;\">\n" +
+                "              <h2 style=\"color: #111827; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;\">Verify your email address</h2>\n" +
+                "              <p style=\"color: #4b5563; font-size: 15px; line-height: 24px; margin: 0 0 20px 0;\">\n" +
+                "                Hello " + displayName + ",<br><br>\n" +
+                "                Welcome to HireGenius AI! Please verify your email address to activate your full account permissions and receive real-time notifications about applications, interview schedules, and job matches:\n" +
+                "              </p>\n" +
+                "              <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"margin: 28px 0;\">\n" +
+                "                <tr>\n" +
+                "                  <td align=\"center\">\n" +
+                "                    <a href=\"" + verificationLink + "\" target=\"_blank\" style=\"display: inline-block; background-color: #4f46e5; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);\">\n" +
+                "                      Verify Email Address\n" +
+                "                    </a>\n" +
+                "                  </td>\n" +
+                "                </tr>\n" +
+                "              </table>\n" +
+                "              <div style=\"background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin: 24px 0;\">\n" +
+                "                <p style=\"color: #1e40af; font-size: 13px; line-height: 18px; margin: 0;\">\n" +
+                "                  <strong>Note:</strong> This verification link is valid for <strong>24 hours</strong>. If it expires, you can request a new one from your dashboard.\n" +
+                "                </p>\n" +
+                "              </div>\n" +
+                "              <p style=\"color: #6b7280; font-size: 13px; line-height: 20px; margin: 20px 0 0 0;\">\n" +
+                "                If the button above does not work, copy and paste this link into your browser:<br>\n" +
+                "                <a href=\"" + verificationLink + "\" style=\"color: #4f46e5; word-break: break-all;\">" + verificationLink + "</a>\n" +
+                "              </p>\n" +
+                "            </td>\n" +
+                "          </tr>\n" +
+                "          <tr>\n" +
+                "            <td style=\"background-color: #f9fafb; padding: 24px 40px; border-top: 1px solid #e5e7eb; text-align: center;\">\n" +
+                "              <p style=\"color: #6b7280; font-size: 12px; line-height: 18px; margin: 0 0 8px 0;\">\n" +
+                "                If you did not sign up for a HireGenius AI account, you can safely ignore this email.\n" +
+                "              </p>\n" +
+                "              <p style=\"color: #9ca3af; font-size: 12px; margin: 0;\">\n" +
+                "                © 2026 HireGenius AI. All rights reserved.\n" +
+                "              </p>\n" +
+                "            </td>\n" +
+                "          </tr>\n" +
+                "        </table>\n" +
+                "      </td>\n" +
+                "    </tr>\n" +
+                "  </table>\n" +
+                "</body>\n" +
+                "</html>";
+    }
 }

@@ -14,9 +14,3 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Seed system ADMIN user (ADMIN accounts cannot be created via public register or Google endpoints)
--- Password: AdminPassword123! (BCrypt strength 12: $2a$12$NqBvhM.2XzD8V6.rK1wQyOSl6rK9Yy688g786Gg.B471L7uXwZkUe)
-INSERT INTO users (name, email, password, role, auth_provider, is_active)
-VALUES ('System Admin', 'admin@hiregenius.ai', '$2a$12$NqBvhM.2XzD8V6.rK1wQyOSl6rK9Yy688g786Gg.B471L7uXwZkUe', 'ADMIN', 'LOCAL', TRUE)
-ON DUPLICATE KEY UPDATE id=id;

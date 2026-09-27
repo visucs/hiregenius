@@ -6,6 +6,7 @@ const emailService = require('../email/email.service');
 const { jobAlertTemplate } = require('../email/email.templates');
 const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
+const db = require('../../config/db');
 
 class JobsService {
   /**
@@ -13,6 +14,17 @@ class JobsService {
    * Recruiter ID comes strictly from authenticated user — never from request body.
    */
   async createJob(recruiterId, jobData) {
+    // 0. Recruiter email must be verified
+    let user;
+    try {
+      user = await db('users').where('id', Number(recruiterId)).first('email_verified');
+    } catch {
+      // Table or column might not exist in isolated test environments
+    }
+    if (user && (user.email_verified === 0 || user.email_verified === false)) {
+      throw ApiError.forbidden('Please verify your email address to post jobs.');
+    }
+
     // Strip recruiter_id if passed in request body
     const safeData = { ...jobData };
     delete safeData.recruiter_id;

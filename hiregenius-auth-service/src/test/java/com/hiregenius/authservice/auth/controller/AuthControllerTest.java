@@ -57,6 +57,9 @@ class AuthControllerTest {
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
+    private com.hiregenius.authservice.auth.repository.EmailVerificationTokenRepository emailVerificationTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -76,6 +79,7 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
+        emailVerificationTokenRepository.deleteAll();
         passwordResetTokenRepository.deleteAll();
         userRepository.deleteAll();
         // Default to true for unit tests unless specifically mocked to test DNS failure
@@ -526,5 +530,136 @@ class AuthControllerTest {
     void validateWithoutApiPrefixStillRequiresAuth() throws Exception {
         mockMvc.perform(get("/auth/validate"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("23. GET /api/auth/verify-email with valid token sets email_verified = true (200)")
+    void verifyEmailGetSuccess() throws Exception {
+        User user = new User("Jane Candidate", "jane@company.io", passwordEncoder.encode("Password123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        user.setEmailVerified(false);
+        user = userRepository.save(user);
+
+        com.hiregenius.authservice.auth.entity.EmailVerificationToken token =
+                new com.hiregenius.authservice.auth.entity.EmailVerificationToken(user, "valid-token-123", LocalDateTime.now().plusHours(24));
+        emailVerificationTokenRepository.save(token);
+
+        mockMvc.perform(get("/api/auth/verify-email")
+                        .param("token", "valid-token-123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value(containsString("verified successfully")));
+
+        User updatedUser = userRepository.findById(user.getId()).orElseThrow();
+        assertTrue(updatedUser.isEmailVerified());
+
+        com.hiregenius.authservice.auth.entity.EmailVerificationToken updatedToken =
+                emailVerificationTokenRepository.findByToken("valid-token-123").orElseThrow();
+        assertTrue(updatedToken.isUsed());
+    }
+
+    @Test
+    @DisplayName("24. POST /api/auth/verify-email with valid JSON body succeeds (200)")
+    void verifyEmailPostSuccess() throws Exception {
+        User user = new User("John Recruiter", "john@recruiter.co", passwordEncoder.encode("Password123!"), Role.RECRUITER, AuthProvider.LOCAL);
+        user.setEmailVerified(false);
+        user = userRepository.save(user);
+
+        com.hiregenius.authservice.auth.entity.EmailVerificationToken token =
+                new com.hiregenius.authservice.auth.entity.EmailVerificationToken(user, "valid-token-post-456", LocalDateTime.now().plusHours(24));
+        emailVerificationTokenRepository.save(token);
+
+        com.hiregenius.authservice.auth.dto.request.VerifyEmailRequest request =
+                new com.hiregenius.authservice.auth.dto.request.VerifyEmailRequest("valid-token-post-456");
+
+        mockMvc.perform(post("/api/auth/verify-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        User updatedUser = userRepository.findById(user.getId()).orElseThrow();
+        assertTrue(updatedUser.isEmailVerified());
+    }
+
+    @Test
+    @DisplayName("25. GET /api/auth/verify-email with expired token returns 400 Bad Request")
+    void verifyEmailExpiredToken() throws Exception {
+        User user = new User("Expired User", "expired@domain.com", passwordEncoder.encode("Password123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        user.setEmailVerified(false);
+        user = userRepository.save(user);
+
+        com.hiregenius.authservice.auth.entity.EmailVerificationToken token =
+                new com.hiregenius.authservice.auth.entity.EmailVerificationToken(user, "expired-token", LocalDateTime.now().minusHours(1));
+        emailVerificationTokenRepository.save(token);
+
+        mockMvc.perform(get("/api/auth/verify-email")
+                        .param("token", "expired-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("expired")));
+    }
+
+    @Test
+    @DisplayName("26. GET /api/auth/verify-email with already used token returns 400 Bad Request")
+    void verifyEmailAlreadyUsedToken() throws Exception {
+        User user = new User("Used User", "used@domain.com", passwordEncoder.encode("Password123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        user.setEmailVerified(true);
+        user = userRepository.save(user);
+
+        com.hiregenius.authservice.auth.entity.EmailVerificationToken token =
+                new com.hiregenius.authservice.auth.entity.EmailVerificationToken(user, "used-token", LocalDateTime.now().plusHours(24));
+        token.setUsed(true);
+        emailVerificationTokenRepository.save(token);
+
+        mockMvc.perform(get("/api/auth/verify-email")
+                        .param("token", "used-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("already been used")));
+    }
+
+    @Test
+    @DisplayName("27. POST /api/auth/resend-verification rate-limits 2nd request within 2 minutes (400)")
+    void resendVerificationRateLimiting() throws Exception {
+        User user = new User("Rate Limit User", "ratelimit@domain.com", passwordEncoder.encode("Password123!"), Role.CANDIDATE, AuthProvider.LOCAL);
+        user.setEmailVerified(false);
+        user = userRepository.save(user);
+
+        com.hiregenius.authservice.auth.dto.request.ResendVerificationRequest request =
+                new com.hiregenius.authservice.auth.dto.request.ResendVerificationRequest("ratelimit@domain.com");
+
+        // 1st request -> 200 OK
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        // 2nd immediate request -> 400 Bad Request with rate limit message
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("wait at least 2 minutes")));
+    }
+
+    @Test
+    @DisplayName("28. Registration with non-Gmail domain succeeds and dispatches verification email")
+    void registerNonGmailDomainSuccess() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                "Alex Engineer",
+                "alex@startup.io",
+                "SecurePass123!",
+                "CANDIDATE"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.email").value("alex@startup.io"))
+                .andExpect(jsonPath("$.user.emailVerified").value(false));
+
+        // Confirm verification token was generated
+        User user = userRepository.findByEmail("alex@startup.io").orElseThrow();
+        assertFalse(user.isEmailVerified());
+        assertFalse(emailVerificationTokenRepository.findByUserOrderByCreatedAtDesc(user).isEmpty());
     }
 }
