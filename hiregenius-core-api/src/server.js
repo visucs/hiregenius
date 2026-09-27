@@ -17,6 +17,15 @@ async function startServer() {
       console.log(`[Core API] HireGenius Core API running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     });
 
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[Core API] Port ${env.PORT} is already in use by another process. Please stop the existing process or set PORT=<new_port>.`);
+      } else {
+        console.error('[Core API] Server error:', err);
+      }
+      process.exit(1);
+    });
+
     const shutdown = async (signal) => {
       console.log(`\n[Core API] Received ${signal}. Gracefully shutting down...`);
       server.close(async () => {
