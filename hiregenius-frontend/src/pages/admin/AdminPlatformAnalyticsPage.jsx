@@ -104,17 +104,42 @@ const AdminPlatformAnalyticsPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const [sumRes, topRes, trendRes, skillsRes] = await Promise.all([
+      const [sumResult, topResult, trendResult, skillsResult] = await Promise.allSettled([
         analyticsService.getAdminSummary(),
         analyticsService.getAdminTopRecruiters({ sortBy }),
         analyticsService.getAdminTrend({ months: 6 }),
         analyticsService.getAdminTopSkills({ limit: 8 }),
       ]);
 
-      setSummary(sumRes?.data ?? null);
-      setTopRecruiters(topRes?.data ?? []);
-      setTrendData(trendRes?.data ?? []);
-      setTopSkills(skillsRes?.data ?? []);
+      if (sumResult.status === 'fulfilled') {
+        setSummary(sumResult.value?.data ?? null);
+      } else {
+        console.error('[AdminPlatformAnalyticsPage] Summary fetch failed:', sumResult.reason);
+      }
+
+      if (topResult.status === 'fulfilled') {
+        setTopRecruiters(topResult.value?.data ?? []);
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Top-recruiters fetch failed:', topResult.reason?.message);
+      }
+
+      if (trendResult.status === 'fulfilled') {
+        setTrendData(trendResult.value?.data ?? []);
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Trend fetch failed:', trendResult.reason?.message);
+      }
+
+      if (skillsResult.status === 'fulfilled') {
+        setTopSkills(skillsResult.value?.data ?? []);
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Top-skills fetch failed:', skillsResult.reason?.message);
+      }
+
+      // Surface a page-level error only when the primary summary call fails
+      if (sumResult.status === 'rejected') {
+        const msg = sumResult.reason?.response?.data?.message || sumResult.reason?.message || 'Failed to load platform analytics';
+        setError(msg);
+      }
     } catch (err) {
       console.error('[AdminPlatformAnalyticsPage] Analytics query error:', err);
       const msg = err.response?.data?.message || err.message || 'Failed to load platform analytics';
@@ -122,6 +147,7 @@ const AdminPlatformAnalyticsPage = () => {
     } finally {
       setLoading(false);
     }
+
   }, [sortBy]);
 
   useEffect(() => {

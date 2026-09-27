@@ -141,7 +141,11 @@ const AdminUserManagementPage = () => {
             </div>
             <h1 style={{ fontSize: 'clamp(22px, 4vw, 28px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>User Management</h1>
             <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>
-              {totalElements} registered account{totalElements === 1 ? '' : 's'} managed across the platform
+              {!loading && !error
+                ? `${totalElements} registered account${totalElements === 1 ? '' : 's'} managed across the platform`
+                : !loading && error
+                  ? 'Could not load account data — see error below'
+                  : 'Loading account data…'}
             </p>
 
             {/* Role filter chips */}
