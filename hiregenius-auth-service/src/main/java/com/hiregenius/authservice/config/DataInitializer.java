@@ -44,12 +44,20 @@ public class DataInitializer implements CommandLineRunner {
 
         userRepository.findByEmail(email).ifPresentOrElse(
                 existingAdmin -> {
-                    // Sync password and verified status if explicitly provided in environment
-                    existingAdmin.setPassword(passwordEncoder.encode(adminPassword));
-                    existingAdmin.setEmailVerified(true);
-                    existingAdmin.setRole(Role.ADMIN);
-                    userRepository.save(existingAdmin);
-                    log.info("System admin account synchronized with environment configuration: email={}", email);
+                    // Do NOT overwrite existing password, preserving self-service password changes
+                    boolean updated = false;
+                    if (!existingAdmin.isEmailVerified()) {
+                        existingAdmin.setEmailVerified(true);
+                        updated = true;
+                    }
+                    if (existingAdmin.getRole() != Role.ADMIN) {
+                        existingAdmin.setRole(Role.ADMIN);
+                        updated = true;
+                    }
+                    if (updated) {
+                        userRepository.save(existingAdmin);
+                    }
+                    log.info("System admin account verified and active: email={}", email);
                 },
                 () -> {
                     User admin = new User(

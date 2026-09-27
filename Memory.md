@@ -1438,7 +1438,7 @@ pm run build completed successfully with 0 errors.
   - Completely removed hardcoded admin credentials from Flyway schema migration (`V1__init_auth_schema.sql`), `DataInitializer.java`, and OpenAPI Swagger `@ExampleObject`.
   - Driven admin user seeding and synchronization dynamically via environment variables `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
   - Rotated the historical admin password to a strong secret stored in gitignored `.env` and updated the admin BCrypt password hash in MySQL.
-  - Diagnosed historical admin login mismatch: Swagger UI had previously displayed `"Admin123!"` while seed migration contained `"AdminPassword123!"`, causing 401 Bad Credentials upon copy-pasting from API documentation.
+  - Diagnosed historical admin login mismatch: Swagger UI had previously displayed `"Admin123!"` while seed migration contained `"[REDACTED_HISTORICAL_PASSWORD]"`, causing 401 Bad Credentials upon copy-pasting from API documentation.
 - **Mandatory Email Verification Flow**:
   - Added Flyway migration `V3__add_email_verification.sql` adding `email_verified` boolean column to `users` and creating `email_verification_tokens` table.
   - Updated `AuthService.java` to dispatch verification emails containing secure 24-hour tokens upon candidate and recruiter registration.
