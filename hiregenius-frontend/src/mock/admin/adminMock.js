@@ -1,26 +1,5 @@
 /**
- * Mock data for Admin Dashboard.
- * TODO: replace with GET /api/admin/dashboard/summary
- *
- * AdminDashboardSummaryDTO:
- * {
- *   totalRecruiters: number,
- *   totalCandidates: number,
- *   totalJobsPlatformWide: number,
- *   totalInterviewsConducted: number,
- * }
- */
-
-export const MOCK_ADMIN_SUMMARY = {
-  totalRecruiters: 48,
-  totalCandidates: 3824,
-  totalJobsPlatformWide: 291,
-  totalInterviewsConducted: 1547,
-};
-
-/**
- * UserDTO for User Management page.
- * TODO: replace with GET /api/admin/users?page=0&size=20
+ * UserDTO for User Management page (retained until User Management phase).
  * {
  *   id: string,
  *   name: string,
@@ -87,34 +66,3 @@ export const MOCK_USERS = [
     lastLoginAt: '2026-09-02T05:50:00Z',
   },
 ];
-
-/**
- * Platform Analytics data (aggregated across all recruiters).
- * TODO: replace with GET /api/admin/analytics?range=30d
- */
-export const MOCK_PLATFORM_ANALYTICS = {
-  hiringTrend: [
-    { month: 'Mar', applications: 180, hires: 14 },
-    { month: 'Apr', applications: 240, hires: 22 },
-    { month: 'May', applications: 310, hires: 31 },
-    { month: 'Jun', applications: 420, hires: 44 },
-    { month: 'Jul', applications: 530, hires: 58 },
-    { month: 'Aug', applications: 680, hires: 72 },
-    { month: 'Sep', applications: 720, hires: 80 },
-  ],
-  scoreDistribution: [
-    { range: '0-20', count: 45 },
-    { range: '21-40', count: 120 },
-    { range: '41-60', count: 580 },
-    { range: '61-80', count: 1840 },
-    { range: '81-100', count: 1239 },
-  ],
-  topSkillsDemand: [
-    { skill: 'Python', count: 380 },
-    { skill: 'React', count: 340 },
-    { skill: 'Java', count: 310 },
-    { skill: 'SQL', count: 280 },
-    { skill: 'AWS', count: 240 },
-    { skill: 'Docker', count: 210 },
-  ],
-};

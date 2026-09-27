@@ -29,13 +29,14 @@ const api = axios.create({
 // Request interceptor — attach JWT, route Core API endpoints, and ensure 30s timeout for cold starts
 api.interceptors.request.use(
   (config) => {
-    // Route jobs, candidates, applications, interviews, and notifications endpoints to Core API
+    // Route jobs, candidates, applications, interviews, notifications, and analytics endpoints to Core API
     const isCoreRequest = config.url && (
       config.url.startsWith('/jobs') || config.url.startsWith('jobs') ||
       config.url.startsWith('/candidates') || config.url.startsWith('candidates') ||
       config.url.startsWith('/applications') || config.url.startsWith('applications') ||
       config.url.startsWith('/interviews') || config.url.startsWith('interviews') ||
-      config.url.startsWith('/notifications') || config.url.startsWith('notifications')
+      config.url.startsWith('/notifications') || config.url.startsWith('notifications') ||
+      config.url.startsWith('/analytics') || config.url.startsWith('analytics')
     );
     if (isCoreRequest) {
       config.baseURL = coreBaseURL;

@@ -1508,4 +1508,58 @@ pm run build completed successfully with 0 errors.
   8. **Dependency & Build Sanity**: `npm ci` completed cleanly in 14s with 0 vulnerabilities. Production dependencies are 100% pure JS with zero native compilation steps.
   9. **CI Status**: GitHub Actions CI on `dev` passed successfully (`Core API CI/CD`).
 
+---
+
+### 2026-09-27 - Phase 5 Frontend: Real Backend Analytics & Dashboard Integration
+
+- **Scope & Objectives**: Replaced all mock/placeholder analytics data on both Recruiter and Admin dashboards with 100% real Phase 5 Core API aggregation endpoints (`/api/analytics/*`). Ensured zero leftover mock data across the entire frontend, confirmed strict cross-account tenant isolation, and verified that no fake or invented endpoints were introduced.
+- **Architectural Implementation**:
+  1. **Axios Core API Routing (`src/services/api.js`)**:
+     - Added `/analytics` and `analytics` to `isCoreRequest` in the Axios request interceptor, ensuring all analytics queries automatically route to Core API on port 4000 with the active Bearer JWT token attached.
+  2. **Analytics Client Service (`src/services/analyticsService.js`)**:
+     - Implemented canonical client wrappers matching the exact Phase 5 backend contracts:
+       - `getRecruiterSummary(days)` -> `GET /api/analytics/recruiter/summary`
+       - `getRecruiterJobsBreakdown()` -> `GET /api/analytics/recruiter/jobs-breakdown`
+       - `getRecruiterTrend(days)` -> `GET /api/analytics/recruiter/trend`
+       - `getCandidateSummary()` -> `GET /api/analytics/candidate/summary`
+       - `getAdminSummary()` -> `GET /api/analytics/admin/summary`
+       - `getAdminTopRecruiters(options)` -> `GET /api/analytics/admin/top-recruiters`
+  3. **Recruiter Portal Integration**:
+     - `RecruiterDashboardHome.jsx` (`/recruiter/dashboard`):
+       - Hero Stat Cards: Replaced mock numbers with real `totalJobs`, `openJobs`, `closedJobs`, `totalApplications`, and `totalInterviewsScheduled`. Supports date-range presets (`Last 7 Days`, `Last 30 Days`, `Last 90 Days`, `All Time`), clearly displaying both recent window figures and all-time totals without conflation.
+       - Applications Trend Area Chart: Fed continuous daily application counts from `GET /api/analytics/recruiter/trend` directly into Recharts AreaChart with zero-filled gaps preserved.
+       - Hiring Pipeline Funnel: Replaced "Phase 3 Upcoming" placeholder with real 6-stage distribution (`APPLIED`, `SCREENING`, `SHORTLISTED`, `INTERVIEW`, `HIRED`, `REJECTED`) sourced directly from `summary.applicationsByStatus` (zero duplicate API calls).
+       - Per-Job Breakdown Table: Rendered live job rows (`jobId`, `title`, `status`, `applicationCount`, `interviewCount`) ordered descending by application traction directly from `GET /api/analytics/recruiter/jobs-breakdown`.
+     - `AnalyticsPage.jsx` (`/recruiter/analytics`):
+       - Upgraded from `ModulePendingState` to a full-fledged real analytics view with date-range selector, summary stat cards, daily trend area chart, pipeline distribution bar chart, and per-job conversion rate breakdown.
+  4. **Admin Portal Integration**:
+     - `AdminDashboardHome.jsx` (`/admin/dashboard`):
+       - Removed `MOCK_ADMIN_SUMMARY` import. Wired stat cards directly to `GET /api/analytics/admin/summary` (`totalRecruiters`, `totalCandidates`, `totalJobs`, `totalInterviews`, `totalApplications`).
+     - `AdminPlatformAnalyticsPage.jsx` (`/admin/analytics`):
+       - Removed `MOCK_PLATFORM_ANALYTICS` import. Wired platform summary and 6-stage platform application funnel to `GET /api/analytics/admin/summary`.
+       - Wired Top Recruiters Leaderboard directly to `GET /api/analytics/admin/top-recruiters`. Added real backend sort toggle (`Sort by Applications` vs `Sort by Jobs`) querying `?sortBy=jobs` dynamically.
+       - Enforced role guard: non-admin access is blocked and returns graceful restriction UI on frontend on top of backend 403 enforcement.
+  5. **Candidate Scope Confirmation**:
+     - Confirmed `CandidateDashboard.jsx` already derives all stats directly from `applicationsService.getMyApplications()` and `candidatesService.getMyProfile()`. No separate mock "my stats" section existed; per prompt instructions, no new unrequested sections were created.
+  6. **Mock Cleanup & Dead Code Neutralization**:
+     - Removed `MOCK_ADMIN_SUMMARY` and `MOCK_PLATFORM_ANALYTICS` from `src/mock/admin/adminMock.js`.
+     - Re-exported real `RecruiterDashboardHome` and `AdminDashboardHome` from legacy `RecruiterDashboard.jsx` and `AdminDashboard.jsx`, eliminating all legacy mock arrays (`STATS`, `PIPELINE`, `JOBS`, `INTERVIEWS`, `ACTIVITY`, `MOCK_STATS`).
+- **Verification & Test Results**:
+  1. **Recruiter Isolation & Live Data**:
+     - Recruiter A (ID: 25): 4 jobs, 12 applications, 2 interviews, top job with 4 applications.
+     - Recruiter B (ID: 305): 2 jobs, 4 applications, 1 interview.
+     - **Confirmed zero cross-account data leakage**: switching accounts displays completely different, strictly scoped real numbers.
+  2. **Admin Aggregation Spot Check**:
+     - Admin platform summary reports 10 total jobs, matching the exact platform sum across recruiters.
+     - Top recruiters ranked Sarah Recruiter #1 (12 applications) and vishal kumar #2 (4 applications).
+  3. **Role & Security Guards**:
+     - Recruiter attempting `GET /api/analytics/admin/summary` was denied with `403 Forbidden`.
+  4. **Date Range Filters**:
+     - `?days=7` returned exactly 7 chronological zero-filled entries; `?days=90` returned 90 entries.
+  5. **Code Hygiene & Build**:
+     - Frontend `npm run lint`: **0 errors**.
+     - Frontend `npm run build`: **Success (1.58s)**.
+     - Backend `npm run lint` & `npm test`: **11/11 test suites passed, 138/138 tests passed**.
+
+
 
