@@ -1665,3 +1665,22 @@ pm run build completed successfully with 0 errors.
   - `hiregenius-frontend`: ESLint 0 errors; Vite production build completed in 1.01s.
   - Live E2E Verification: 10/10 live API tests passed against running daemons (401 on wrong password, 400 on weak password, 200 on valid change, login with new password, Candidate preference persistence, Recruiter preference persistence).
 
+### 2026-09-27 - Bug Fix: Admin Analytics Blank Screen & Error Boundary
+
+- **Issue**: Navigating to `http://localhost:5173/admin/analytics` in an InPrivate browser window rendered an empty blank screen (`#F2EFE8`).
+- **Root Cause**:
+  1. `skillsResult.value?.data` returned from Core API `GET /api/analytics/admin/top-skills` is an object: `{ totalOpenJobs: number, topSkills: Array<{ skill, count, percentage }> }`. In `AdminPlatformAnalyticsPage.jsx`, `setTopSkills(skillsResult.value?.data ?? [])` stored this object directly into state instead of unpacking `rawSkills?.topSkills`.
+  2. In JSX, `topSkills.map(...)` was called on the object, throwing an uncaught `TypeError: topSkills.map is not a function`.
+  3. Because React had no global `ErrorBoundary`, the entire React root unmounted, leaving `<div id="root">` empty and resulting in a blank page.
+- **Fixes Applied**:
+  1. `AdminPlatformAnalyticsPage.jsx`: Properly extracted `rawSkills?.topSkills` into the array state and added defensive `Array.isArray()` checks across `topSkills`, `trendData`, and `topRecruiters`.
+  2. `ErrorBoundary.jsx`: Created a global error boundary component with "Try Again" and "Reset & Sign In" options.
+  3. `main.jsx`: Wrapped `<App />` with `<ErrorBoundary>` to eliminate blank screen failures.
+  4. `authSlice.js` & `useTheme.js`: Wrapped `localStorage` in `safeStorage` helpers with try/catch to avoid `SecurityError` exceptions in InPrivate/Incognito browsing mode with strict storage protection.
+  5. Restarted Vite dev server on port 5173.
+- **Verification**:
+  - Vite production build succeeded in 1.23s.
+  - ESLint 0 errors across 109 files.
+  - Commit `51166ff` pushed to `origin/dev`.
+
+
