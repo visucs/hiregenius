@@ -166,7 +166,7 @@ const AdminDashboardHome = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <motion.button
                   whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                  onClick={fetchSummary}
+                  onClick={fetchData}
                   disabled={loading}
                   title="Refresh Platform Analytics"
                   style={{
