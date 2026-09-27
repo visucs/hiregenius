@@ -1602,3 +1602,29 @@ pm run build completed successfully with 0 errors.
   - Core API: **13/13 test suites passed, 150/150 tests passed** (`npm test`), **0 ESLint errors/warnings** (`npm run lint`).
   - Auth Service: **46/46 tests passed with BUILD SUCCESS** (`.\mvnw.cmd test`).
   - Frontend: **0 ESLint errors** (`npm run lint`), production build succeeded in 1.19s (`npm run build`).
+
+---
+
+### 2026-09-27 — Bug-Fix Session: Admin Analytics 404 + User Management 500
+
+**Bug 1 — GET /api/analytics/admin/trend -> 404 Not Found**
+- **Root cause:** The hiregenius-core-api Node.js process was running an old build (started before the admin analytics routes were added). The route existed on disk in analytics.routes.js (lines 77-83) and repository method getAdminMonthlyTrend existed at line 500, but the running process didn't have them loaded.
+- **Secondary issue:** AdminPlatformAnalyticsPage.jsx used Promise.all() — when trend returned 404, the whole call rejected, zeroing all four stat cards even though /api/analytics/admin/summary was returning real data.
+- **Fix:** Killed PID 14700, restarted Core API with current code. Changed AdminPlatformAnalyticsPage.jsx to use Promise.allSettled() so each of the four fetches resolves independently; page-level error only shown if the primary summary call fails.
+- **Files changed:** hiregenius-frontend/src/pages/admin/AdminPlatformAnalyticsPage.jsx.
+- **No backend code changes** — route, controller, service, repository were all correct; stale process was the only issue.
+
+**Bug 2 — GET /api/admin/users -> 500 An unexpected server error occurred**
+- **Root cause:** hiregenius-auth-service was running a JAR built on 2026-09-17, before AdminUserController, AdminUserServiceImpl, and UserRepository (extended with JpaSpecificationExecutor) were added. Old JAR had no /api/admin/users route -> Spring MVC NoHandlerFoundException -> 500.
+- **Secondary issue:** AdminUserManagementPage.jsx always showed '{totalElements} registered accounts...' with totalElements=0 initial state, falsely claiming '0 registered accounts' while simultaneously showing an error.
+- **Fix:** Rebuilt Auth Service JAR (mvnw clean package -DskipTests), killed old PID 31100, restarted with new JAR. Verified /api/admin/users is registered via /v3/api-docs. Fixed subtitle to show 'Loading...' during load, 'Could not load account data' during error, real count only on success.
+- **Files changed:** hiregenius-frontend/src/pages/admin/AdminUserManagementPage.jsx.
+- **No backend code changes** — all Auth Service code was correct; JAR just needed rebuilding and restarting.
+
+**Verification:**
+- Core API GET /api/analytics/admin/trend?months=6 -> 200, GET /api/analytics/admin/summary -> 200, GET /api/analytics/admin/top-skills -> 200. All confirmed.
+- Auth Service /api/admin/users registered in Swagger, Auth Service started in 9.2s.
+- Core API test suite: 13/13 suites, 150/150 tests. Zero regressions.
+- Frontend: 0 lint errors, build succeeded in 1.14s.
+- **Commit:** b85abf0 on origin/dev.
+- **Untouched:** Jobs, Candidates, Applications, Interviews, Notifications, recruiter/candidate-side Analytics.
