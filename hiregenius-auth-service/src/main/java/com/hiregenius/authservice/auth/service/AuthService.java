@@ -24,6 +24,8 @@ public interface AuthService {
     ApiResponse<String> verifyEmail(String token);
 
     ApiResponse<String> resendVerificationEmail(String email);
+    
+    ApiResponse<String> changePassword(Long userId, com.hiregenius.authservice.auth.dto.request.ChangePasswordRequest request);
 
     UserResponse validateToken(String authHeader);
 }

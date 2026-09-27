@@ -259,4 +259,51 @@ describe('Candidates Module - Resume Upload & Access Enforcement', () => {
       expect(res.body.message).toMatch(/Candidate not found/i);
     });
   });
+
+  describe('GET & PATCH /api/candidates/me/preferences', () => {
+    test('should return 200 with default job_alerts_opt_in when candidate row does not exist yet', async () => {
+      const res = await request(app)
+        .get('/api/candidates/me/preferences')
+        .set('Authorization', `Bearer ${candidateToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe(200);
+      expect(res.body.data.job_alerts_opt_in).toBe(true);
+    });
+
+    test('should update preferences with PATCH /api/candidates/me/preferences', async () => {
+      const patchRes = await request(app)
+        .patch('/api/candidates/me/preferences')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .send({ job_alerts_opt_in: false });
+
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.data.job_alerts_opt_in).toBe(false);
+
+      const getRes = await request(app)
+        .get('/api/candidates/me/preferences')
+        .set('Authorization', `Bearer ${candidateToken}`);
+
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.data.job_alerts_opt_in).toBe(false);
+    });
+
+    test('should return 400 when invalid payload is sent to PATCH', async () => {
+      const res = await request(app)
+        .patch('/api/candidates/me/preferences')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .send({ job_alerts_opt_in: 'invalid-string' });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 403 when recruiter attempts to access candidate preferences', async () => {
+      const res = await request(app)
+        .get('/api/candidates/me/preferences')
+        .set('Authorization', `Bearer ${recruiter1Token}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
 });
+

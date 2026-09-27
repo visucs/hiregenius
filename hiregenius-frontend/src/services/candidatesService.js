@@ -40,6 +40,25 @@ export const candidatesService = {
     const res = await api.get(`/candidates/${id}`);
     return res.data;
   },
+
+  /**
+   * Get candidate notification preferences
+   * GET /api/candidates/me/preferences
+   */
+  getPreferences: async () => {
+    const res = await api.get('/candidates/me/preferences');
+    return res.data;
+  },
+
+  /**
+   * Update candidate notification preferences
+   * PATCH /api/candidates/me/preferences
+   * @param {{ job_alerts_opt_in: boolean }} payload
+   */
+  updatePreferences: async (payload) => {
+    const res = await api.patch('/candidates/me/preferences', payload);
+    return res.data;
+  },
 };
 
 export default candidatesService;

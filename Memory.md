@@ -1628,3 +1628,40 @@ pm run build completed successfully with 0 errors.
 - Frontend: 0 lint errors, build succeeded in 1.14s.
 - **Commit:** b85abf0 on origin/dev.
 - **Untouched:** Jobs, Candidates, Applications, Interviews, Notifications, recruiter/candidate-side Analytics.
+
+### 2026-09-27 - Settings & Profile Real Backend Wiring Across All Roles
+
+- **Scope & Objectives**: Built backend support for and wired real data to Settings and Profile sections across Candidate, Recruiter, and Admin dashboards, eliminating all mock `setTimeout` saves and mock toggles.
+- **Architectural Decisions Implemented**:
+  1. **Change Password Endpoint (`hiregenius-auth-service`)**:
+     - Added DTO: `ChangePasswordRequest.java` enforcing `ValidationPatterns.PASSWORD_REGEX` (min 8 chars, >=1 digit).
+     - Service: `AuthService.java` & `AuthServiceImpl.java` implementing `changePassword(Long userId, ChangePasswordRequest request)` with BCrypt password verification. Returns 401 on incorrect current password, 400 on invalid/short new password, and 200 on success.
+     - Controller: `AuthController.java` exposing `POST /api/auth/change-password` requiring `@SecurityRequirement(name = "bearerAuth")`.
+     - Frontend: Wired to Candidate Settings (`CandidateSettingsPage.jsx`), Recruiter Profile (`RecruiterProfilePage.jsx`), and Admin Profile (`AdminProfilePage.jsx`) via unified `authService.changePassword({ currentPassword, newPassword })`.
+  2. **Identity Fields Read-Only (All 3 Roles)**:
+     - Full Name and Email inputs made strictly read-only on Candidate Settings, Recruiter Profile, and Admin Profile.
+     - Removed all mock `setTimeout` saves, save buttons, and simulated state changes for profile identity fields.
+  3. **Candidate Notification Preferences (`hiregenius-core-api`)**:
+     - Routes & Controller: `GET /api/candidates/me/preferences` and `PATCH /api/candidates/me/preferences` reading/updating `job_alerts_opt_in` on the `candidates` table.
+     - Frontend (`CandidateSettingsPage.jsx`): Replaced 3 mock toggles with 1 real live toggle (`job_alerts_opt_in`), with automatic persistence on toggle.
+     - Transactional alerts ("Application Status Updates" and "Interview Invitations") displayed as non-toggleable "Always On" notices.
+     - "AI Resume Tips & Career Advice" marked honestly as Phase 6 Pending.
+  4. **Recruiter Notification Preferences (`hiregenius-core-api`)**:
+     - Wired existing `GET /api/recruiters/me/notification-preferences` and `PATCH /api/recruiters/me/notification-preferences` via new `recruiterPreferencesService.js`.
+     - Configured `src/services/api.js` to route `/recruiters` requests to Core API (:4000).
+     - Frontend (`RecruiterSettingsPage.jsx`): Wired live toggles for `notify_on_new_application` and `job_alert_dispatch_enabled`. Remaining unbuilt toggles disabled with honest "Coming soon" indicators.
+  5. **Account Deletion Protocol**:
+     - Removed mock delete modal and simulated `setTimeout` deletion in `CandidateSettingsPage.jsx`.
+     - Replaced with an Account Support & Deletion card directing candidates to `support@hiregenius.ai` via prefilled mailto link. Destructive deletion logic safely deferred.
+  6. **UI Polish & Hero Stats**:
+     - Recruiter Profile hero stats wired to real `analyticsService.getRecruiterSummary()` (`jobs_posted`, `hired`).
+     - Admin Profile hero stat wired to real `analyticsService.getAdminSummary()` (`users_managed`).
+     - Disabled non-functional avatar upload buttons with "Coming soon" tooltips across all roles.
+     - Fixed `authService.js` export to provide default export.
+
+- **Verification**:
+  - `hiregenius-core-api`: 13/13 test suites, 154/154 tests passed.
+  - `hiregenius-auth-service`: 46/46 tests passed.
+  - `hiregenius-frontend`: ESLint 0 errors; Vite production build completed in 1.01s.
+  - Live E2E Verification: 10/10 live API tests passed against running daemons (401 on wrong password, 400 on weak password, 200 on valid change, login with new password, Candidate preference persistence, Recruiter preference persistence).
+

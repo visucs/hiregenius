@@ -39,6 +39,22 @@ router.get(
   (req, res, next) => candidatesController.getMyProfile(req, res, next),
 );
 
+// GET /api/candidates/me/preferences - Get candidate notification preferences
+router.get(
+  '/me/preferences',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  (req, res, next) => candidatesController.getPreferences(req, res, next),
+);
+
+// PATCH /api/candidates/me/preferences - Update candidate notification preferences
+router.patch(
+  '/me/preferences',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  (req, res, next) => candidatesController.updatePreferences(req, res, next),
+);
+
 /**
  * Recruiter Protected Routes
  */

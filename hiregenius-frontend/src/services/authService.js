@@ -84,4 +84,13 @@ export const authService = {
    * @param {{ email: string }} data
    */
   resendVerification: (data) => api.post('/auth/resend-verification', data),
+
+  /**
+   * POST /auth/change-password
+   * Authenticated password change with current and new password
+   * @param {{ currentPassword: string, newPassword: string }} data
+   */
+  changePassword: (data) => api.post('/auth/change-password', data),
 };
+
+export default authService;

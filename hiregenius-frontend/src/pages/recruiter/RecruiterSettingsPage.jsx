@@ -1,21 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Sun, Moon, Bell, Mail, Smartphone, CalendarDays,
-  CheckCircle2, Settings, Palette, BriefcaseBusiness,
+  CheckCircle2, Settings, Palette,
   Shield, Zap, FileSearch, Play, Users, ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import useTheme from '../../hooks/useTheme';
+import recruiterPreferencesService from '../../services/recruiterPreferencesService';
 
 /* ─── Animated toggle ─────────────────────────────────────── */
-const Toggle = ({ checked, onChange, id }) => (
+const Toggle = ({ checked, onChange, id, disabled = false }) => (
   <button
-    id={id} role="switch" aria-checked={checked}
-    onClick={() => onChange(!checked)}
+    id={id} role="switch" aria-checked={checked} disabled={disabled}
+    onClick={() => !disabled && onChange(!checked)}
     style={{
       position: 'relative', width: 48, height: 26, borderRadius: 999, flexShrink: 0,
       background: checked ? 'linear-gradient(135deg, #3D5016, #6B8A3A)' : 'var(--border)',
-      border: 'none', cursor: 'pointer', transition: 'background 0.22s ease',
+      border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.55 : 1, transition: 'background 0.22s ease',
       boxShadow: checked ? '0 2px 10px rgba(61,80,22,0.45)' : 'none',
     }}
   >
@@ -32,14 +36,14 @@ const Toggle = ({ checked, onChange, id }) => (
 );
 
 /* ─── Setting row ─────────────────────────────────────────── */
-const SettingRow = ({ label, description, icon: Icon, iconColor, checked, onChange, id }) => (
+const SettingRow = ({ label, description, icon: Icon, iconColor, checked, onChange, id, badge, disabled = false }) => (
   <motion.div
-    whileHover={{ x: 2 }}
+    whileHover={disabled ? undefined : { x: 2 }}
     transition={{ duration: 0.15 }}
     style={{
       display: 'flex', alignItems: 'center', gap: 14,
       padding: '14px 0', borderBottom: '1px solid var(--card-row-border)',
-      cursor: 'default',
+      cursor: 'default', opacity: disabled ? 0.75 : 1,
     }}
   >
     {Icon && (
@@ -48,10 +52,17 @@ const SettingRow = ({ label, description, icon: Icon, iconColor, checked, onChan
       </div>
     )}
     <div style={{ flex: 1, minWidth: 0 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{label}</p>
-      {description && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>{description}</p>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>{label}</p>
+        {badge && (
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, ...badge.style }}>
+            {badge.text}
+          </span>
+        )}
+      </div>
+      {description && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5, margin: 0 }}>{description}</p>}
     </div>
-    <Toggle checked={checked} onChange={onChange} id={id} />
+    <Toggle checked={checked} onChange={onChange} id={id} disabled={disabled} />
   </motion.div>
 );
 
@@ -77,37 +88,64 @@ const Section = ({ title, subtitle, icon: Icon, iconColor, stripe, children, del
 );
 
 /* ════════════════════════════════════════════════════════════
-   SETTINGS PAGE
+   RECRUITER SETTINGS PAGE
 ════════════════════════════════════════════════════════════ */
 const RecruiterSettingsPage = () => {
   const { theme, toggleTheme } = useTheme();
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
 
-  const [notifs, setNotifs] = useState({
-    emailOnApplication: true,
-    emailOnInterview:   true,
-    emailOnScreening:   false,
-    pushNotifications:  true,
-    weeklyDigest:       false,
+  // Real Preferences from Core API: recruiter_notification_preferences
+  const [prefs, setPrefs] = useState({
+    notify_on_new_application: false,
+    job_alert_dispatch_enabled: true,
   });
 
-  const set = (key) => (val) => setNotifs((prev) => ({ ...prev, [key]: val }));
+  // Fetch real preferences on load (GET /api/recruiters/me/notification-preferences)
+  const fetchPrefs = useCallback(async () => {
+    setLoadingPrefs(true);
+    try {
+      const res = await recruiterPreferencesService.getPreferences();
+      if (res?.data) {
+        setPrefs({
+          notify_on_new_application: Boolean(res.data.notify_on_new_application),
+          job_alert_dispatch_enabled: Boolean(res.data.job_alert_dispatch_enabled),
+        });
+      }
+    } catch (err) {
+      console.warn('[RecruiterSettings] Error fetching preferences:', err?.message);
+    } finally {
+      setLoadingPrefs(false);
+    }
+  }, []);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setIsSaving(false); setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  useEffect(() => {
+    fetchPrefs();
+  }, [fetchPrefs]);
+
+  const handleToggle = (key) => (val) => {
+    setPrefs((prev) => ({ ...prev, [key]: val }));
   };
 
-  const NOTIF_ROWS = [
-    { key: 'emailOnApplication', label: 'New Application Email',   description: 'Get emailed when a candidate applies to your job',     icon: Mail,         iconColor: '#60a5fa' },
-    { key: 'emailOnInterview',   label: 'Interview Completed Email',description: 'Get emailed when an AI interview is done',             icon: Play,         iconColor: '#a78bfa' },
-    { key: 'emailOnScreening',   label: 'Resume Screened Email',    description: 'Get emailed for each resume screening result',         icon: FileSearch,   iconColor: '#f59e0b' },
-    { key: 'pushNotifications',  label: 'Push Notifications',       description: 'Browser push alerts for real-time hiring events',      icon: Smartphone,   iconColor: '#34d399' },
-    { key: 'weeklyDigest',       label: 'Weekly Digest',            description: 'Summary of all activity every Monday morning',         icon: CalendarDays, iconColor: '#ec4899' },
-  ];
+  // Real Save to Core API (PATCH /api/recruiters/me/notification-preferences)
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await recruiterPreferencesService.updatePreferences({
+        notify_on_new_application: prefs.notify_on_new_application,
+        job_alert_dispatch_enabled: prefs.job_alert_dispatch_enabled,
+      });
+      setIsSaving(false);
+      setSaved(true);
+      toast.success('Preferences saved successfully!');
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setIsSaving(false);
+      const msg = err.response?.data?.message || err.message || 'Failed to save preferences';
+      toast.error(msg);
+    }
+  };
 
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
@@ -183,7 +221,7 @@ const RecruiterSettingsPage = () => {
           </div>
         </Section>
 
-        {/* ── Notifications ──────────────────────────────────── */}
+        {/* ── Notifications (Real Core API GET/PATCH /api/recruiters/me/notification-preferences) ──────────────── */}
         <Section
           title="Notification Preferences"
           subtitle="Control how and when you get notified about hiring activity"
@@ -192,36 +230,95 @@ const RecruiterSettingsPage = () => {
           delay={0.12}
         >
           <div style={{ paddingTop: 4 }}>
-            {NOTIF_ROWS.map((row, i) => (
-              <SettingRow
-                key={row.key}
-                label={row.label}
-                description={row.description}
-                icon={row.icon}
-                iconColor={row.iconColor}
-                checked={notifs[row.key]}
-                onChange={set(row.key)}
-                id={`settings-notif-${row.key}`}
-              />
-            ))}
+            {/* Real 1: notify_on_new_application */}
+            <SettingRow
+              label="New Application Email Alerts"
+              description="Get emailed immediately whenever a candidate applies to one of your active job postings"
+              icon={Mail}
+              iconColor="#60a5fa"
+              checked={prefs.notify_on_new_application}
+              onChange={handleToggle('notify_on_new_application')}
+              id="settings-notif-new-app"
+              badge={{ text: 'Live Core API', style: { color: '#34d399', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' } }}
+              disabled={loadingPrefs}
+            />
+
+            {/* Real 2: job_alert_dispatch_enabled */}
+            <SettingRow
+              label="Candidate Job Alert Dispatch"
+              description="Automatically send email alerts to opted-in candidates when you publish a new job opening"
+              icon={Zap}
+              iconColor="#a3e635"
+              checked={prefs.job_alert_dispatch_enabled}
+              onChange={handleToggle('job_alert_dispatch_enabled')}
+              id="settings-notif-job-alerts"
+              badge={{ text: 'Live Core API', style: { color: '#34d399', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' } }}
+              disabled={loadingPrefs}
+            />
+
+            {/* Honest Placeholder 1: AI Interview notifications */}
+            <SettingRow
+              label="AI Interview Completed Alerts"
+              description="Get emailed a transcript and evaluation scorecard when an AI interview session concludes"
+              icon={Play}
+              iconColor="#a78bfa"
+              checked={false}
+              onChange={() => {}}
+              id="settings-notif-interview"
+              badge={{ text: 'Phase 7 · AI Evaluator', style: { color: '#a78bfa', background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.22)' } }}
+              disabled
+            />
+
+            {/* Honest Placeholder 2: Resume Screening */}
+            <SettingRow
+              label="Resume Screening Results"
+              description="Real-time email alerts for ATS parsing and candidate match score completions"
+              icon={FileSearch}
+              iconColor="#f59e0b"
+              checked={false}
+              onChange={() => {}}
+              id="settings-notif-screening"
+              badge={{ text: 'Phase 6 · Coming Soon', style: { color: '#f59e0b', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.22)' } }}
+              disabled
+            />
+
+            {/* Honest Placeholder 3: Weekly Digest */}
+            <SettingRow
+              label="Weekly Hiring Funnel Digest"
+              description="Summary of all candidate applicants, screening ratios, and weekly pipeline changes"
+              icon={CalendarDays}
+              iconColor="#ec4899"
+              checked={false}
+              onChange={() => {}}
+              id="settings-notif-digest"
+              badge={{ text: 'Coming Soon', style: { color: 'var(--text-muted)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)' } }}
+              disabled
+            />
 
             <div style={{ paddingTop: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
               <motion.button
                 whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }}
-                onClick={handleSave} disabled={isSaving} id="settings-save"
+                onClick={handleSave} disabled={isSaving || loadingPrefs} id="settings-save"
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  padding: '11px 22px', minHeight: 44, borderRadius: 12, border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer',
-                  background: isSaving ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
+                  padding: '11px 22px', minHeight: 44, borderRadius: 12, border: 'none',
+                  cursor: (isSaving || loadingPrefs) ? 'not-allowed' : 'pointer',
+                  background: (isSaving || loadingPrefs) ? 'rgba(107,138,58,0.35)' : 'linear-gradient(135deg, #3D5016, #6B8A3A)',
                   color: '#fff', fontSize: 13, fontWeight: 800,
                   boxShadow: isSaving ? 'none' : '0 4px 18px rgba(61,80,22,0.40)',
                   transition: 'all 0.18s', letterSpacing: '-0.01em',
                 }}
               >
-                {isSaving
-                  ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving…</>
-                  : <><CheckCircle2 size={14} />Save Preferences</>
-                }
+                {isSaving ? (
+                  <>
+                    <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={14} />Save Preferences
+                  </>
+                )}
               </motion.button>
 
               <AnimatePresence>
@@ -251,17 +348,17 @@ const RecruiterSettingsPage = () => {
             </div>
             <div>
               <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Account & Security</p>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Manage your account security settings</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Manage your account credentials</p>
             </div>
           </div>
           <div style={{ padding: '8px 16px 16px' }}>
             {[
-              { label: 'Update Profile Info',    sub: 'Name, email, company details',     icon: Users,       color: '#60a5fa', to: '/recruiter/profile' },
-              { label: 'Change Password',         sub: 'Update your login credentials',    icon: Shield,      color: '#f59e0b', to: '/recruiter/profile' },
-              { label: 'Active Sessions',         sub: 'View and manage login sessions',   icon: Zap,         color: '#a78bfa', to: '#'                  },
-            ].map(({ label, sub, icon: Icon, color }) => (
-              <div key={label}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 10px', borderRadius: 12, cursor: 'pointer', transition: 'background 0.13s' }}
+              { label: 'View Profile Info', sub: 'Identity and credentials overview', icon: Users, color: '#60a5fa', to: '/recruiter/profile' },
+              { label: 'Change Password', sub: 'Update your login password', icon: Shield, color: '#f59e0b', to: '/recruiter/profile' },
+            ].map(({ label, sub, icon: Icon, color, to }) => (
+              <a
+                key={label} href={to}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 10px', borderRadius: 12, textDecoration: 'none', transition: 'background 0.13s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--card-row-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -269,11 +366,11 @@ const RecruiterSettingsPage = () => {
                   <Icon size={15} style={{ color }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{label}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, margin: 0 }}>{sub}</p>
                 </div>
                 <ChevronRight size={15} style={{ color: 'var(--text-muted)' }} />
-              </div>
+              </a>
             ))}
           </div>
         </motion.div>

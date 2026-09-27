@@ -418,6 +418,32 @@ public class AuthServiceImpl implements AuthService {
         return ApiResponse.ok("A new verification email has been sent. Please check your inbox.", null);
     }
 
+    @Override
+    @Transactional
+    public ApiResponse<String> changePassword(Long userId, com.hiregenius.authservice.auth.dto.request.ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+
+        if (user.getAuthProvider() == AuthProvider.GOOGLE && user.getPassword() == null) {
+            throw new IllegalArgumentException("This account uses Google Sign-In and has no password to change");
+        }
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            log.warn("Change password failed for user id={}: incorrect current password", userId);
+            throw new InvalidCredentialsException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password cannot be the same as your current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password updated successfully for user id={}, email={}", user.getId(), user.getEmail());
+
+        return ApiResponse.ok("Password updated successfully. Please use your new password next time you log in.", null);
+    }
+
     private Role parseAndValidatePublicRole(String roleStr) {
         if (roleStr == null || roleStr.trim().isEmpty()) {
             throw new IllegalArgumentException("Role is required");

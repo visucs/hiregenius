@@ -489,4 +489,21 @@ public class AuthController {
         ApiResponse<String> response = authService.resendVerificationEmail(request.getEmail());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/change-password")
+    @Operation(
+            summary = "Change password for authenticated user",
+            description = "Verifies current password and updates to new password. Requires valid JWT."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.ChangePasswordRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.hiregenius.authservice.security.SecurityUser currentUser
+    ) {
+        if (currentUser == null) {
+            throw new com.hiregenius.authservice.exception.InvalidCredentialsException("Authentication required");
+        }
+        ApiResponse<String> response = authService.changePassword(currentUser.getId(), request);
+        return ResponseEntity.ok(response);
+    }
 }

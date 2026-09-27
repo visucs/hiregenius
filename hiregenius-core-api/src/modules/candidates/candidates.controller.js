@@ -74,6 +74,26 @@ class CandidatesController {
       return next(err);
     }
   }
+
+  async getPreferences(req, res, next) {
+    try {
+      const userId = req.user.userId || req.user.id;
+      const data = await candidatesService.getPreferences(userId);
+      return ApiResponse.success(res, data, 'Candidate notification preferences retrieved successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async updatePreferences(req, res, next) {
+    try {
+      const userId = req.user.userId || req.user.id;
+      const data = await candidatesService.updatePreferences(userId, req.body);
+      return ApiResponse.success(res, data, 'Candidate notification preferences updated successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new CandidatesController();

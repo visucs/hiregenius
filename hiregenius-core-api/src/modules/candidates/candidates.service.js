@@ -183,6 +183,43 @@ class CandidatesService {
     const detailed = await candidatesRepository.findDetailWithUser(candidateId);
     return detailed || candidate;
   }
+
+  /**
+   * Get candidate notification preferences
+   * @param {number|string} userId
+   */
+  async getPreferences(userId) {
+    const candidate = await candidatesRepository.findByUserId(userId);
+    if (!candidate) {
+      return { job_alerts_opt_in: true };
+    }
+    return {
+      job_alerts_opt_in: candidate.job_alerts_opt_in !== undefined ? Boolean(candidate.job_alerts_opt_in) : true,
+    };
+  }
+
+  /**
+   * Update candidate notification preferences
+   * @param {number|string} userId
+   * @param {{ job_alerts_opt_in: boolean }} param1
+   */
+  async updatePreferences(userId, { job_alerts_opt_in }) {
+    if (typeof job_alerts_opt_in !== 'boolean') {
+      throw ApiError.badRequest('job_alerts_opt_in must be a boolean');
+    }
+    let candidate = await candidatesRepository.findByUserId(userId);
+    if (!candidate) {
+      candidate = await candidatesRepository.create({
+        user_id: Number(userId),
+        resume_path: null,
+        resume_original_name: null,
+      });
+    }
+    const updated = await candidatesRepository.updateJobAlertsOptIn(candidate.id, job_alerts_opt_in);
+    return {
+      job_alerts_opt_in: Boolean(updated.job_alerts_opt_in),
+    };
+  }
 }
 
 module.exports = new CandidatesService();

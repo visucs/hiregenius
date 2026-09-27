@@ -88,8 +88,13 @@ function validate(schema, source = 'body') {
   };
 }
 
+const updateCandidatePreferencesSchema = z.object({
+  job_alerts_opt_in: z.boolean({ required_error: 'job_alerts_opt_in must be a boolean' }),
+});
+
 module.exports = {
   candidateIdParamSchema,
   resumeUploadMiddleware,
+  updateCandidatePreferencesSchema,
   validate,
 };
