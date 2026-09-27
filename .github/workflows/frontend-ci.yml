@@ -61,19 +61,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Vercel CLI (latest)
-        run: npm install --global vercel@latest
-
       - name: Pull Vercel environment (preview)
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build project (preview)
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel (preview)
         id: vercel-deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          DEPLOY_URL=$(npx --yes vercel@latest deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
       - name: Comment deployment URL on PR
@@ -118,17 +115,14 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Vercel CLI (latest)
-        run: npm install --global vercel@latest
-
       - name: Pull Vercel environment (production)
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build project (production)
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel (production)
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
   build-and-push-image:
     name: Build & Push Docker Image (GHCR)
