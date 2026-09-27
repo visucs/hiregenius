@@ -1452,3 +1452,38 @@ pm run build completed successfully with 0 errors.
   - `hiregenius-core-api`: 10/10 test suites passed, 118/118 tests passed (`npm test`), ESLint clean (`npm run lint`).
   - `hiregenius-frontend`: Production build succeeded in 1.26s (`npm run build`).
   - Database schema: `V3` Flyway migration successfully applied, admin user synchronized and verified.
+
+---
+
+### 2026-09-27 - Phase 5 Core API: Dashboard & Analytics Aggregation Endpoints
+
+- **Scope & Objective**: Complete backend implementation for Phase 5 — Dashboard/Analytics aggregation endpoints in `hiregenius-core-api`. All endpoints are strictly read-only SQL aggregations (`COUNT`, `GROUP BY`, date-range filters) over existing source tables (`jobs`, `candidates`, `applications`, `interviews`, `users`) with zero new analytics cache/summary tables, ensuring metrics never drift out of sync with reality.
+- **Architectural Implementation**:
+  1. **Strict Layered Pattern & Scoping**:
+     - `src/modules/analytics/analytics.repository.js`: Encapsulates high-performance aggregation queries using indexed joins and columns.
+     - `src/modules/analytics/analytics.service.js`: Houses business logic, continuous date range generation with zero-filled gaps, and separation of all-time vs. recent window figures.
+     - `src/modules/analytics/analytics.controller.js`: Orchestrates HTTP responses using `ApiResponse.success` envelope.
+     - `src/modules/analytics/analytics.routes.js`: Guarded by `verifyJwt` and `requireRole`.
+     - `src/modules/analytics/analytics.validation.js`: Validates `?days=` and top-recruiters query parameters using Zod. Returns 400 Bad Request on invalid values (non-numeric, negative, zero, etc.).
+     - `src/modules/analytics/analytics.openapi.js`: Complete OpenAPI 3.0 specification registered in Swagger UI (`/swagger-ui`).
+  2. **Part 1 — Recruiter-Scoped Analytics (`requireRole('RECRUITER')`)**:
+     - `GET /api/analytics/recruiter/summary`: Scoped strictly to `jobs.recruiter_id = req.user.userId`. Computes `totalJobs`, `openJobs`, `closedJobs`, `totalApplications`, `totalInterviewsScheduled`, and `applicationsByStatus` (6-stage breakdown). Supports optional `?days=30`. If omitted, returns both `allTime` totals and `recent` window numbers clearly labeled in separate objects without mixing.
+     - `GET /api/analytics/recruiter/jobs-breakdown`: Per-job metrics (`jobId`, `title`, `status`, `applicationCount`, `interviewCount`) ordered by `applicationCount DESC`.
+     - `GET /api/analytics/recruiter/trend`: Continuous chronological daily application counts over `?days=30` (default) with zero-filled gaps for days with 0 applications.
+  3. **Part 2 — Candidate-Scoped Analytics (`requireRole('CANDIDATE')`)**:
+     - `GET /api/analytics/candidate/summary`: Scoped strictly to authenticated candidate's applications (`candidates.user_id = req.user.userId`). Returns `totalApplications`, full `applicationsByStatus` breakdown, `totalInterviewsScheduled`, and `totalInterviewsCompleted`.
+  4. **Part 3 — Admin Platform-Wide Analytics (`requireRole('ADMIN')`)**:
+     - `GET /api/analytics/admin/summary`: Platform-wide aggregate across all recruiters and candidates: `totalUsers` (broken down by role: recruiters, candidates, admins), `totalJobs`, `totalApplications`, `totalInterviews`, and platform-wide `applicationsByStatus`.
+     - `GET /api/analytics/admin/top-recruiters`: Ranked recruiter leaderboard with joined read-only user details (`name`, `email`).
+     - **Sort Criterion Choice**: Primary sort is **total applications received (`applicationsCount DESC`)**, with total jobs posted (`jobsCount DESC`) as secondary tie-breaker (reflecting true recruiter engagement and candidate traction). Supports optional `?sortBy=jobs` query parameter.
+     - **Sensitive Fields Audit**: Verified that no user passwords, password hashes, or security tokens are selected or exposed.
+  5. **Performance & Schema Indexes Migration (`migrations/20260927_add_analytics_performance_indexes.js`)**:
+     - Added database indexes for `jobs.created_at`, `applications.applied_at`, `applications.candidate_id`, and `interviews.created_at`.
+- **Verification Results**:
+  1. `npm run lint`: **0 errors, 0 warnings** across all 11 modules and test suites.
+  2. `npm test`: **11/11 test suites passed, 138/138 tests passed** (including 20 automated tests in `test/modules/analytics/analytics.test.js`).
+  3. **Data Isolation Confirmation**:
+     - **Cross-recruiter data isolation was tested and confirmed**: In both automated unit tests and manual live curl verifications against MySQL, Recruiter A's summary and job breakdown reflected ONLY Recruiter A's data, and Recruiter B reflected ONLY Recruiter B's data, with zero cross-contamination.
+     - Candidate isolation was tested and confirmed: Candidate 1 and Candidate 2 received strictly isolated data.
+     - Role-based authorization was confirmed: RECRUITER attempting `/api/analytics/admin/summary` received `403 Forbidden`.
+

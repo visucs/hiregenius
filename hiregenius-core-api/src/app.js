@@ -6,6 +6,7 @@ const applicationsRouter = require('./modules/applications/applications.routes')
 const interviewsRouter = require('./modules/interviews/interviews.routes');
 const notificationsRouter = require('./modules/notifications/notifications.routes');
 const recruiterPreferencesRouter = require('./modules/recruiters/recruiterPreferences.routes');
+const analyticsRouter = require('./modules/analytics/analytics.routes');
 const errorHandler = require('./middleware/errorHandler');
 const ApiError = require('./utils/ApiError');
 const { swaggerUi, swaggerSpec, isSwaggerEnabled } = require('./config/swagger');
@@ -60,6 +61,7 @@ app.use('/api/applications', applicationsRouter);
 app.use('/api/interviews', interviewsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/recruiters', recruiterPreferencesRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

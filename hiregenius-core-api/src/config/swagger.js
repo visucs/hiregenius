@@ -23,8 +23,8 @@ const { registerInterviewsOpenApi } = require('../modules/interviews/interviews.
 registerInterviewsOpenApi(registry);
 const { registerNotificationsOpenApi } = require('../modules/notifications/notifications.openapi');
 registerNotificationsOpenApi(registry);
-// const { registerAnalyticsOpenApi } = require('../modules/analytics/analytics.openapi');
-// registerAnalyticsOpenApi(registry);
+const { registerAnalyticsOpenApi } = require('../modules/analytics/analytics.openapi');
+registerAnalyticsOpenApi(registry);
 
 const generator = new OpenApiGeneratorV3(registry.definitions);
 
