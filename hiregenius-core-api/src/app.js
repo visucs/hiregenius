@@ -7,6 +7,9 @@ const interviewsRouter = require('./modules/interviews/interviews.routes');
 const notificationsRouter = require('./modules/notifications/notifications.routes');
 const recruiterPreferencesRouter = require('./modules/recruiters/recruiterPreferences.routes');
 const analyticsRouter = require('./modules/analytics/analytics.routes');
+const settingsRouter = require('./modules/admin/settings/settings.routes');
+const adminHealthRouter = require('./modules/admin/health/health.routes');
+const maintenanceMode = require('./middleware/maintenanceMode');
 const errorHandler = require('./middleware/errorHandler');
 const ApiError = require('./utils/ApiError');
 const { swaggerUi, swaggerSpec, isSwaggerEnabled } = require('./config/swagger');
@@ -52,6 +55,9 @@ if (isSwaggerEnabled) {
   );
 }
 
+// Global maintenance mode guard (respects admin access, health, docs)
+app.use(maintenanceMode);
+
 // Mount module routes
 app.use('/api/jobs', jobsRouter);
 app.use('/api/jobs', applicationsRouter.jobsApplicationsRouter);
@@ -62,6 +68,8 @@ app.use('/api/interviews', interviewsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/recruiters', recruiterPreferencesRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/admin/settings', settingsRouter);
+app.use('/api/admin/health', adminHealthRouter);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

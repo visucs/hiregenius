@@ -138,6 +138,14 @@ class ApplicationsRepository {
 
     return this.findById(id);
   }
+
+  async countByJob(jobId) {
+    const row = await db('applications')
+      .where('job_id', Number(jobId))
+      .count('id as count')
+      .first();
+    return Number(row?.count || 0);
+  }
 }
 
 module.exports = new ApplicationsRepository();

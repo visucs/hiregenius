@@ -36,7 +36,9 @@ api.interceptors.request.use(
       config.url.startsWith('/applications') || config.url.startsWith('applications') ||
       config.url.startsWith('/interviews') || config.url.startsWith('interviews') ||
       config.url.startsWith('/notifications') || config.url.startsWith('notifications') ||
-      config.url.startsWith('/analytics') || config.url.startsWith('analytics')
+      config.url.startsWith('/analytics') || config.url.startsWith('analytics') ||
+      config.url.startsWith('/admin/settings') || config.url.startsWith('admin/settings') ||
+      config.url.startsWith('/admin/health') || config.url.startsWith('admin/health')
     );
     if (isCoreRequest) {
       config.baseURL = coreBaseURL;

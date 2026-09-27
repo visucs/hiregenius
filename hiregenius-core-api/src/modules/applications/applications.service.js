@@ -2,6 +2,7 @@ const applicationsRepository = require('./applications.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const jobsRepository = require('../jobs/jobs.repository');
 const notificationsService = require('../notifications/notifications.service');
+const settingsService = require('../admin/settings/settings.service');
 const ApiError = require('../../utils/ApiError');
 const db = require('../../config/db');
 
@@ -43,6 +44,19 @@ class ApplicationsService {
     const existing = await applicationsRepository.findByJobAndCandidate(jobId, candidate.id);
     if (existing) {
       throw ApiError.conflict('You have already applied for this job');
+    }
+
+    // 4.1 Check max_candidates_per_job platform limit
+    try {
+      const settings = await settingsService.getSettings();
+      if (settings && typeof settings.maxCandidatesPerJob === 'number') {
+        const currentCandidates = await applicationsRepository.countByJob(jobId);
+        if (currentCandidates >= settings.maxCandidatesPerJob) {
+          throw ApiError.badRequest(`Maximum candidate limit reached for this job (${settings.maxCandidatesPerJob}).`);
+        }
+      }
+    } catch (err) {
+      if (err.statusCode) throw err;
     }
 
     // 5. Persist application with race condition handling

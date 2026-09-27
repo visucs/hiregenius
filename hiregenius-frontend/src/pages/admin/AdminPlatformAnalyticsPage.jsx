@@ -2,14 +2,13 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, useInView, animate } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import {
-  BarChart3, Users, Briefcase, Video, Star,
-  TrendingUp, Award, ArrowUpRight, RefreshCw,
-  AlertCircle, Shield, ChevronDown, CheckCircle2,
-  ArrowUpDown, Filter,
+  BarChart3, Users, Briefcase, Video,
+  TrendingUp, Award, RefreshCw, AlertCircle,
+  Cpu, Layers,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+  XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend,
 } from 'recharts';
 import { selectUserRole } from '../../features/auth/authSlice';
 import analyticsService from '../../services/analyticsService';
@@ -45,7 +44,7 @@ const Counter = ({ to, suffix = '' }) => {
   return <span ref={ref}>{(val || 0).toLocaleString()}{suffix}</span>;
 };
 
-/* ─── Custom tooltip for BarChart ────────────────────────── */
+/* ─── Custom tooltip for Funnel BarChart ──────────────────── */
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -62,9 +61,29 @@ const CustomBarTooltip = ({ active, payload, label }) => {
   );
 };
 
+/* ─── Custom tooltip for Monthly Trend Chart ─────────────── */
+const CustomTrendTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#0F1420', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 10, padding: '10px 14px', color: '#F8FAFC', fontSize: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    }}>
+      <p style={{ margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 700 }}>Month: {label}</p>
+      {payload.map((item) => (
+        <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, margin: '3px 0' }}>
+          <span style={{ color: item.color, fontWeight: 600 }}>{item.name}:</span>
+          <span style={{ fontWeight: 800, color: '#fff' }}>{item.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /* ════════════════════════════════════════════════════════════
    ADMIN PLATFORM ANALYTICS PAGE — 100% REAL CORE API INTEGRATION
-════════════════════════════════════════════════════════════ */
+ ════════════════════════════════════════════════════════════ */
 const AdminPlatformAnalyticsPage = () => {
   const role = useSelector(selectUserRole);
 
@@ -74,22 +93,28 @@ const AdminPlatformAnalyticsPage = () => {
   // Backend state
   const [summary, setSummary]             = useState(null);
   const [topRecruiters, setTopRecruiters] = useState([]);
+  const [trendData, setTrendData]         = useState([]);
+  const [topSkills, setTopSkills]         = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  // Fetch real summary & top recruiters
+  // Fetch real summary, recruiters, trend, and top skills
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [sumRes, topRes] = await Promise.all([
+      const [sumRes, topRes, trendRes, skillsRes] = await Promise.all([
         analyticsService.getAdminSummary(),
         analyticsService.getAdminTopRecruiters({ sortBy }),
+        analyticsService.getAdminTrend({ months: 6 }),
+        analyticsService.getAdminTopSkills({ limit: 8 }),
       ]);
 
       setSummary(sumRes?.data ?? null);
       setTopRecruiters(topRes?.data ?? []);
+      setTrendData(trendRes?.data ?? []);
+      setTopSkills(skillsRes?.data ?? []);
     } catch (err) {
       console.error('[AdminPlatformAnalyticsPage] Analytics query error:', err);
       const msg = err.response?.data?.message || err.message || 'Failed to load platform analytics';
@@ -123,6 +148,28 @@ const AdminPlatformAnalyticsPage = () => {
   }, [rawStatus]);
 
   const hiredCount = Number(rawStatus.HIRED || 0);
+
+  // Format trend months (e.g. '2026-04' -> 'Apr '26')
+  const formattedTrend = useMemo(() => {
+    return trendData.map((d) => {
+      let label = d.month;
+      if (d.month && typeof d.month === 'string') {
+        const parts = d.month.split('-');
+        if (parts.length >= 2) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const date = new Date(year, month - 1, 1);
+          label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        }
+      }
+      return {
+        ...d,
+        label,
+        applications: Number(d.applications || 0),
+        hires: Number(d.hires || 0),
+      };
+    });
+  }, [trendData]);
 
   // Guard against non-admin rendering
   if (role && role !== 'ADMIN') {
@@ -292,6 +339,117 @@ const AdminPlatformAnalyticsPage = () => {
       {/* ── Main Content Area ──────────────────────────────── */}
       <div style={{ padding: 'clamp(20px, 3vw, 28px) clamp(16px, 4vw, 36px) 60px', maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+        {/* ── Row 1: Monthly Hiring Trend + In-Demand Skills ── */}
+        <div className="admin-analytics-charts" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18 }}>
+
+          {/* Monthly Hiring Trend (GET /api/analytics/admin/trend) */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #4f46e5, #818cf8, #4ade80)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{
+              padding: '16px 20px 12px', borderBottom: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Monthly Platform Hiring Trend
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                  Applications submitted vs successful hires (past 6 months)
+                </p>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+                6 Months
+              </span>
+            </div>
+            <div style={{ padding: '18px 16px 12px' }}>
+              {loading ? (
+                <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
+                </div>
+              ) : formattedTrend.length === 0 ? (
+                <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <BarChart3 size={30} style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No monthly activity recorded yet</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={formattedTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <Tooltip content={<CustomTrendTooltip />} />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: 11, paddingBottom: 10 }}
+                    />
+                    <Bar dataKey="applications" name="Applications" fill="#818cf8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="hires" name="Hires" fill="#4ade80" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Top In-Demand Skills (GET /api/analytics/admin/top-skills) */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Top Skills in Demand
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                Most requested skills across active job listings
+              </p>
+            </div>
+            <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 260, overflowY: 'auto' }}>
+              {loading ? (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
+                </div>
+              ) : topSkills.length === 0 ? (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <Layers size={28} style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No skills tagged in active jobs yet</p>
+                </div>
+              ) : (
+                topSkills.map((s) => (
+                  <div key={s.skill}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {s.skill}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#818cf8' }}>
+                        {s.count} {s.count === 1 ? 'job' : 'jobs'} <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>({s.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.min(s.percentage, 100)}%`,
+                          borderRadius: 999,
+                          background: 'linear-gradient(90deg, #4f46e5, #818cf8)',
+                          transition: 'width 0.6s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
         {/* ── Top Recruiters Leaderboard (GET /api/analytics/admin/top-recruiters) ── */}
         <div style={{
           background: 'var(--bg-elevated)', border: '1px solid var(--border)',
@@ -371,7 +529,6 @@ const AdminPlatformAnalyticsPage = () => {
                   </thead>
                   <tbody>
                     {topRecruiters.map((r, index) => {
-                      const isTop3 = index < 3;
                       const badgeColor = index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : null;
                       return (
                         <tr
@@ -421,7 +578,7 @@ const AdminPlatformAnalyticsPage = () => {
           </div>
         </div>
 
-        {/* ── Row: Platform-Wide Funnel BarChart + Role Breakdown ── */}
+        {/* ── Row 3: Platform-Wide Funnel BarChart + Role Breakdown ── */}
         <div className="admin-analytics-charts" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18 }}>
 
           {/* Platform Application Funnel */}
@@ -520,6 +677,38 @@ const AdminPlatformAnalyticsPage = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* ── Phase 6 Notice: AI Candidate Match & Resume Screening ── */}
+        <div style={{
+          background: 'rgba(99,102,241,0.06)',
+          border: '1px dashed rgba(99,102,241,0.30)',
+          borderRadius: 20,
+          padding: '20px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(99,102,241,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Cpu size={20} style={{ color: '#818cf8' }} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  AI Candidate Match & Resume Screening Analytics
+                </p>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'rgba(99,102,241,0.20)', color: '#a5b4fc', padding: '2px 8px', borderRadius: 999 }}>
+                  Phase 6 Architecture
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                Candidate semantic match distribution, AI interview grading curves, and automated scoring metrics will be activated when the Python FastAPI AI service connects.
+              </p>
+            </div>
+          </div>
         </div>
 
       </div>

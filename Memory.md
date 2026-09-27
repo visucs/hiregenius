@@ -1561,5 +1561,44 @@ pm run build completed successfully with 0 errors.
      - Frontend `npm run build`: **Success (1.58s)**.
      - Backend `npm run lint` & `npm test`: **11/11 test suites passed, 138/138 tests passed**.
 
+---
 
+### 2026-09-27 — Admin Backend Implementation & Full Admin Console Frontend Integration
 
+- **Scope & Objectives**: Audited and built the complete Admin backend across Core API (`hiregenius-core-api`) and Auth Service (`hiregenius-auth-service`), and wired the entire Admin Console frontend (`hiregenius-frontend/src/pages/admin/*`) to live data with zero leftover mock data. Marked upcoming AI/ML features honestly as "Phase 6 Pending".
+- **Architectural Implementation**:
+  1. **Core API — Platform Settings & Quota Enforcement**:
+     - Database Migration: `migrations/20260927_create_platform_settings_table.js` (singleton settings row with ID=1, default quotas, and toggles).
+     - Module: `src/modules/admin/settings/` (`settings.repository.js`, `settings.service.js`, `settings.validation.js`, `settings.controller.js`, `settings.routes.js`).
+     - Endpoints: `GET /api/admin/settings`, `PATCH /api/admin/settings` (Zod validated, guarded by `verifyJwt` and `requireRole('ADMIN')`).
+     - Global Middleware: `src/middleware/maintenanceMode.js` enforces 503 maintenance mode for non-admin requests when enabled, while allowing admin bypass.
+     - Quota Enforcement:
+       - `jobs.service.js` enforces `maxJobsPerRecruiter` before job creation.
+       - `applications.service.js` enforces `maxCandidatesPerJob` before application creation (with `countByJob(jobId)` in repository).
+  2. **Core API — System Health & Analytics Aggregation**:
+     - System Health Module: `src/modules/admin/health/` (`GET /api/admin/health` checking MySQL latency, Auth Service ping, SMTP status, and local uploads file storage).
+     - Enhanced Analytics (`src/modules/analytics/`):
+       - `GET /api/analytics/admin/summary`: Added `completedInterviews` and real 7-day deltas (`newUsersLast7d`, `newRecruitersLast7d`, `newCandidatesLast7d`, `newJobsLast7d`, `newApplicationsLast7d`, `newInterviewsLast7d`).
+       - `GET /api/analytics/admin/trend`: Database-agnostic monthly applications vs hires trend with zero-filling (`?months=6`).
+       - `GET /api/analytics/admin/top-skills`: Parses JSON skill arrays across active jobs to compute frequency and demand percentage (`?limit=8`).
+  3. **Auth Service — User Administration & Registration Gate (Spring Boot)**:
+     - User Management Module:
+       - `UserRepository.java` extended with `JpaSpecificationExecutor<User>`.
+       - DTOs: `AdminUserResponse.java`, `UpdateUserStatusRequest.java`, `PageResponse.java`.
+       - Service: `AdminUserService.java`, `AdminUserServiceImpl.java` with dynamic JPA Specification filtering (role, active, search keyword), pagination, and safety checks (cannot disable own account; cannot disable another admin).
+       - Controller: `AdminUserController.java` (`GET /api/admin/users`, `PATCH /api/admin/users/{id}/status` guarded by `@PreAuthorize("hasRole('ADMIN')")`).
+     - Registration & Status Guard in `AuthServiceImpl.java`:
+       - Local login & Google OAuth reject deactivated users (`isActive == false`) with `DisabledException` (403 Forbidden).
+       - Local register & Google OAuth check `platform_settings.open_registration_enabled`; reject with `IllegalStateException` (400) if closed.
+  4. **Frontend Admin Console Wiring (`hiregenius-frontend`)**:
+     - Request Routing (`src/services/api.js`): Dual routing configured so `/admin/users` routes to Spring Boot (:8080) and `/admin/settings`, `/admin/health`, and `/analytics/admin/*` route to Core API (:4000).
+     - Client Service (`src/services/adminService.js`): Unified API client for admin operations.
+     - `AdminDashboardHome.jsx`: Live stat cards with 7-day delta indicators, live system health cards (DB latency, Auth service, file storage, SMTP), and honest Phase 6 AI indicators.
+     - `AdminUserManagementPage.jsx`: Live user table with server-side pagination, search debouncing, role filtering, enable/disable toggling, and self-disable protection.
+     - `AdminSystemSettingsPage.jsx`: Real settings form connected to `GET/PATCH /api/admin/settings` (maintenance mode, open registration, recruiter job quota, candidate application quota).
+     - `AdminPlatformAnalyticsPage.jsx`: Real 6-month monthly hiring trend chart (`GET /api/analytics/admin/trend`), top skills in demand (`GET /api/analytics/admin/top-skills`), top recruiters leaderboard with sort toggle, application funnel, role distribution, and Phase 6 AI match screening notice.
+     - `AdminApiKeysPage.jsx`: Replaced mock saving form with honest Phase 6 architectural panel explaining that LLM provider keys will be configured when the Python AI service is deployed.
+- **Verification & Test Results**:
+  - Core API: **13/13 test suites passed, 150/150 tests passed** (`npm test`), **0 ESLint errors/warnings** (`npm run lint`).
+  - Auth Service: **46/46 tests passed with BUILD SUCCESS** (`.\mvnw.cmd test`).
+  - Frontend: **0 ESLint errors** (`npm run lint`), production build succeeded in 1.19s (`npm run build`).

@@ -122,6 +122,22 @@ class AnalyticsService {
   async getTopRecruiters(options = {}) {
     return analyticsRepository.getTopRecruiters(options);
   }
+
+  /**
+   * Admin monthly trend
+   * @param {{ months?: number }} options
+   */
+  async getAdminTrend(options = {}) {
+    return analyticsRepository.getAdminMonthlyTrend(options);
+  }
+
+  /**
+   * Admin top skills
+   * @param {{ limit?: number }} options
+   */
+  async getAdminTopSkills(options = {}) {
+    return analyticsRepository.getAdminTopSkills(options);
+  }
 }
 
 module.exports = new AnalyticsService();

@@ -2,6 +2,7 @@ const jobsRepository = require('./jobs.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const candidatesService = require('../candidates/candidates.service');
 const recruiterPreferencesService = require('../recruiters/recruiterPreferences.service');
+const settingsService = require('../admin/settings/settings.service');
 const emailService = require('../email/email.service');
 const { jobAlertTemplate } = require('../email/email.templates');
 const env = require('../../config/env');
@@ -23,6 +24,24 @@ class JobsService {
     }
     if (user && (user.email_verified === 0 || user.email_verified === false)) {
       throw ApiError.forbidden('Please verify your email address to post jobs.');
+    }
+
+    // 0.1 Check max_jobs_per_recruiter platform limit
+    try {
+      const settings = await settingsService.getSettings();
+      if (settings && typeof settings.maxJobsPerRecruiter === 'number') {
+        const countRow = await db('jobs')
+          .where('recruiter_id', Number(recruiterId))
+          .where('is_deleted', false)
+          .count('id as count')
+          .first();
+        const currentCount = Number(countRow?.count || 0);
+        if (currentCount >= settings.maxJobsPerRecruiter) {
+          throw ApiError.badRequest(`Maximum job posting limit reached (${settings.maxJobsPerRecruiter}). Please contact your administrator.`);
+        }
+      }
+    } catch (err) {
+      if (err.statusCode) throw err;
     }
 
     // Strip recruiter_id if passed in request body

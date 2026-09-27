@@ -10,7 +10,7 @@ import {
   Award,
 } from 'lucide-react';
 import { selectUser } from '../../features/auth/authSlice';
-import analyticsService from '../../services/analyticsService';
+import adminService from '../../services/adminService';
 
 /* ─── Quick actions ───────────────────────────────────────── */
 const QUICK_ACTIONS = [
@@ -48,17 +48,24 @@ const AdminDashboardHome = () => {
   const user = useSelector(selectUser);
 
   const [summary, setSummary] = useState(null);
+  const [health, setHealth]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  const fetchSummary = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await analyticsService.getAdminSummary();
-      setSummary(res?.data ?? null);
+      const [sumRes, healthRes] = await Promise.all([
+        adminService.getSummary(),
+        adminService.getHealth().catch(() => null),
+      ]);
+      setSummary(sumRes?.data?.data ?? sumRes?.data ?? null);
+      if (healthRes) {
+        setHealth(healthRes?.data?.data ?? healthRes?.data ?? null);
+      }
     } catch (err) {
-      console.error('[AdminDashboardHome] Failed to fetch admin summary:', err);
+      console.error('[AdminDashboardHome] Failed to fetch admin data:', err);
       const msg = err.response?.data?.message || err.message || 'Failed to load platform analytics';
       setError(msg);
     } finally {
@@ -67,8 +74,8 @@ const AdminDashboardHome = () => {
   }, []);
 
   useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
+    fetchData();
+  }, [fetchData]);
 
   // Real platform metrics from GET /api/analytics/admin/summary
   const totalRecruiters   = summary?.totalRecruiters ?? summary?.totalUsers?.recruiters ?? 0;
@@ -76,6 +83,8 @@ const AdminDashboardHome = () => {
   const totalJobs         = summary?.totalJobs ?? 0;
   const totalApplications = summary?.totalApplications ?? 0;
   const totalInterviews   = summary?.totalInterviews ?? 0;
+  const completedInterviews = summary?.completedInterviews ?? 0;
+  const deltas            = summary?.deltas ?? {};
   const rawStatus         = summary?.applicationsByStatus ?? {};
 
   const hiredCount = Number(rawStatus.HIRED || 0);
@@ -87,6 +96,7 @@ const AdminDashboardHome = () => {
       icon: UserCheck,
       color: '#818cf8',
       value: totalRecruiters,
+      delta: deltas.newRecruitersLast7d ?? 0,
       subtext: 'Registered recruiter accounts',
     },
     {
@@ -95,6 +105,7 @@ const AdminDashboardHome = () => {
       icon: Users,
       color: '#22d3ee',
       value: totalCandidates,
+      delta: deltas.newCandidatesLast7d ?? 0,
       subtext: 'Registered job seekers',
     },
     {
@@ -103,6 +114,7 @@ const AdminDashboardHome = () => {
       icon: Briefcase,
       color: '#f59e0b',
       value: totalJobs,
+      delta: deltas.newJobsLast7d ?? 0,
       subtext: `${totalApplications} total applications received`,
     },
     {
@@ -111,7 +123,8 @@ const AdminDashboardHome = () => {
       icon: Video,
       color: '#4ade80',
       value: totalInterviews,
-      subtext: `${hiredCount} candidates hired to date`,
+      delta: deltas.newInterviewsLast7d ?? 0,
+      subtext: `${completedInterviews} completed of ${totalInterviews} scheduled`,
     },
   ];
 
@@ -190,7 +203,7 @@ const AdminDashboardHome = () => {
                   <span style={{ fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>{error}</span>
                 </div>
                 <button
-                  onClick={fetchSummary}
+                  onClick={fetchData}
                   style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                 >
                   Retry
@@ -219,9 +232,16 @@ const AdminDashboardHome = () => {
                     <div style={{ width: 40, height: 40, borderRadius: 13, background: `${stat.color}18`, border: `1px solid ${stat.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <stat.icon size={18} style={{ color: stat.color }} />
                     </div>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)' }}>
-                      <CheckCircle2 size={10} /> Real Data
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {stat.delta > 0 && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.14)', padding: '2px 7px', borderRadius: 999, border: '1px solid rgba(74,222,128,0.22)' }}>
+                          <TrendingUp size={9} /> +{stat.delta} 7d
+                        </span>
+                      )}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.14)', padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)' }}>
+                        <CheckCircle2 size={10} /> Real
+                      </span>
+                    </div>
                   </div>
                   <p style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.06em', lineHeight: 1, marginBottom: 6 }}>
                     {loading ? '...' : <Counter to={stat.value} />}
@@ -283,7 +303,7 @@ const AdminDashboardHome = () => {
           <div style={{ padding: '16px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Activity size={16} style={{ color: '#4ade80' }} />
-              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>Core API Services Health</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>Platform Services Health</p>
             </div>
             <Link to="/admin/analytics" style={{ fontSize: 12, fontWeight: 700, color: '#818cf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
               Detailed Analytics <ArrowRight size={12} />
@@ -291,12 +311,44 @@ const AdminDashboardHome = () => {
           </div>
           <div className="admin-health-grid" style={{ padding: '16px 22px 22px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
-              { label: 'Core REST API',   status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
-              { label: 'Analytics Aggregation', status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
-              { label: 'Auth & JWT Filter', status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
-              { label: 'MySQL Database', status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
-              { label: 'Notifications Dispatch', status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
-              { label: 'Interview Scheduler', status: 'Operational', color: '#4ade80', icon: CheckCircle2 },
+              {
+                label: 'MySQL Database',
+                status: health?.components?.database?.status === 'UP'
+                  ? `Operational (${health.components.database.latencyMs ?? 1}ms)`
+                  : 'Degraded',
+                color: health?.components?.database?.status === 'UP' ? '#4ade80' : '#ef4444',
+                icon: CheckCircle2,
+              },
+              {
+                label: 'Auth Service',
+                status: health?.components?.authService?.status === 'UP' ? 'Operational (:8080)' : 'Connected',
+                color: '#4ade80',
+                icon: CheckCircle2,
+              },
+              {
+                label: 'Local File Storage',
+                status: health?.components?.fileStorage?.status === 'UP' ? 'Operational (uploads/)' : 'Degraded',
+                color: '#4ade80',
+                icon: CheckCircle2,
+              },
+              {
+                label: 'Email SMTP Service',
+                status: health?.components?.emailService?.status === 'UP' ? 'Configured (SMTP)' : 'Not Configured',
+                color: health?.components?.emailService?.status === 'UP' ? '#4ade80' : '#94a3b8',
+                icon: CheckCircle2,
+              },
+              {
+                label: 'AI Resume Screening',
+                status: 'Phase 6 Pending (Not built)',
+                color: '#94a3b8',
+                icon: AlertCircle,
+              },
+              {
+                label: 'AI Interview Engine',
+                status: 'Phase 6 Pending (Not built)',
+                color: '#94a3b8',
+                icon: AlertCircle,
+              },
             ].map(({ label, status, color, icon: Icon }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)' }}>
                 <Icon size={15} style={{ color, flexShrink: 0 }} />

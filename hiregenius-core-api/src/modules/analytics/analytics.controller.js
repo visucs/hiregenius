@@ -59,6 +59,26 @@ class AnalyticsController {
       return next(err);
     }
   }
+
+  async getAdminTrend(req, res, next) {
+    try {
+      const months = req.query.months ? parseInt(req.query.months, 10) : 6;
+      const data = await analyticsService.getAdminTrend({ months });
+      return ApiResponse.success(res, data, 'Admin monthly hiring trend retrieved successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async getAdminTopSkills(req, res, next) {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+      const data = await analyticsService.getAdminTopSkills({ limit });
+      return ApiResponse.success(res, data, 'Top skills in demand retrieved successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new AnalyticsController();

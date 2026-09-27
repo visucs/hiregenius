@@ -22,6 +22,8 @@ import com.hiregenius.authservice.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -48,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${app.frontend.base-url:https://hiregenius-delta.vercel.app}")
     private String frontendBaseUrl;
@@ -61,7 +64,8 @@ public class AuthServiceImpl implements AuthService {
             DnsValidationService dnsValidationService,
             PasswordResetTokenRepository passwordResetTokenRepository,
             EmailVerificationTokenRepository emailVerificationTokenRepository,
-            EmailService emailService
+            EmailService emailService,
+            JdbcTemplate jdbcTemplate
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -72,11 +76,31 @@ public class AuthServiceImpl implements AuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.emailService = emailService;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    private boolean isOpenRegistrationEnabled() {
+        try {
+            Boolean enabled = jdbcTemplate.queryForObject(
+                    "SELECT open_registration_enabled FROM platform_settings WHERE id = 1",
+                    Boolean.class
+            );
+            return enabled != null ? enabled : true;
+        } catch (Exception ex) {
+            // Table or row may not exist in some environments; default to true
+            return true;
+        }
     }
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // 0. Check open registration platform setting
+        if (!isOpenRegistrationEnabled()) {
+            log.warn("Registration rejected: Platform registration is currently closed [{}]", request.getEmail());
+            throw new IllegalStateException("Registration is currently closed by administrator.");
+        }
+
         // Validate and normalize role
         Role role = parseAndValidatePublicRole(request.getRole());
 
@@ -129,10 +153,14 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().toLowerCase().trim();
 
-        // Check if user exists and whether this is a Google-only account
+        // Check if user exists and whether account is active
         Optional<User> existingUserOpt = userRepository.findByEmail(email);
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
+            if (!existingUser.isActive()) {
+                log.warn("Password login rejected for deactivated user [{}]", email);
+                throw new DisabledException("Your account has been deactivated. Please contact support.");
+            }
             if (existingUser.getAuthProvider() == AuthProvider.GOOGLE && existingUser.getPassword() == null) {
                 log.info("Password login rejected for Google-only user [{}]", email);
                 throw new IllegalArgumentException("This account uses Google Sign-In — please use the Google button");
@@ -144,6 +172,9 @@ public class AuthServiceImpl implements AuthService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getPassword())
             );
+        } catch (DisabledException ex) {
+            log.warn("Login rejected for deactivated user [{}]: {}", email, ex.getMessage());
+            throw ex;
         } catch (AuthenticationException ex) {
             log.warn("Login failed for email [{}]: {}", email, ex.getMessage());
             throw new InvalidCredentialsException("Invalid email or password");
@@ -169,6 +200,12 @@ public class AuthServiceImpl implements AuthService {
         Optional<User> existingUserOpt = userRepository.findByEmail(email);
 
         if (existingUserOpt.isEmpty()) {
+            // 0. Check open registration platform setting
+            if (!isOpenRegistrationEnabled()) {
+                log.warn("Google registration rejected: Platform registration is currently closed [{}]", email);
+                throw new IllegalStateException("Registration is currently closed by administrator.");
+            }
+
             // New user registration via Google OAuth
             if (request.getRole() == null || request.getRole().trim().isEmpty()) {
                 log.warn("Google registration rejected: Role is required for first-time sign-up [{}]", email);
@@ -197,6 +234,11 @@ public class AuthServiceImpl implements AuthService {
         } else {
             // Existing user login via Google OAuth
             User existingUser = existingUserOpt.get();
+
+            if (!existingUser.isActive()) {
+                log.warn("Google login rejected for deactivated user [{}]", email);
+                throw new DisabledException("Your account has been deactivated. Please contact support.");
+            }
 
             // Account-linking policy:
             // If the account was previously registered locally, we preserve their credentials and stored role,

@@ -70,6 +70,28 @@ export const analyticsService = {
     const res = await api.get('/analytics/admin/top-recruiters', { params: options });
     return res.data;
   },
+
+  /**
+   * Admin monthly hiring trend (applications vs hires)
+   * GET /api/analytics/admin/trend
+   * @param {object} [options] - { months?: number }
+   * @returns {Promise<{ success: boolean, data: Array<{ month: string, applications: number, hires: number }> }>}
+   */
+  getAdminTrend: async (options = {}) => {
+    const res = await api.get('/analytics/admin/trend', { params: options });
+    return res.data;
+  },
+
+  /**
+   * Admin top in-demand skills aggregated across active jobs
+   * GET /api/analytics/admin/top-skills
+   * @param {object} [options] - { limit?: number }
+   * @returns {Promise<{ success: boolean, data: Array<{ skill: string, count: number, percentage: number }> }>}
+   */
+  getAdminTopSkills: async (options = {}) => {
+    const res = await api.get('/analytics/admin/top-skills', { params: options });
+    return res.data;
+  },
 };
 
 export default analyticsService;

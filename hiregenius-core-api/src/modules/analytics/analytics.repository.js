@@ -301,11 +301,17 @@ class AnalyticsRepository {
       .first();
     const totalApplications = Number(appsRow?.count || 0);
 
-    // 4. Total interviews
+    // 4. Total interviews & completed interviews
     const interviewsRow = await db('interviews')
       .count('id as count')
       .first();
     const totalInterviews = Number(interviewsRow?.count || 0);
+
+    const completedRow = await db('interviews')
+      .where('status', 'COMPLETED')
+      .count('id as count')
+      .first();
+    const completedInterviews = Number(completedRow?.count || 0);
 
     // 5. Platform-wide applicationsByStatus
     const appRows = await db('applications')
@@ -322,6 +328,53 @@ class AnalyticsRepository {
       }
     }
 
+    // 6. 7-Day Deltas
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const sql7d = toSqlDateTime(sevenDaysAgo);
+
+    let newUsersLast7d = 0;
+    let newRecruitersLast7d = 0;
+    let newCandidatesLast7d = 0;
+
+    try {
+      const hasUsers = await db.schema.hasTable('users');
+      if (hasUsers) {
+        const u7Rows = await db('users')
+          .where('created_at', '>=', sql7d)
+          .select('role', db.raw('COUNT(id) as count'))
+          .groupBy('role');
+        for (const r of u7Rows) {
+          const c = Number(r.count || 0);
+          newUsersLast7d += c;
+          if (r.role === 'RECRUITER') newRecruitersLast7d = c;
+          else if (r.role === 'CANDIDATE') newCandidatesLast7d = c;
+        }
+      }
+    } catch {
+      // test fallback
+    }
+
+    const j7Row = await db('jobs')
+      .where('is_deleted', false)
+      .andWhere('created_at', '>=', sql7d)
+      .count('id as count')
+      .first();
+    const newJobsLast7d = Number(j7Row?.count || 0);
+
+    const a7Row = await db('applications')
+      .join('jobs', 'applications.job_id', 'jobs.id')
+      .where('jobs.is_deleted', false)
+      .andWhere('applications.applied_at', '>=', sql7d)
+      .count('applications.id as count')
+      .first();
+    const newApplicationsLast7d = Number(a7Row?.count || 0);
+
+    const i7Row = await db('interviews')
+      .andWhere('interviews.created_at', '>=', sql7d)
+      .count('id as count')
+      .first();
+    const newInterviewsLast7d = Number(i7Row?.count || 0);
+
     return {
       totalUsers,
       usersByRole: {
@@ -334,7 +387,16 @@ class AnalyticsRepository {
       totalJobs,
       totalApplications,
       totalInterviews,
+      completedInterviews,
       applicationsByStatus,
+      deltas: {
+        newUsersLast7d,
+        newRecruitersLast7d,
+        newCandidatesLast7d,
+        newJobsLast7d,
+        newApplicationsLast7d,
+        newInterviewsLast7d,
+      },
     };
   }
 
@@ -429,6 +491,99 @@ class AnalyticsRepository {
     });
 
     return recruiters.slice(0, limit);
+  }
+
+  /**
+   * Admin: Monthly trend of applications and hires over the past N months
+   * @param {{ months?: number }} options
+   */
+  async getAdminMonthlyTrend({ months = 6 } = {}) {
+    const monthList = [];
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString('en-US', { month: 'short' });
+      monthList.push({ month: key, label, applications: 0, hires: 0 });
+    }
+
+    const oldestMonthDate = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const sqlOldest = toSqlDateTime(oldestMonthDate);
+
+    const rows = await db('applications')
+      .join('jobs', 'applications.job_id', 'jobs.id')
+      .where('jobs.is_deleted', false)
+      .andWhere('applications.applied_at', '>=', sqlOldest)
+      .select('applications.applied_at', 'applications.status');
+
+    const monthMap = new Map();
+    for (const item of monthList) {
+      monthMap.set(item.month, item);
+    }
+
+    for (const r of rows) {
+      const dt = new Date(r.applied_at);
+      if (!isNaN(dt.getTime())) {
+        const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+        const entry = monthMap.get(key);
+        if (entry) {
+          entry.applications += 1;
+          if (r.status === 'HIRED') {
+            entry.hires += 1;
+          }
+        }
+      }
+    }
+
+    return monthList;
+  }
+
+  /**
+   * Admin: Top skills in demand from all active open jobs
+   * @param {{ limit?: number }} options
+   */
+  async getAdminTopSkills({ limit = 10 } = {}) {
+    const rows = await db('jobs')
+      .where('is_deleted', false)
+      .where('status', 'OPEN')
+      .select('skills');
+
+    const totalOpenJobs = rows.length;
+    const skillCounts = {};
+
+    for (const r of rows) {
+      let skillsArray = [];
+      if (Array.isArray(r.skills)) {
+        skillsArray = r.skills;
+      } else if (typeof r.skills === 'string') {
+        try {
+          const parsed = JSON.parse(r.skills);
+          if (Array.isArray(parsed)) skillsArray = parsed;
+        } catch {
+          skillsArray = r.skills.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+      }
+
+      // Deduplicate per job
+      const uniqueSkills = new Set(skillsArray.map((s) => String(s).trim()).filter(Boolean));
+      for (const skill of uniqueSkills) {
+        skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+      }
+    }
+
+    const sortedSkills = Object.entries(skillCounts)
+      .map(([skill, count]) => ({
+        skill,
+        count,
+        percentage: totalOpenJobs > 0 ? Math.round((count / totalOpenJobs) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+
+    return {
+      totalOpenJobs,
+      topSkills: sortedSkills,
+    };
   }
 }
 

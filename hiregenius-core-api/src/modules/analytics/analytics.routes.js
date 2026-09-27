@@ -74,4 +74,20 @@ router.get(
   (req, res, next) => analyticsController.getTopRecruiters(req, res, next),
 );
 
+// GET /api/analytics/admin/trend - Monthly hiring trend (applications vs hires)
+router.get(
+  '/admin/trend',
+  verifyJwt,
+  requireRole('ADMIN'),
+  (req, res, next) => analyticsController.getAdminTrend(req, res, next),
+);
+
+// GET /api/analytics/admin/top-skills - Top skills in demand across open jobs
+router.get(
+  '/admin/top-skills',
+  verifyJwt,
+  requireRole('ADMIN'),
+  (req, res, next) => analyticsController.getAdminTopSkills(req, res, next),
+);
+
 module.exports = router;
