@@ -3,12 +3,37 @@ import { createSlice } from '@reduxjs/toolkit';
 const TOKEN_KEY = 'hg_token';
 const USER_KEY = 'hg_user';
 
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key, val) => {
+    try {
+      localStorage.setItem(key, val);
+    } catch {
+      // ignore in restricted environments
+    }
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  },
+};
+
 // Rehydrate from localStorage on page load
 const initialState = {
-  token: localStorage.getItem(TOKEN_KEY) || null,
+  token: safeStorage.getItem(TOKEN_KEY) || null,
   user: (() => {
     try {
-      return JSON.parse(localStorage.getItem(USER_KEY)) || null;
+      const raw = safeStorage.getItem(USER_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
@@ -28,8 +53,8 @@ const authSlice = createSlice({
       state.token = token;
       state.user = resolvedUser;
       state.error = null;
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
+      safeStorage.setItem(TOKEN_KEY, token);
+      safeStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     },
     setLoading(state, action) {
       state.isLoading = action.payload;
@@ -46,8 +71,8 @@ const authSlice = createSlice({
       state.user = null;
       state.error = null;
       state.isLoading = false;
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
+      safeStorage.removeItem(TOKEN_KEY);
+      safeStorage.removeItem(USER_KEY);
     },
   },
 });

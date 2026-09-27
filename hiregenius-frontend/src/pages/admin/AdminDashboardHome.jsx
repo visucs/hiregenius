@@ -155,7 +155,7 @@ const AdminDashboardHome = () => {
                   </span>
                 </div>
                 <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 34px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
-                  Platform Overview{user?.name ? ` — ${user.name.split(' ')[0]}` : ''}
+                  Platform Overview{typeof user?.name === 'string' && user.name.trim() ? ` — ${user.name.trim().split(' ')[0]}` : ''}
                 </h1>
                 <p style={{ fontSize: 14, color: 'rgba(196,200,255,0.60)', lineHeight: 1.6 }}>
                   Real-time platform telemetry aggregated across all recruiters, jobs, and candidates.

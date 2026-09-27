@@ -118,19 +118,27 @@ const AdminPlatformAnalyticsPage = () => {
       }
 
       if (topResult.status === 'fulfilled') {
-        setTopRecruiters(topResult.value?.data ?? []);
+        const rawTop = topResult.value?.data;
+        setTopRecruiters(Array.isArray(rawTop) ? rawTop : (rawTop?.recruiters || []));
       } else {
         console.warn('[AdminPlatformAnalyticsPage] Top-recruiters fetch failed:', topResult.reason?.message);
       }
 
       if (trendResult.status === 'fulfilled') {
-        setTrendData(trendResult.value?.data ?? []);
+        const rawTrend = trendResult.value?.data;
+        setTrendData(Array.isArray(rawTrend) ? rawTrend : (rawTrend?.trend || []));
       } else {
         console.warn('[AdminPlatformAnalyticsPage] Trend fetch failed:', trendResult.reason?.message);
       }
 
       if (skillsResult.status === 'fulfilled') {
-        setTopSkills(skillsResult.value?.data ?? []);
+        const rawSkills = skillsResult.value?.data;
+        const skillsArray = Array.isArray(rawSkills)
+          ? rawSkills
+          : Array.isArray(rawSkills?.topSkills)
+            ? rawSkills.topSkills
+            : [];
+        setTopSkills(skillsArray);
       } else {
         console.warn('[AdminPlatformAnalyticsPage] Top-skills fetch failed:', skillsResult.reason?.message);
       }
@@ -177,6 +185,7 @@ const AdminPlatformAnalyticsPage = () => {
 
   // Format trend months (e.g. '2026-04' -> 'Apr '26')
   const formattedTrend = useMemo(() => {
+    if (!Array.isArray(trendData)) return [];
     return trendData.map((d) => {
       let label = d.month;
       if (d.month && typeof d.month === 'string') {
@@ -441,7 +450,7 @@ const AdminPlatformAnalyticsPage = () => {
                 <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
                 </div>
-              ) : topSkills.length === 0 ? (
+              ) : !Array.isArray(topSkills) || topSkills.length === 0 ? (
                 <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
                   <Layers size={28} style={{ color: 'var(--text-muted)' }} />
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No skills tagged in active jobs yet</p>

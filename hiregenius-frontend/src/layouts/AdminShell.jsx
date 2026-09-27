@@ -24,11 +24,11 @@ const NAV_ITEMS = [
 
 /* ─── Avatar initials helper ─────────────────────────────────── */
 const getInitials = (name) => {
-  if (!name) return 'A';
-  const parts = name.trim().split(' ');
+  if (!name || typeof name !== 'string') return 'A';
+  const parts = name.trim().split(' ').filter(Boolean);
   return parts.length >= 2
     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    : parts[0].slice(0, 2).toUpperCase();
+    : parts[0] ? parts[0].slice(0, 2).toUpperCase() : 'A';
 };
 
 /* ─── Admin color palette (indigo/violet, keeps identity) ─────── */
