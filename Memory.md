@@ -1487,3 +1487,25 @@ pm run build completed successfully with 0 errors.
      - Candidate isolation was tested and confirmed: Candidate 1 and Candidate 2 received strictly isolated data.
      - Role-based authorization was confirmed: RECRUITER attempting `/api/analytics/admin/summary` received `403 Forbidden`.
 
+---
+
+### 2026-09-27 - Phase 5 Core API: Merge into Dev & AWS Deployment Readiness Audit
+
+- **Merge Execution**:
+  - `feature/core-api-phase5-analytics` was merged directly into `dev` via fast-forward (`a263c6b`).
+  - Merged `dev` was pushed to `origin/dev`.
+  - Git log confirms both the security fix (`8d91eea`) and Phase 5 (`a263c6b`) are present on `dev`.
+  - Regression testing on `dev`: `npm run lint` passed (0 errors), `npm test` passed (11/11 suites, 138/138 tests).
+  - GitHub Actions CI on `dev`: `Core API CI/CD` passed with conclusion `success`.
+- **AWS Deployment Readiness Audit Findings**:
+  1. **Environment Variables**: Audited all 19 configuration variables across `src/config/env.js` and `knexfile.js`. Identified that `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` have local fallbacks in `src/config/env.js` that should fail fast in production if unset.
+  2. **.env / Secrets Hygiene**: Verified `.env` is unversioned and ignored. `.env.example` has full placeholders. No hardcoded API keys or credentials exist in `src/`.
+  3. **Database Migrations**: Tested fresh database migration sequence against empty MySQL schema (`hiregenius_migration_test_temp`). All 5 Knex migrations executed in order without errors. Noted that user schema email verification is managed via Flyway in Auth Service.
+  4. **Health Check Endpoint**: Found that `GET /health` is process-only (no DB ping) and `GET /api/health` does not exist. Proposed adding DB `SELECT 1` ping and `/api/health` alias.
+  5. **CORS Configuration**: Found that CORS uses permissive wildcard `app.use(cors())`. Proposed restricting allowed origins via `FRONTEND_BASE_URL` / `CORS_ALLOWED_ORIGINS`.
+  6. **Logging & Crash Behavior**: Startup failures log to stderr with `process.exit(1)`. Graceful shutdown handles `SIGTERM`/`SIGINT`. Proposed adding explicit `uncaughtException` and `unhandledRejection` handlers.
+  7. **Port & Binding**: Reads `PORT` dynamically (default 4000) and binds to all interfaces (`0.0.0.0`).
+  8. **Dependency & Build Sanity**: `npm ci` completed cleanly in 14s with 0 vulnerabilities. Production dependencies are 100% pure JS with zero native compilation steps.
+  9. **CI Status**: GitHub Actions CI on `dev` passed successfully (`Core API CI/CD`).
+
+
