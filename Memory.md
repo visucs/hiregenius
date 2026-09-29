@@ -1780,6 +1780,7 @@ pm run build completed successfully with 0 errors.
 - **Future Hardening Item**:
   - `DB_SSL=false` is acceptable for now inside the private VPC, but enabling RDS SSL/TLS (with AWS RDS global CA bundle) is flagged as a future security hardening item.
 - **Production Environment Inventory**:
+  - `DB_NAME` set to `hiregenius_core` (distinct database on the RDS instance holding Core API schema; separate from Auth Service's `hiregenius` database).
   - `AUTH_SERVICE_URL` set to private VPC IP `http://172.31.6.0:8080`.
 
 
