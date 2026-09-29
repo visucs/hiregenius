@@ -23,10 +23,23 @@ const env = {
   MAIL_FROM: process.env.MAIL_FROM || 'noreply@hiregenius.ai',
   FRONTEND_BASE_URL: process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app',
   CORE_API_URL: process.env.CORE_API_URL || 'http://localhost:4000',
+  CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://localhost:3000',
 };
 
 if (!env.JWT_SIGNING_KEY) {
   throw new Error('FATAL: JWT_SIGNING_KEY environment variable is missing.');
+}
+
+if (env.NODE_ENV === 'production') {
+  const missingDbVars = [];
+  if (!process.env.DB_HOST) missingDbVars.push('DB_HOST');
+  if (!process.env.DB_USER) missingDbVars.push('DB_USER');
+  if (!process.env.DB_PASSWORD) missingDbVars.push('DB_PASSWORD');
+  if (!process.env.DB_NAME) missingDbVars.push('DB_NAME');
+
+  if (missingDbVars.length > 0) {
+    throw new Error(`FATAL: Missing required database environment variables in production: ${missingDbVars.join(', ')}`);
+  }
 }
 
 if (env.NODE_ENV === 'production' && (!env.MAIL_USERNAME || !env.MAIL_PASSWORD)) {

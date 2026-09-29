@@ -13,6 +13,7 @@ async function maintenanceMode(req, res, next) {
   // Always bypass health checks, docs, and admin endpoints
   if (
     req.path === '/health' ||
+    req.path === '/api/health' ||
     req.path.startsWith('/swagger') ||
     req.path.startsWith('/api-docs') ||
     req.path.startsWith('/api/admin')

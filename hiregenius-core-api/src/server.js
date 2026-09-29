@@ -1,3 +1,14 @@
+// Process-level uncaught exception & unhandled rejection handlers
+process.on('uncaughtException', (err) => {
+  console.error('[Core API] FATAL UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Core API] FATAL UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 const app = require('./app');
 const env = require('./config/env');
 const db = require('./config/db');

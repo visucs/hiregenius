@@ -1754,5 +1754,59 @@ pm run build completed successfully with 0 errors.
   - Priority 0 Test (`verify_priority0.js`): All 9 live checks passed.
   - `hiregenius-frontend`: `npm run build` passed in 1.10s with 0 errors.
 
+---
+
+### 2026-09-30 — Phase A: Core API Dockerization & AWS Readiness Audit Fixes
+
+- **Branch**: `feature/core-api-aws-deployment` (cleanly branched from `dev`).
+- **Audit Fixes Implemented & Tested**:
+  1. Fatal DB Environment Validation: Missing `DB_HOST`, `DB_USER`, `DB_PASSWORD`, or `DB_NAME` when `NODE_ENV=production` throws fatal error during boot.
+  2. Database-Aware Health Checks: `GET /health` and `GET /api/health` run live `SELECT 1 AS health_check`. Returns 200 `{ status: 'UP', database: 'CONNECTED' }` or 503 `{ status: 'DOWN', database: 'DISCONNECTED' }`.
+  3. Environment-Based CORS: `cors(...)` parses comma-separated origins from `CORS_ALLOWED_ORIGINS` / `FRONTEND_BASE_URL` with credentials support.
+  4. Process Exception Handlers: Registered `uncaughtException` and `unhandledRejection` in `server.js` with clean code 1 exit.
+- **Dockerfile & .dockerignore**:
+  - `.dockerignore` created to exclude `.env`, `node_modules`, `test/`, `.git`, coverage.
+  - Multi-stage Dockerfile based on `node:20.18.0-alpine` (deps stage with clean `--omit=dev` install; runtime stage copying modules and app code).
+  - Built-in non-root user `node` (`USER node`) with `/app` directory ownership.
+  - Port 4000 exposed; `HEALTHCHECK` probing `GET /health` with 30s interval, 5s timeout, 3 retries.
+- **Local Container Verification**:
+  - Built image `hiregenius-core-api:local` (63 MB compressed content size, 297 MB on disk).
+  - Started container connected to local MySQL container over Docker network (`hiregenius_net`).
+  - Container started cleanly, performed Knex migration check, and listened on port 4000.
+  - `curl http://localhost:4000/health` and `/api/health` returned HTTP 200 `{ status: 'UP', database: 'CONNECTED' }`.
+  - Docker daemon evaluated healthcheck and marked container status as **`healthy`**.
+  - `GET /api/jobs` retrieved live seeded jobs.
+  - Clean graceful shutdown verified upon `docker stop` (`SIGTERM` received -> database connections closed -> exit 0).
+- **Future Hardening Item**:
+  - `DB_SSL=false` is acceptable for now inside the private VPC, but enabling RDS SSL/TLS (with AWS RDS global CA bundle) is flagged as a future security hardening item.
+- **Production Environment Inventory**:
+  - `DB_NAME` set to `hiregenius_core` (distinct database on the RDS instance holding Core API schema; separate from Auth Service's `hiregenius` database).
+  - `AUTH_SERVICE_URL` set to private VPC IP `http://172.31.6.0:8080`.
+
+---
+
+### 2026-09-30 — Free-Tier EC2 Deployment & Coordinated Nginx Port Cutover
+
+- **Architecture Decision**:
+  - Switched from paid AWS ECS + Fargate + ALB approach to 100% Free-Tier single EC2 instance (`13.203.243.162`, `hiregenius-auth-server`).
+  - Host Nginx acts as single reverse proxy on port 80 (and future 443).
+  - `hiregenius-auth` runs on `127.0.0.1:8080:8080` (Spring Boot, Clever Cloud / RDS).
+  - `hiregenius-core-api` runs on `127.0.0.1:4000:4000` (Node.js Express, RDS database `hiregenius_core`).
+- **Execution & Coordinated Cutover**:
+  - `hiregenius-core-api:latest` built directly on EC2 from `feature/core-api-aws-deployment`.
+  - Production `.env` generated directly on EC2 at `/var/www/hiregenius/hiregenius-core-api/.env` (chmod 600).
+  - `hiregenius-core-api` started and verified healthy on `127.0.0.1:4000` (`database: CONNECTED`).
+  - Staged Nginx configuration at `/etc/nginx/conf.d/hiregenius.conf` (`nginx -t` passed).
+  - Cutover executed atomically: old `hiregenius-auth` stopped, re-launched bound to `127.0.0.1:8080:8080`, and Nginx enabled & restarted in <100ms.
+  - Auth Service downtime window: ~34 seconds (from container stop to Spring Boot warmup complete at 20:38:20 UTC).
+- **Public Verification (All Passed against `http://13.203.243.162`)**:
+  - `GET /health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /api/health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /auth/health` -> 200 OK (Auth Service, `status: UP`).
+  - `GET /api/jobs` -> 200 OK (Core API, `status: 200, jobs: []`).
+  - `GET /api/auth/validate` -> 401 (Auth Service, `Full authentication is required`).
+  - `POST /api/auth/login` -> 401 (Auth Service, `Invalid email or password`).
+
+
 
 
