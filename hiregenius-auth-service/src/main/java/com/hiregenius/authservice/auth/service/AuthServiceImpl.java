@@ -449,7 +449,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
 
         if (!user.isActive()) {
-            throw new com.hiregenius.authservice.auth.exception.AccountDisabledException("Your account has been deactivated. Please contact support.");
+            throw new DisabledException("Your account has been deactivated. Please contact support.");
         }
 
         if (user.getAuthProvider() == AuthProvider.GOOGLE && user.getPassword() == null) {
