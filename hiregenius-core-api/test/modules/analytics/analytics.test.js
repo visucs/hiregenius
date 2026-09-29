@@ -281,8 +281,9 @@ describe('Analytics Module - Multi-Role Scoping, Isolation & Aggregations', () =
 
       // Today's entry should reflect today's created applications (3 for recruiter A)
       const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const todayEntry = res.body.data.find((e) => e.date === todayStr);
+      const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const utcTodayStr = now.toISOString().split('T')[0];
+      const todayEntry = res.body.data.find((e) => e.date === localTodayStr || e.date === utcTodayStr);
       expect(todayEntry).toBeDefined();
       expect(todayEntry.count).toBe(3);
 
