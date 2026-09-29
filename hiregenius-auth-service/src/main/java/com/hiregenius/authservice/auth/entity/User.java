@@ -50,6 +50,18 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "admin_approved", nullable = false)
+    private boolean adminApproved = false;
+
+    @Column(name = "can_post_jobs", nullable = false)
+    private boolean canPostJobs = true;
+
+    @Column(name = "can_apply_to_jobs", nullable = false)
+    private boolean canApplyToJobs = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -66,6 +78,10 @@ public class User {
         this.role = role;
         this.authProvider = authProvider;
         this.isActive = true;
+        this.emailVerified = (role == Role.ADMIN || authProvider == AuthProvider.GOOGLE);
+        this.adminApproved = (role == Role.ADMIN);
+        this.canPostJobs = true;
+        this.canApplyToJobs = true;
     }
 
     @PrePersist
@@ -133,6 +149,38 @@ public class User {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public boolean isAdminApproved() {
+        return adminApproved;
+    }
+
+    public void setAdminApproved(boolean adminApproved) {
+        this.adminApproved = adminApproved;
+    }
+
+    public boolean isCanPostJobs() {
+        return canPostJobs;
+    }
+
+    public void setCanPostJobs(boolean canPostJobs) {
+        this.canPostJobs = canPostJobs;
+    }
+
+    public boolean isCanApplyToJobs() {
+        return canApplyToJobs;
+    }
+
+    public void setCanApplyToJobs(boolean canApplyToJobs) {
+        this.canApplyToJobs = canApplyToJobs;
     }
 
     public LocalDateTime getCreatedAt() {

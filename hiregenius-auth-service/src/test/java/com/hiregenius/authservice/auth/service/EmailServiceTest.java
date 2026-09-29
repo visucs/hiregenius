@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 class EmailServiceTest {
 
     @Test
-    @DisplayName("EmailService builds and dispatches HTML password reset email")
+    @DisplayName("1. EmailService builds and dispatches HTML password reset email")
     void sendPasswordResetEmailDispatchesMessage() {
         JavaMailSender mailSender = mock(JavaMailSender.class);
         MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
@@ -27,6 +27,46 @@ class EmailServiceTest {
                 "candidate@hiregenius.ai",
                 "Alex Candidate",
                 "https://hiregenius-delta.vercel.app/reset-password?token=test-token"
+        );
+
+        verify(mailSender, times(1)).createMimeMessage();
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    @DisplayName("2. EmailService builds and dispatches HTML verification OTP email")
+    void sendVerificationOtpEmailDispatchesMessage() {
+        JavaMailSender mailSender = mock(JavaMailSender.class);
+        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        EmailServiceImpl emailService = new EmailServiceImpl(mailSender);
+        ReflectionTestUtils.setField(emailService, "mailFrom", "test@hiregenius.ai");
+
+        emailService.sendVerificationOtpEmail(
+                "candidate@hiregenius.ai",
+                "Alex Candidate",
+                "654321"
+        );
+
+        verify(mailSender, times(1)).createMimeMessage();
+        verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    @DisplayName("3. EmailService builds and dispatches HTML recruiter approval email")
+    void sendRecruiterApprovalEmailDispatchesMessage() {
+        JavaMailSender mailSender = mock(JavaMailSender.class);
+        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+
+        EmailServiceImpl emailService = new EmailServiceImpl(mailSender);
+        ReflectionTestUtils.setField(emailService, "mailFrom", "test@hiregenius.ai");
+        ReflectionTestUtils.setField(emailService, "frontendBaseUrl", "https://hiregenius-delta.vercel.app");
+
+        emailService.sendRecruiterApprovalEmail(
+                "recruiter@hiregenius.ai",
+                "Sarah Recruiter"
         );
 
         verify(mailSender, times(1)).createMimeMessage();

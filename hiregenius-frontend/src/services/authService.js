@@ -71,4 +71,39 @@ export const authService = {
       data,
     };
   },
+
+  /**
+   * POST /auth/verify-email-otp
+   * 6-digit OTP email verification
+   * @param {{ email: string, otp: string }} payload
+   */
+  verifyEmailOtp: (payload) => api.post('/auth/verify-email-otp', payload),
+
+  /**
+   * POST /auth/resend-otp
+   * Request fresh 6-digit OTP (rate-limited with 2-minute cooldown)
+   * @param {{ email: string }} payload
+   */
+  resendOtp: (payload) => api.post('/auth/resend-otp', payload),
+
+  /**
+   * Legacy verify-email endpoint
+   * @deprecated Use verifyEmailOtp instead
+   */
+  verifyEmail: (token) => api.get('/auth/verify-email', { params: { token } }),
+
+  /**
+   * Legacy resend-verification endpoint
+   * @deprecated Use resendOtp instead
+   */
+  resendVerification: (data) => api.post('/auth/resend-otp', data),
+
+  /**
+   * POST /auth/change-password
+   * Authenticated password change with current and new password
+   * @param {{ currentPassword: string, newPassword: string }} data
+   */
+  changePassword: (data) => api.post('/auth/change-password', data),
 };
+
+export default authService;

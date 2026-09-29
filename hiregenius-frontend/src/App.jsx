@@ -13,6 +13,7 @@ import LoginPage from './pages/Login/LoginPage';
 import RegisterPage from './pages/Register/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPassword/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPassword/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmail/VerifyEmailPage';
 import ResumeScreeningPage    from './pages/products/ResumeScreening/ResumeScreeningPage';
 import AIInterviewPage        from './pages/products/AIInterview/AIInterviewPage';
 import AnalyticsProductPage   from './pages/products/Analytics/AnalyticsProductPage';
@@ -141,6 +142,7 @@ const App = () => {
         <Route path="/register" element={<RoleRedirect><RegisterPage /></RoleRedirect>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
+        <Route path="/verify-email"    element={<VerifyEmailPage />} />
         <Route path="/unauthorized"    element={<UnauthorizedPage />} />
 
         {/* ── PROTECTED: RECRUITER ──────────────────────────────────── */}

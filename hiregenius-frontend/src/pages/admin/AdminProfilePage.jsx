@@ -1,45 +1,59 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import toast from 'react-hot-toast';
 import {
-  Shield, Camera, Lock, Mail, CheckCircle2,
+  Shield, Camera, Lock, Mail,
   AlertCircle, Eye, EyeOff, User, Key,
-  Activity, Users, Briefcase,
+  Activity, Info,
 } from 'lucide-react';
 import { selectUser } from '../../features/auth/authSlice';
+import authService from '../../services/authService';
+import analyticsService from '../../services/analyticsService';
 
 /* ─── Schemas ─────────────────────────────────────────────── */
-const profileSchema = z.object({
-  name:  z.string().min(2, 'Name too short'),
-  email: z.string().email('Invalid email'),
-});
 const pwdSchema = z.object({
-  currentPassword: z.string().min(1, 'Required'),
-  newPassword:     z.string().min(8, 'At least 8 characters'),
-  confirmPassword: z.string(),
-}).refine(d => d.newPassword === d.confirmPassword, { message: 'Passwords do not match', path: ['confirmPassword'] });
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword:     z.string().min(8, 'At least 8 characters').regex(/\d/, 'Must contain at least one number'),
+  confirmPassword: z.string().min(1, 'Please confirm your new password'),
+}).refine(d => d.newPassword === d.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
 
 /* ─── Shared styles ───────────────────────────────────────── */
-const IS = { width: '100%', minHeight: 44, padding: '11px 14px', borderRadius: 13, fontSize: 13, background: 'var(--card-row-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
+const inputStyle = (isReadOnly = false) => ({
+  width: '100%', minHeight: 44, padding: '11px 14px', borderRadius: 13, fontSize: 13,
+  background: isReadOnly ? 'rgba(255,255,255,0.03)' : 'var(--card-row-bg)',
+  border: '1px solid var(--border)',
+  color: isReadOnly ? 'var(--text-muted)' : 'var(--text-primary)',
+  outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+  cursor: isReadOnly ? 'not-allowed' : 'text',
+});
 
-const Field = ({ label, error, children }) => (
+const Field = ({ label, error, hint, children }) => (
   <div>
-    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 7 }}>{label}</label>
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 7 }}>
+      {label}
+    </label>
     {children}
-    <AnimatePresence>
-      {error && <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-        style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#ef4444', marginTop: 6, fontWeight: 600 }}
-      ><AlertCircle size={11} />{error}</motion.p>}
-    </AnimatePresence>
+    {hint && !error && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>{hint}</p>}
+    {error && (
+      <p style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#ef4444', marginTop: 6, fontWeight: 600 }}>
+        <AlertCircle size={11} />{error}
+      </p>
+    )}
   </div>
 );
 
 /* ─── Section card ────────────────────────────────────────── */
 const Section = ({ title, subtitle, icon: Icon, iconColor, stripe, children, delay = 0 }) => (
-  <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, delay, ease: [0.22, 1, 0.36, 1] }}
+  <motion.div
+    initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.38, delay, ease: [0.22, 1, 0.36, 1] }}
     style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}
   >
     {stripe && <div style={{ height: 3, background: stripe, borderRadius: '20px 20px 0 0' }} />}
@@ -62,25 +76,39 @@ const PwdInput = ({ id, registration }) => {
   return (
     <div style={{ position: 'relative' }}>
       <Lock size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-      <input {...registration} id={id} type={show ? 'text' : 'password'}
-        style={{ ...IS, paddingLeft: 40, paddingRight: 46 }}
+      <input
+        {...registration} id={id} type={show ? 'text' : 'password'}
+        style={{ ...inputStyle(false), paddingLeft: 40, paddingRight: 46 }}
       />
-      <button type="button" onClick={() => setShow(v => !v)} aria-label={show ? 'Hide password' : 'Show password'}
+      <button
+        type="button" onClick={() => setShow(v => !v)} aria-label={show ? 'Hide password' : 'Show password'}
         style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', minWidth: 44, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >{show ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+      >
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
     </div>
   );
 };
 
 /* ─── Submit button ───────────────────────────────────────── */
 const SubmitBtn = ({ isLoading, id, children }) => (
-  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} type="submit" disabled={isLoading} id={id}
-    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8, padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', background: isLoading ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isLoading ? 'none' : '0 4px 18px rgba(79,70,229,0.40)', transition: 'all 0.18s', letterSpacing: '-0.01em' }}
+  <motion.button
+    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+    type="submit" disabled={isLoading} id={id}
+    style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 8,
+      padding: '11px 22px', borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+      background: isLoading ? 'rgba(99,102,241,0.35)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+      color: '#fff', fontSize: 13, fontWeight: 800, boxShadow: isLoading ? 'none' : '0 4px 18px rgba(79,70,229,0.40)',
+      transition: 'all 0.18s', letterSpacing: '-0.01em',
+    }}
   >
-    {isLoading
-      ? <><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Processing…</>
-      : children
-    }
+    {isLoading ? (
+      <>
+        <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        Processing…
+      </>
+    ) : children}
   </motion.button>
 );
 
@@ -89,28 +117,50 @@ const SubmitBtn = ({ isLoading, id, children }) => (
  ════════════════════════════════════════════════════════════ */
 const AdminProfilePage = () => {
   const user = useSelector(selectUser);
-  const [profileSaved, setProfileSaved] = useState(false);
-  const [pwdSaved,     setPwdSaved]     = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isSavingPwd,     setIsSavingPwd]     = useState(false);
 
-  const initials = (user?.name ?? 'AD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  // Real stats from Core API analytics
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(true);
 
-  const profileForm = useForm({ resolver: zodResolver(profileSchema), defaultValues: { name: user?.name ?? 'Admin', email: user?.email ?? 'admin@hiregenius.ai' } });
+  // Change password form
   const pwdForm = useForm({ resolver: zodResolver(pwdSchema) });
 
-  const onProfileSubmit = async () => {
-    setIsSavingProfile(true);
-    await new Promise(r => setTimeout(r, 700));
-    setIsSavingProfile(false); setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 3000);
+  // Fetch real total users from admin summary (GET /api/analytics/admin/summary)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAdminStats = async () => {
+      setLoadingStats(true);
+      try {
+        const res = await analyticsService.getAdminSummary();
+        if (isMounted && res?.data?.totalUsers?.total !== undefined) {
+          setTotalUsers(res.data.totalUsers.total);
+        }
+      } catch (err) {
+        console.warn('[AdminProfile] Error fetching admin summary:', err?.message);
+      } finally {
+        if (isMounted) setLoadingStats(false);
+      }
+    };
+    fetchAdminStats();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Real change password submission to Auth Service
+  const onPwdSubmit = async (data) => {
+    try {
+      const res = await authService.changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      toast.success(res?.data?.message || 'Password updated successfully!');
+      pwdForm.reset();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to update password';
+      toast.error(msg);
+    }
   };
-  const onPwdSubmit = async () => {
-    setIsSavingPwd(true);
-    await new Promise(r => setTimeout(r, 700));
-    setIsSavingPwd(false); setPwdSaved(true); pwdForm.reset();
-    setTimeout(() => setPwdSaved(false), 3000);
-  };
+
+  const initials = (user?.name ?? 'AD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
@@ -135,17 +185,31 @@ const AdminProfilePage = () => {
                 <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 900, boxShadow: '0 6px 24px rgba(79,70,229,0.55), 0 0 0 3px rgba(99,102,241,0.30)', letterSpacing: '-0.02em' }}>
                   {initials}
                 </div>
-                <button id="admin-profile-avatar" aria-label="Change photo"
-                  style={{ position: 'absolute', bottom: -4, right: -4, width: 30, height: 30, borderRadius: '50%', background: '#4f46e5', border: '2.5px solid rgba(255,255,255,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.35)', transition: 'background 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#6366f1'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#4f46e5'}
-                ><Camera size={14} color="#fff" /></button>
+                {/* Disabled avatar camera upload button with tooltip */}
+                <button
+                  id="admin-profile-avatar"
+                  aria-label="Change photo (Coming Soon)"
+                  disabled
+                  title="Avatar photo upload coming soon"
+                  style={{
+                    position: 'absolute', bottom: -4, right: -4, width: 30, height: 30, borderRadius: '50%',
+                    background: 'rgba(79,70,229,0.7)', border: '2.5px solid rgba(255,255,255,0.20)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.35)', opacity: 0.75,
+                  }}
+                >
+                  <Camera size={14} color="#fff" />
+                </button>
               </div>
 
               {/* Info */}
               <div style={{ flex: '1 1 200px', minWidth: 180 }}>
-                <p style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 4 }}>{user?.name ?? 'Admin'}</p>
-                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)', marginBottom: 10 }}>{user?.email ?? 'admin@hiregenius.ai'}</p>
+                <p style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 4 }}>
+                  {user?.name ?? 'Super Administrator'}
+                </p>
+                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)', marginBottom: 10 }}>
+                  {user?.email || 'admin@hiregenius.ai'}
+                </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(99,102,241,0.22)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.35)' }}>
                     <Shield size={11} /> Super Admin
@@ -156,15 +220,19 @@ const AdminProfilePage = () => {
                 </div>
               </div>
 
-              {/* Stats */}
+              {/* Real Stats from Core API */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
                 {[
-                  { label: 'Users Managed', value: '3.8k', color: '#818cf8' },
-                  { label: 'Actions Today', value: '24',   color: '#4ade80' },
+                  { label: 'Users Managed', value: loadingStats ? '…' : totalUsers, color: '#818cf8' },
+                  { label: 'Audit Trail',    value: 'Phase 6',                       color: 'rgba(255,255,255,0.5)' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ padding: '12px 16px', textAlign: 'center', borderRadius: 14, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', minWidth: 80 }}>
-                    <p style={{ fontSize: 22, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
-                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, marginTop: 5 }}>{label}</p>
+                    <p style={{ fontSize: typeof value === 'number' ? 22 : 15, fontWeight: 900, color, letterSpacing: '-0.04em', lineHeight: 1.2 }}>
+                      {value}
+                    </p>
+                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, marginTop: 4 }}>
+                      {label}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -176,33 +244,44 @@ const AdminProfilePage = () => {
       {/* ── Content ───────────────────────────────────────── */}
       <div style={{ padding: 'clamp(20px, 3vw, 24px) clamp(16px, 4vw, 36px) 60px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 720, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
 
-        {/* Account Details */}
-        <Section title="Account Details" subtitle="Update your admin identity" icon={User} iconColor="#818cf8" stripe="linear-gradient(90deg, #4f46e5, #818cf8)" delay={0.08}>
-          <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Field label="Full Name" error={profileForm.formState.errors.name?.message}>
+        {/* Account Details (Read-only from Auth Service) */}
+        <Section title="Account Details" subtitle="Admin credentials managed by Auth Service" icon={User} iconColor="#818cf8" stripe="linear-gradient(90deg, #4f46e5, #818cf8)" delay={0.08}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Field label="Full Name" hint="Managed by Auth Service.">
               <div style={{ position: 'relative' }}>
                 <User size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input {...profileForm.register('name')} id="admin-profile-name" style={{ ...IS, paddingLeft: 40 }} />
+                <input
+                  id="admin-profile-name"
+                  readOnly
+                  value={user?.name ?? 'Admin'}
+                  style={{ ...inputStyle(true), paddingLeft: 40 }}
+                />
               </div>
             </Field>
-            <Field label="Email Address" error={profileForm.formState.errors.email?.message}>
+
+            <Field label="Email Address" hint="Verified system administrator email address.">
               <div style={{ position: 'relative' }}>
                 <Mail size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input {...profileForm.register('email')} type="email" id="admin-profile-email" style={{ ...IS, paddingLeft: 40 }} />
+                <input
+                  id="admin-profile-email"
+                  type="email"
+                  readOnly
+                  value={user?.email ?? 'admin@hiregenius.ai'}
+                  style={{ ...inputStyle(true), paddingLeft: 40 }}
+                />
               </div>
             </Field>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4, flexWrap: 'wrap' }}>
-              <SubmitBtn isLoading={isSavingProfile} id="admin-profile-save"><CheckCircle2 size={14} />Save Changes</SubmitBtn>
-              <AnimatePresence>
-                {profileSaved && <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#4ade80' }}
-                ><CheckCircle2 size={15} />Changes saved!</motion.span>}
-              </AnimatePresence>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <Info size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                Super administrator identity is controlled centrally in the Auth Service.
+              </p>
             </div>
-          </form>
+          </div>
         </Section>
 
-        {/* Change Password */}
+        {/* Change Password (Real Auth Service POST /api/auth/change-password) */}
         <Section title="Change Password" subtitle="Keep your admin account secure" icon={Key} iconColor="#f59e0b" stripe="linear-gradient(90deg, #d97706, #f59e0b)" delay={0.14}>
           <form onSubmit={pwdForm.handleSubmit(onPwdSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Field label="Current Password" error={pwdForm.formState.errors.currentPassword?.message}>
@@ -214,18 +293,19 @@ const AdminProfilePage = () => {
             <Field label="Confirm Password" error={pwdForm.formState.errors.confirmPassword?.message}>
               <PwdInput id="admin-profile-pwd-confirm" registration={pwdForm.register('confirmPassword')} />
             </Field>
+
             {/* Security hint */}
             <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.20)' }}>
               <Shield size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>As a Super Admin, use a <strong>strong unique password</strong> with at least 8 characters including numbers and symbols.</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                As a Super Admin, use a <strong>strong unique password</strong> with at least 8 characters including numbers.
+              </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4, flexWrap: 'wrap' }}>
-              <SubmitBtn isLoading={isSavingPwd} id="admin-profile-pwd-save"><Key size={14} />Update Password</SubmitBtn>
-              <AnimatePresence>
-                {pwdSaved && <motion.span initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#4ade80' }}
-                ><CheckCircle2 size={15} />Password updated!</motion.span>}
-              </AnimatePresence>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+              <SubmitBtn isLoading={pwdForm.formState.isSubmitting} id="admin-profile-pwd-save">
+                <Key size={14} />Update Password
+              </SubmitBtn>
             </div>
           </form>
         </Section>

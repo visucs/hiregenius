@@ -27,6 +27,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: '0'
     locations: classpath:db/migration
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -45,8 +46,11 @@ spring:
             required: true
 
 app:
+  admin:
+    email: ${ADMIN_EMAIL:admin@hiregenius.ai}
+    password: ${ADMIN_PASSWORD:}
   mail:
-    from: ${MAIL_FROM:krvisuji92@gmail.com}
+    from: ${MAIL_FROM:noreply@hiregenius.ai}
   frontend:
     base-url: ${FRONTEND_BASE_URL:https://hiregenius-delta.vercel.app}
   email-validation:

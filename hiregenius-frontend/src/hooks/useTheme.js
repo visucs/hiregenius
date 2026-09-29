@@ -11,10 +11,18 @@ const THEME_KEY = 'hg_theme';
 
 const getInitialTheme = () => {
   if (typeof window === 'undefined') return 'light';
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved === 'dark' || saved === 'light') return saved;
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // ignore in private browsing / restricted storage
+  }
   // Fall back to DOM class or light default
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  try {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 };
 
 const listeners = new Set();

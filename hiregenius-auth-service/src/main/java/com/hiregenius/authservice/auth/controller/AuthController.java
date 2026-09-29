@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/auth"})
 @Tag(name = "Authentication", description = "Endpoints for local & Google login, user registration, token validation, and password recovery")
 public class AuthController {
 
@@ -39,7 +39,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
+    @PostMapping({"/register", "/signup"})
     @Operation(
             summary = "Register a new user",
             description = "Registers a RECRUITER or CANDIDATE. Public ADMIN registration is rejected."
@@ -129,9 +129,9 @@ public class AuthController {
                                     value = "{\n  \"email\": \"sarah@hiregenius.ai\",\n  \"password\": \"Password123!\"\n}"
                             ),
                             @ExampleObject(
-                                    name = "System Admin Login",
-                                    summary = "Default admin credentials",
-                                    value = "{\n  \"email\": \"admin@hiregenius.ai\",\n  \"password\": \"Admin123!\"\n}"
+                                    name = "Administrator Login",
+                                    summary = "Administrator credentials example",
+                                    value = "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"YourSecurePassword123!\"\n}"
                             )
                     }
             )
@@ -420,6 +420,67 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader
     ) {
         UserResponse response = authService.validateToken(authHeader);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-email-otp")
+    @Operation(
+            summary = "Verify email via 6-digit OTP",
+            description = "Validates the 6-digit one-time password (OTP) sent to the user's email address, setting email_verified to true upon success."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Email verified successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid, expired, or already-used verification OTP"
+            )
+    })
+    public ResponseEntity<ApiResponse<String>> verifyEmailOtp(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.VerifyEmailOtpRequest request
+    ) {
+        ApiResponse<String> response = authService.verifyEmailOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-otp")
+    @Operation(
+            summary = "Resend 6-digit email verification OTP",
+            description = "Issues a fresh 6-digit verification code to an unverified user. Rate limited to at most 1 dispatch every 2 minutes."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Verification code resent successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Validation error or rate limit exceeded (wait 2 minutes)"
+            )
+    })
+    public ResponseEntity<ApiResponse<String>> resendOtp(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.ResendOtpRequest request
+    ) {
+        ApiResponse<String> response = authService.resendOtp(request.getEmail());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    @Operation(
+            summary = "Change password for authenticated user",
+            description = "Verifies current password and updates to new password. Requires valid JWT."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @org.springframework.web.bind.annotation.RequestBody com.hiregenius.authservice.auth.dto.request.ChangePasswordRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.hiregenius.authservice.security.SecurityUser currentUser
+    ) {
+        if (currentUser == null) {
+            throw new com.hiregenius.authservice.exception.InvalidCredentialsException("Authentication required");
+        }
+        ApiResponse<String> response = authService.changePassword(currentUser.getId(), request);
         return ResponseEntity.ok(response);
     }
 }

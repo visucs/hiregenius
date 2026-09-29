@@ -541,7 +541,7 @@ pm run build build command, and dist output directory for monorepo configuration
 - **Database & Persistence:**
   - Configured JPA/Hibernate with Flyway database migrations (`V1__init_auth_schema.sql`).
   - Table `users`: `id`, `name`, `email` (unique indexed), `password` (nullable for Google-only users), `role` (`RECRUITER`, `CANDIDATE`, `ADMIN`), `auth_provider` (`LOCAL`, `GOOGLE`), `is_active`, `created_at`, `updated_at`.
-  - Added `DataInitializer` to automatically seed system administrator (`admin@hiregenius.ai` / `AdminPassword123!`) on startup.
+  - Added `DataInitializer` to automatically seed system administrator (`admin@hiregenius.ai` / `[ROTATED - See Security Audit]`) on startup.
 - **Security & JWT:**
   - Configured Spring Security 6 with stateless session management (`SessionCreationPolicy.STATELESS`), BCrypt password hashing (strength 12), and custom CORS policy.
   - Custom `AuthenticationEntryPoint` returning standard 401 `ApiError` JSON (`{ status: 401, message: "Full authentication is required...", timestamp, path }`).
@@ -868,6 +868,945 @@ pm run build completed successfully with 0 errors.
 
 - **Non-Breaking Deployment Note**:
   - Purely additive infrastructure tooling. Business rules, application logic, and existing Render/Vercel configurations remain completely intact as a fallback.
+
+### 2026-09-24 — Phase 2 Backend: Core API Setup, JWT Verification Middleware & Jobs CRUD
+
+- **Strict Boundary Confirmation**:
+  - Zero modifications made to `hiregenius-frontend/` or `hiregenius-auth-service/`. All work strictly confined to the `hiregenius-core-api/` service and branch `feature/core-api-phase2`.
+
+- **Built / Added (`hiregenius-core-api/`)**:
+  1. **Layered Industry-Standard Architecture**:
+     - Followed `routes -> controller -> service -> repository` pattern across the entire service:
+       - `src/config/`: `env.js` (centralized environment loading & validation), `db.js` (Knex MySQL connection pool).
+       - `src/middleware/`:
+         - `verifyJwt.js`: High-performance local JWT verification (HS256) using shared `JWT_SIGNING_KEY`. Attaches `req.user = { userId, email, role }`. Returns uniform 401 on missing, expired, or tampered tokens without 500 errors or external network calls.
+         - `requireRole.js`: Role-based access guard factory (e.g., `requireRole('RECRUITER')`) enforcing 403 Forbidden on role mismatch.
+         - `errorHandler.js`: Centralized error handling middleware delivering uniform response shape `{ status, message, timestamp, path }`. Handles Zod validation errors, JWT verification failures, malformed JSON, and operational API errors.
+       - `src/utils/`: `ApiError.js` (custom operational errors with HTTP status factory methods) and `ApiResponse.js` (standardized success/created envelopes).
+       - `src/modules/jobs/`:
+         - `jobs.validation.js`: Zod schemas for job creation, updates, status toggling, pagination/filtering query params, and ID params.
+         - `jobs.repository.js`: Knex database access layer supporting pagination, search filters (title, company, location), JSON skills handling, and soft-delete queries.
+         - `jobs.service.js`: Domain business logic enforcing strict recruiter ownership on update/delete/status toggle and guaranteeing `recruiter_id` is assigned solely from JWT `req.user.userId`.
+         - `jobs.controller.js`: Request/response controllers using `ApiResponse` and routing errors to `next()`.
+         - `jobs.routes.js`: Express routes with `verifyJwt`, `requireRole`, and Zod validators wired up (ensuring `/api/jobs/mine` is registered before `/:id`).
+       - `src/app.js`: Express application wiring with CORS, body parsers, `/health` endpoint, jobs router, and centralized error handler.
+       - `src/server.js`: Server startup verifying database connectivity, running pending Knex migrations automatically, and listening on `PORT` (4000) with graceful shutdown handling.
+  2. **Database Migrations (`migrations/20260924_create_jobs_table.js`)**:
+     - Created `jobs` table using Knex migration tool:
+       - `id`: unsigned integer, primary key, auto-increment.
+       - `recruiter_id`: bigint, not null, indexed.
+       - `title`: varchar(255), not null.
+       - `company`: varchar(255), not null.
+       - `skills`: json, not null (JSON array).
+       - `salary`: varchar(100), nullable.
+       - `experience`: varchar(100), nullable.
+       - `location`: varchar(255), nullable.
+       - `description`: text, not null.
+       - `status`: enum('OPEN', 'CLOSED'), default 'OPEN', indexed.
+       - `is_deleted`: boolean, default false, indexed.
+       - `created_at` & `updated_at`: timestamps with automatic current timestamp generation.
+  3. **Production Dockerfile (`Dockerfile`)**:
+     - Multi-stage build (`node:20.11.1-alpine`), dependency pruning (`npm ci --omit=dev`), non-root `node` user security, healthcheck against `/health`, and configurable `PORT=4000`.
+
+- **Key Architectural Decisions**:
+  1. **Skills Storage as JSON Array**:
+     - Stored `skills` as a native MySQL `JSON` column rather than a normalized relational junction table.
+     - **Rationale**: In HireGenius AI, job postings require their full skills list during job rendering, search matching, and transmission to downstream AI/ML agents for resume scoring. Storing skills as a JSON array avoids unnecessary multi-table relational joins during high-throughput CRUD while retaining MySQL's native JSON query functions (`JSON_CONTAINS`) for advanced searches if needed in later phases.
+  2. **Soft-Delete (`is_deleted` flag)**:
+     - Implemented soft-delete via an indexed boolean column `is_deleted`.
+     - **Rationale**: In recruitment platforms, jobs are linked to candidate applications, AI resume screening records, scheduled interviews, and audit logs. A hard `DELETE` cascades or breaks referential integrity and historical reporting. Soft-delete ensures historical data remains immutable for analytics and auditability while filtering deleted jobs from public listings and recruiter views.
+
+- **Cross-Service Trust & Real JWT Verification**:
+  - Confirmed the Core API uses the exact shared `JWT_SIGNING_KEY` as configured in the Auth Service (`YxLwDO5k9msT158PxUDcIX+pOJXEkcsD2I8V3Hp/gSU=`, HS256).
+  - Verified cross-service compatibility by testing HS256 tokens directly against the AWS-deployed Auth Service (`http://13.203.243.162/api/auth/validate`), validating token parsing and signature verification.
+
+- **Verification Results**:
+  1. **Linting**: `npm run lint` passed with 0 errors and 0 warnings across all source and test files.
+  2. **Automated Unit & Integration Tests**: 26 of 26 tests passed in Jest:
+     - `verifyJwt`: Valid HS256 token decoding & `req.user` attachment; 401 on missing Authorization header; 401 on non-Bearer scheme; 401 on expired tokens (no 500); 401 on tampered tokens; 401 on wrong signature key; 401 on missing userId.
+     - `requireRole`: Correct role allowed; wrong role rejected with 403 Forbidden; unauthenticated requests rejected with 401; multi-role checks supported.
+     - `jobs.test.js`: Unauthenticated POST rejected (401); Candidate role POST rejected (403); Recruiter POST creates job with `recruiter_id` strictly from JWT (201); Public GET returns only OPEN non-deleted jobs with pagination & filters; Recruiter GET `/mine` isolates jobs to the caller; Public GET `/:id` returns full detail (404 for missing/deleted); PUT updates succeed for owner and return 403 for non-owners; PATCH status toggles OPEN/CLOSED with ownership enforcement; DELETE soft-deletes with ownership enforcement.
+  3. **Manual Verification Suite (17 Live Endpoints & Scenarios)**:
+     - Ran full automated HTTP execution script against the active Core API server and local MySQL 8.0 instance:
+       - Test 0: Cross-Service Trust against AWS Auth Service (`GET /api/auth/validate`) -> confirmed.
+       - Test 1: `GET /health` -> 200 `{"status":"UP","service":"hiregenius-core-api"}`.
+       - Test 2: `POST /api/jobs` without token -> 401 Unauthorized.
+       - Test 3: `POST /api/jobs` with expired token -> 401 Unauthorized.
+       - Test 4: `POST /api/jobs` with tampered token -> 401 Unauthorized.
+       - Test 5: `POST /api/jobs` with CANDIDATE role -> 403 Forbidden.
+       - Test 6: `POST /api/jobs` with RECRUITER token and spoofed `recruiter_id: 999999` -> 201 Created with DB `recruiter_id: 101` (spoof rejected).
+       - Test 7: Public `GET /api/jobs` -> 200 OK with open jobs array.
+       - Test 8: Recruiter 1 `GET /api/jobs/mine` -> 200 OK listing caller's jobs.
+       - Test 9: Recruiter 2 `GET /api/jobs/mine` -> 200 OK with 0 jobs (tenant isolation confirmed).
+       - Test 10: Recruiter 2 `PUT /api/jobs/:id` (attempted update of Recruiter 1's job) -> 403 Forbidden.
+       - Test 11: Recruiter 1 `PUT /api/jobs/:id` -> 200 OK with updated fields.
+       - Test 12: Recruiter 2 `PATCH /api/jobs/:id/status` (attempted status change of Recruiter 1's job) -> 403 Forbidden.
+       - Test 13: Recruiter 1 `PATCH /api/jobs/:id/status` -> 200 OK with `status: CLOSED`.
+       - Test 14: Public `GET /api/jobs` -> confirmed closed job is excluded from public search.
+       - Test 15: Recruiter 2 `DELETE /api/jobs/:id` (attempted deletion of Recruiter 1's job) -> 403 Forbidden.
+       - Test 16: Recruiter 1 `DELETE /api/jobs/:id` -> 200 OK with soft-delete confirmed.
+       - Test 17: Public `GET /api/jobs/:id` on soft-deleted job -> 404 Not Found.
+  4. **Security & Secrets**: Confirmed `.env` is gitignored and excluded from version control. Zero hardcoded secrets in source files.
+
+
+
+
+### 2026-09-25 — Recruiter Dashboard Real Core API Integration & Mock Data Removal
+
+- **Real Integration (Jobs)**:
+  - Created `src/services/jobsService.js` calling real Core API Phase 2 endpoints:
+    - `GET /api/jobs/mine` — Recruiter's personal listings across all statuses (`OPEN`, `CLOSED`).
+    - `POST /api/jobs` — Creates job with `title`, `company`, `location`, `salary`, `experience`, `skills`, and `description`.
+    - `PUT /api/jobs/:id` — Updates existing job with strict ownership verification.
+    - `PATCH /api/jobs/:id/status` — Toggles job status (`OPEN` / `CLOSED`) with ownership check.
+    - `DELETE /api/jobs/:id` — Soft-deletes job from listings with ownership check.
+    - `GET /api/jobs/:id` — Fetches full details for the job detail modal/drawer.
+  - Centralized Axios instance (`src/services/api.js`):
+    - Automatically routes `/jobs` endpoints to `VITE_CORE_API_URL` (default `http://localhost:4000/api`) and `/auth` endpoints to `VITE_API_BASE_URL` (`http://13.203.243.162/api`).
+    - Automatically attaches `Authorization: Bearer <token>` from Redux state on every call.
+    - Handles 401 token expiry/tampering centrally by dispatching `logout()` and redirecting to `/login`.
+  - Recruiter Jobs Page (`src/pages/recruiter/RecruiterJobsPage.jsx`):
+    - Completely replaced all mock jobs with real Core API queries.
+    - Real loading spinner, real retry-able error state, real empty state.
+    - Edit Job and Delete Job actions are strictly guarded by recruiter ownership (`recruiter_id === loggedInUser.id`).
+    - Real toast notifications on create, update, status toggle, and delete.
+  - Recruiter Dashboard Home (`src/pages/recruiter/RecruiterDashboardHome.jsx`):
+    - `Total Jobs` stat card and `Your Active Jobs` list compute directly from real `GET /api/jobs/mine` data.
+
+- **Explicit Placeholder States for Unbuilt Backend Features (No Fake API Calls)**:
+  - Created reusable, Design.md-compliant `ModulePendingState` component (`src/components/ModulePending/ModulePendingState.jsx`).
+  - The following Recruiter Dashboard pages were updated to display clear, honest "Backend Pending • Phase 3" empty states with planned capability roadmaps and quick links back to My Jobs:
+    1. **Candidates Page** (`src/pages/recruiter/RecruiterCandidatesPage.jsx`) — Pending Candidates & Applications microservice.
+    2. **Resume Screening Page** (`src/pages/recruiter/RecruiterResumeScreeningPage.jsx`) — Pending AI-ML resume parsing & scoring service.
+    3. **AI Interview Page** (`src/pages/recruiter/RecruiterAIInterviewPage.jsx`) — Pending AI Interview Agent microservice.
+    4. **Candidate Ranking Page** (`src/pages/recruiter/RecruiterCandidateRankingPage.jsx`) — Pending ML Ranking microservice.
+    5. **Interview Scheduler Page** (`src/pages/recruiter/RecruiterSchedulerPage.jsx`) — Pending Calendar & Interview Coordination backend.
+    6. **Analytics Page** (`src/pages/Analytics/AnalyticsPage.jsx`) — Pending Analytics aggregation backend.
+    7. **Dashboard Home Stat Cards & Sections** (`src/pages/recruiter/RecruiterDashboardHome.jsx`):
+       - `Total Candidates`, `Pending Interviews`, and `Avg Resume Score` cards show "—" with "Pending Backend" status badge.
+       - "Hiring Pipeline" and "Recent Activity" sections show clear Phase 3 connectivity status notes instead of fake graphs/counts.
+
+- **Mock Data Cleanup**:
+  - Removed all mock arrays from `src/mock/recruiter/` (`jobsMock.js`, `dashboardMock.js`, `candidatesMock.js`, `screeningMock.js`, `interviewMock.js`, `rankingMock.js`, `schedulerMock.js`).
+  - Removed unimported `src/hooks/useMockAnalytics.js`.
+  - Zero mock data remains in the recruiter dashboard.
+
+### 2026-09-25 — Phase 3: Candidates & Applications (Core API Backend)
+
+- **What Was Built**:
+  1. **Database Schema & Migrations (`migrations/20260925_create_candidates_and_applications_tables.js`)**:
+     - `candidates` table: `id` (PK), `user_id` (bigint, unique, indexed — 1:1 candidate profile per user), `resume_path` (varchar 500, nullable), `resume_original_name` (varchar 255, nullable), `created_at`, `updated_at`.
+     - `applications` table: `id` (PK), `job_id` (FK to `jobs`), `candidate_id` (FK to `candidates`), `status` (enum: `APPLIED`, `SCREENING`, `INTERVIEW`, `SHORTLISTED`, `REJECTED`, `HIRED`, default `APPLIED`), `applied_at`, `updated_at`.
+     - **Database-Level Unique Constraint**: Added composite unique constraint `UNIQUE KEY (job_id, candidate_id)` at the database engine level to strictly prevent duplicate applications across concurrent race conditions.
+  2. **Candidates Module (`src/modules/candidates/`)**:
+     - `candidates.validation.js`: Multer multipart file upload filter (PDF/DOCX only, 5MB size limit per Rules.md), Zod param schemas.
+     - `candidates.repository.js`: Knex database access methods for profile lookup, resume reference persistence, recruiter application link verification, and read-only cross-reference with Auth Service `users` table.
+     - `candidates.service.js`: Domain logic handling single-profile-per-user upsert, profile retrieval, and recruiter ownership-adjacent access checks.
+     - `candidates.controller.js`: Clean Express controllers delivering consistent `ApiResponse` shapes.
+     - `candidates.routes.js`: Routes with `verifyJwt`, `requireRole('CANDIDATE')`, `requireRole('RECRUITER')` guards (with `/me` declared before `/:id`).
+     - `candidates.openapi.js`: Complete OpenAPI 3.0 specs registered in Swagger UI.
+  3. **Applications Module (`src/modules/applications/`)**:
+     - `applications.validation.js`: Zod schema validation for application creation, enum status updates, and integer ID params.
+     - `applications.repository.js`: Knex queries for job application submission, candidate's application history, recruiter job applications joined with candidate and user metadata, and status updates.
+     - `applications.service.js`: Application workflow logic with validation (job existence, OPEN status check, resume presence check, duplicate prevention, DB race condition handling) and ownership guards.
+     - `applications.controller.js`: Standardized request/response controllers.
+     - `applications.routes.js`: Main applications routes (`POST /api/applications`, `GET /api/applications/mine`, `PATCH /api/applications/:id/status`, `GET /api/applications/:id`) and job-scoped router (`GET /api/jobs/:jobId/applications`).
+     - `applications.openapi.js`: OpenAPI 3.0 specs registered in Swagger UI.
+  4. **App Wiring & Error Handling**:
+     - Wired routers in `src/app.js` under `/api/candidates`, `/api/applications`, and `/api/jobs` without altering existing `src/modules/jobs/` code.
+     - Updated `src/middleware/errorHandler.js` to catch Multer `LIMIT_FILE_SIZE` errors as 400 Bad Request and database duplicate entry errors (`ER_DUP_ENTRY` / `SQLITE_CONSTRAINT`) as 409 Conflict.
+
+- **Architectural & Design Decisions**:
+  1. **Resume Storage Approach for Phase 3**:
+     - File storage stores the file reference (`resume_path` and `resume_original_name`) on local disk storage under `uploads/resumes/`.
+     - In alignment with system architecture, actual file parsing, text extraction, skills matching, and scoring are deferred to the FastAPI AI Service in subsequent phases.
+     - Candidates maintain exactly one current resume profile (`POST /api/candidates/me/resume` creates if new, updates in-place if existing).
+  2. **Candidate Profile Missing Resume Behavior (`GET /api/candidates/me`)**:
+     - Returns HTTP 404 with message `"Candidate profile not found. Please upload your resume first."` when a candidate has not yet uploaded a resume. This provides clear, unambiguous REST semantics indicating the resource does not exist yet.
+  3. **Application Status Transitions (Open vs Restricted)**:
+     - Implemented fully open transitions between any valid enum status (`APPLIED`, `SCREENING`, `INTERVIEW`, `SHORTLISTED`, `REJECTED`, `HIRED`).
+     - **Rationale**: Real-world recruiting workflows often require flexible recruiter interventions (e.g. moving a candidate directly from APPLIED to SHORTLISTED, or reopening consideration). Complex state machine validation can be introduced in a future phase if explicit workflow constraints are required.
+
+- **Verification Results**:
+  1. **Linting**: `npm run lint` passed with 0 errors and 0 warnings.
+  2. **Automated Unit & Integration Tests**: 62 of 62 tests passed across 6 test suites:
+     - `candidates.test.js`: Unauthenticated upload rejected (401); Recruiter role rejected (403); Missing file rejected (400); Wrong file type rejected (400); Oversized file (>5MB) rejected (400); Valid PDF creates profile (201); Valid DOCX updates profile (200); `GET /me` returns 404 when resume missing; `GET /me` returns 200 with resume details; Recruiter `GET /:id` returns 403 when no application link exists; Recruiter `GET /:id` returns 200 when candidate applied to recruiter's job; 404 on non-existent candidate.
+     - `applications.test.js`: Unauthenticated apply rejected (401); Recruiter role rejected (403); Applying without resume rejected (400); Applying to non-existent job rejected (404); Applying to CLOSED job rejected (400); Valid application succeeds (201); Second apply rejected with 409 Conflict; DB-level unique constraint verified on `(job_id, candidate_id)`; `GET /mine` returns applications ordered newest first; `GET /api/jobs/:jobId/applications` succeeds for owner (200) and returns 403 for non-owner recruiter; `PATCH status` succeeds for owner (200), returns 403 for non-owner, and rejects invalid status (400); `GET /api/applications/:id` enforces dual-role ownership (own candidate 200, foreign candidate 403, owning recruiter 200, foreign recruiter 403).
+     - `jobs.test.js`: All 15 tests pass.
+     - `swagger.test.js`: All 4 tests pass.
+     - `verifyJwt.test.js`: All 7 tests pass.
+     - `requireRole.test.js`: All 4 tests pass.
+  3. **Database Constraint Verification**:
+     - Verified `SHOW INDEX FROM applications` confirms `applications_job_id_candidate_id_unique` composite unique key exists with `Non_unique: 0`.
+  4. **Manual Verification Suite with REAL Tokens from Deployed AWS Auth Service (`http://13.203.243.162`)**:
+     - Registered & authenticated 4 real accounts on the live AWS Auth Service:
+       - Recruiter A (`recruiter_a_*@hiregenius.ai`, ID: 21, role: RECRUITER)
+       - Recruiter B (`recruiter_b_*@hiregenius.ai`, ID: 22, role: RECRUITER)
+       - Candidate 1 (`candidate_c_*@hiregenius.ai`, ID: 23, role: CANDIDATE)
+       - Candidate 2 (`candidate_d_*@hiregenius.ai`, ID: 24, role: CANDIDATE, resume-less)
+     - Executed and validated all 9 required scenarios:
+       - Scenario (a): Candidate 1 uploads resume (multipart PDF) -> 201 Created (`id: 51`).
+       - Scenario (b): Candidate 1 applies to open job -> 201 Created (`id: 29`, status: `APPLIED`).
+       - Scenario (c): Candidate 1 applies to same job again -> 409 Conflict (`"You have already applied for this job"`).
+       - Scenario (d): Candidate 2 (no resume) applies to job -> 400 Bad Request (`"Upload your resume before applying"`).
+       - Scenario (e): Recruiter A views applications for own job -> 200 OK (sees Application 29).
+       - Scenario (f): Recruiter B tries to view Recruiter A's job applications -> 403 Forbidden (`"Forbidden: You do not have permission to view applications for this job"`).
+       - Scenario (g): Recruiter A updates application status to `SHORTLISTED` -> 200 OK.
+       - Scenario (h): Recruiter B tries to update Recruiter A's application status -> 403 Forbidden (`"Forbidden: You do not have permission to modify this application"`).
+       - Scenario (i): Candidate 1 views own applications list via `GET /api/applications/mine` -> 200 OK (sees `status: "SHORTLISTED"`).
+       - Extra Scenario: Recruiter A views candidate details via `GET /api/candidates/51` -> 200 OK (has application link); Recruiter B views `GET /api/candidates/51` -> 403 Forbidden (no application link).
+  5. **Environment & Security**:
+     - Confirmed `.env` files remain strictly unchanged and gitignored (`hiregenius-core-api/uploads/` also gitignored). Zero secrets introduced to version control.
+
+### 2026-09-26 — Phase 3 Frontend: Real Core API Integration & Complete Mock Data Removal
+
+- **Scope & Objectives Achieved**:
+  - Replaced all mock data with real HTTP backend integration for **BOTH Candidate and Recruiter sides** of the application, connecting directly to live Core API Phase 2 (Jobs) and Phase 3 (Candidates & Applications) endpoints.
+  - Zero mock data arrays remain in `hiregenius-frontend/src/` (`src/mock/candidate/` and `src/mock/recruiter/` mock files removed).
+  - Unbuilt future modules (Interviews, Analytics, Ranking, Resume Screening scoring) display clear, honest `ModulePendingState` placeholders with planned roadmaps and no fake data.
+
+- **Service Layer Implementation**:
+  1. **Centralized Axios Routing (`src/services/api.js`)**:
+     - Extended request interceptor to route `/jobs`, `/candidates`, and `/applications` to `VITE_CORE_API_URL` (`http://localhost:4000/api`).
+     - Preserved Auth Service routing for `/auth/*` and automatic `Authorization: Bearer <token>` injection.
+  2. **Candidates Service (`src/services/candidatesService.js`)**:
+     - `uploadResume(formData)`: `POST /api/candidates/me/resume` (multipart/form-data, PDF/DOCX, max 5MB).
+     - `getMyProfile()`: `GET /api/candidates/me` (returns 404 cleanly when no resume uploaded yet).
+     - `getCandidateById(id)`: `GET /api/candidates/:id` (recruiter inspection with ownership guard).
+  3. **Applications Service (`src/services/applicationsService.js`)**:
+     - `applyToJob(jobId)`: `POST /api/applications` (`{ jobId }`, handles 201, 400 no-resume, 409 duplicate).
+     - `getMyApplications()`: `GET /api/applications/mine` (candidate application history).
+     - `getJobApplications(jobId)`: `GET /api/jobs/:jobId/applications` (recruiter applicants list for job).
+     - `updateStatus(id, status)`: `PATCH /api/applications/:id/status` (`APPLIED`, `SCREENING`, `INTERVIEW`, `SHORTLISTED`, `HIRED`, `REJECTED`).
+     - `getApplicationById(id)`: `GET /api/applications/:id`.
+
+- **Candidate Side Integration**:
+  1. **Candidate Dashboard (`src/pages/Dashboard/CandidateDashboard.jsx`)**:
+     - Real open jobs list queried via `jobsService.getPublicJobs({ status: 'OPEN', limit: 6 })`.
+     - Direct "Apply Now" button per job calling `applicationsService.applyToJob(job.id)`:
+       - Displays "Applied" badge for already applied jobs.
+       - Cleanly prompts and scrolls to resume upload zone if candidate has not uploaded a resume (HTTP 400).
+       - Prevents duplicate applications with toast feedback (HTTP 409).
+     - Real resume profile status queried via `candidatesService.getMyProfile()`:
+       - Displays verified filename, file format, and upload date.
+       - Interactive drag-and-drop resume upload zone wired to `candidatesService.uploadResume()`.
+     - Real application pipeline tracker counting `Applied`, `Screening`, `Interview`, `Shortlisted` from `applicationsService.getMyApplications()`.
+     - Real activity feed displaying recent application submissions with relative timestamps.
+  2. **Candidate Applications Page (`src/pages/candidate/ApplicationsPage.jsx`)**:
+     - Replaced all mock applications with real query `applicationsService.getMyApplications()`.
+     - Real stage timeline and metadata overview for every submitted application.
+     - Status filtering tabs (`All`, `Applied`, `Screening`, `Interview`, `Shortlisted`, `Hired`, `Rejected`) and search box.
+     - Real loading shimmer, retryable error state, and empty state linking back to open jobs.
+  3. **Candidate Settings Page (`src/pages/candidate/CandidateSettingsPage.jsx`)**:
+     - Replaced mock profile with real authenticated user data from Redux `selectUser`.
+     - Added "Resume Document" section displaying active resume details and "Replace Resume" uploader.
+  4. **Unbuilt Modules (`InterviewsPage.jsx`, `ResumeScorePage.jsx`, `ScanHistoryPage.jsx`)**:
+     - Replaced mock arrays with reusable `ModulePendingState` pointing candidates back to active applications and dashboard.
+
+- **Recruiter Side Integration**:
+  1. **Recruiter Candidates Page (`src/pages/recruiter/RecruiterCandidatesPage.jsx`)**:
+     - Connected to real recruiter jobs via `jobsService.getMyJobs()` with job selection dropdown and `?jobId=` URL param support.
+     - Fetches applicants for selected job via `applicationsService.getJobApplications(jobId)`.
+     - Interactive application status dropdown calling `applicationsService.updateStatus(id, newStatus)` with live state update and toast confirmation.
+     - Candidate detail drawer querying `candidatesService.getCandidateById(candidateId)` with 403 error boundary.
+     - Status filter tabs, search by candidate name/email, and applicant count badges.
+  2. **Recruiter Jobs Page (`src/pages/recruiter/RecruiterJobsPage.jsx`)**:
+     - Added "Applicants" action button to each job card linking to `/recruiter/candidates?jobId=${job.id}`.
+     - Added "View Applicants" button inside the Job Detail modal.
+  3. **Recruiter Dashboard Home (`src/pages/recruiter/RecruiterDashboardHome.jsx`)**:
+     - Updated "View Candidates" quick action badge from "Pending" to "Active".
+     - Updated Card 2 to link directly to the live Candidate Pipeline.
+
+- **Verification Results**:
+  1. **Automated End-to-End Flow (`scratch/verify-frontend-phase3-flows.mjs`)**:
+     - All 14 integration scenarios passed 100% against live Node Core API (port 4000) and deployed AWS Auth Service (`http://13.203.243.162`):
+       1. Recruiter registration on Auth Service -> 201 Created with JWT.
+       2. Candidate registration on Auth Service -> 201 Created with JWT.
+       3. Recruiter creates job via `POST /api/jobs` -> 201 Created.
+       4. Candidate checks profile before resume upload -> 404 cleanly returned.
+       5. Candidate attempts apply without resume -> 400 rejected with "Upload your resume before applying".
+       6. Candidate uploads resume via `POST /api/candidates/me/resume` -> 201 Created.
+       7. Candidate retrieves profile via `GET /api/candidates/me` -> 200 OK.
+       8. Candidate applies to job via `POST /api/applications` -> 201 Created.
+       9. Candidate attempts duplicate apply -> 409 Conflict rejected with "You have already applied for this job".
+       10. Candidate views application history via `GET /api/applications/mine` -> 200 OK.
+       11. Recruiter views applicants via `GET /api/jobs/:jobId/applications` -> 200 OK.
+       12. Recruiter updates status via `PATCH /api/applications/:id/status` -> 200 OK (`SHORTLISTED`).
+       13. Candidate re-queries `GET /api/applications/mine` -> verifies status updated to `SHORTLISTED` in real time.
+       14. Recruiter retrieves candidate detail via `GET /api/candidates/:id` -> 200 OK.
+  2. **Linter & Production Build**:
+     - `npm run lint`: 0 errors across 102 source files.
+     - `npm run build`: 2,943 modules built successfully in 1.42s with 0 errors.
+
+### 2026-09-26 — Data-Integrity Fixes: Recruiter/Candidate Identity Joins & ID Mutation Prevention
+
+- **Problem & Root Causes Identified**:
+  1. **Bug 1 (Missing Names & Emails)**:
+     - **Database Disconnect**: Frontend `.env` pointed to remote AWS EC2 Auth Service while Core API connected to local MySQL on `localhost:3307`. Users registered via AWS auth lacked rows in local `users` table, causing `leftJoin('users')` to return `null` for `candidate_name` and `candidate_email`.
+     - **Missing Recruiter Joins**: Core API queries lacked joins on `jobs.recruiter_id = users.id`. Candidates viewing applications (`GET /api/applications/mine` and `GET /api/applications/:id`) and users viewing jobs (`GET /api/jobs/:id`, `GET /api/jobs`) had no recruiter name or email.
+     - **Inconsistent Keys**: `candidates.repository.js` (`findDetailWithUser` and `findByUserId`) omitted keys if user record was absent.
+  2. **Bug 2 (ID Mutation & Inconsistent Displays)**:
+     - In `RecruiterCandidatesPage.jsx` (`handleViewCandidate`): When inspecting an applicant, merging `res.data` (candidate profile with `id: candidate_id`) over `app` (application with `id: application_id`) caused `selectedCandidate.id` to mutate from application ID (e.g. #58) to candidate ID (e.g. #102) once the profile loaded.
+     - In `ApplicationsPage.jsx`: Job reference rendered `Job #{app.job_id}` instead of consistent `#{app.job_id}`.
+     - In `RecruiterProfilePage.jsx`: Hardcoded company `'TechCorp India'` was displayed instead of dynamic `user?.company`.
+
+- **Fixes Applied**:
+  1. **Core API Repository Layer (`hiregenius-core-api`)**:
+     - `applications.repository.js`:
+       - `findById(id)`: Updated to perform dual left-joins (`users as candidate_user` and `users as recruiter_user`), returning `candidate_name`, `candidate_email`, `recruiter_name`, and `recruiter_email`.
+       - `findByCandidate(candidateId)`: Added left-join on `users as recruiter_user` on `jobs.recruiter_id = recruiter_user.id`, returning `recruiter_name` and `recruiter_email` to candidate application lists.
+     - `jobs.repository.js`:
+       - `findById(id)` and `findPublicJobs()`: Added left-join on `users` on `jobs.recruiter_id = users.id` to return `recruiter_name` and `recruiter_email`.
+     - `candidates.repository.js`:
+       - `findByUserId(userId)` and `findDetailWithUser(candidateId)`: Standardized to always include `candidate_name` and `candidate_email` keys.
+     - `knexfile.js` & `jest.config.js`:
+       - Set `USE_SQLITE=true` for isolated in-memory test execution so `npm test` never wipes or alters developer/production MySQL database records.
+  2. **Frontend UI Fixes (`hiregenius-frontend`)**:
+     - `RecruiterCandidatesPage.jsx`:
+       - Fixed `handleViewCandidate`: Preserves `application_id: app.id` and `candidate_id: app.candidate_id` explicitly.
+       - Modal displays `Candidate ID: #{selectedCandidate.candidate_id}`, `Application ID: #{selectedCandidate.application_id}`, and `Job ID: #{selectedCandidate.job_id}`. Real names and emails are displayed without `'N/A'` or placeholder text.
+     - `ApplicationsPage.jsx`:
+       - Normalized Job Reference display to `#{app.job_id}`.
+       - Added recruiter info display (`{app.recruiter_name} ({app.recruiter_email})`) when available.
+     - `RecruiterJobsPage.jsx`:
+       - Job modal now renders `Recruiter: {viewingJob.recruiter_name} (#{viewingJob.recruiter_id})`.
+     - `RecruiterProfilePage.jsx`:
+       - Removed `'TechCorp India'` fallback string; dynamically renders `user?.company`.
+     - `.env`:
+       - Configured `VITE_API_BASE_URL=http://localhost:8080/api` aligning local dev environment with local Auth Service and shared MySQL DB.
+
+- **Verification Results**:
+  1. `hiregenius-core-api`:
+     - Test suite: 6/6 test suites passed, 62/62 tests passed in SQLite in-memory mode.
+     - Real HTTP tests against live server (`http://localhost:4000`):
+       - `GET /api/jobs/329/applications`: Returns real candidate names ("Alex Tech", "Vishal Kumar") and emails.
+       - `GET /api/candidates/102`: Returns real candidate name ("Vishal Kumar") and email ("vishalkumar.work0@gmail.com").
+       - `GET /api/applications/mine`: Returns real recruiter name ("Sarah Recruiter") and email ("sarah.recruiter@hiregenius.ai").
+       - `GET /api/applications/58`: Returns dual identities ("Vishal Kumar" & "Sarah Recruiter").
+       - `GET /api/jobs/329`: Returns real recruiter name and email.
+  2. `hiregenius-frontend`:
+     - `npm run build`: Passed cleanly with 0 errors.
+
+### 2026-09-26 — Core API CI Workflow Environment Fix
+
+- **Problem & Root Cause**:
+  - In GitHub Actions CI (`.github/workflows/core-api-ci.yml`), `npm test` failed with `"FATAL: JWT_SIGNING_KEY environment variable is missing"`.
+  - `.env` is correctly gitignored. The test step previously used `JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}`, which resolved to empty string when repository secrets were not configured.
+  - `src/config/env.js` strictly validates the presence of `JWT_SIGNING_KEY`, throwing a fatal error.
+- **Fix Applied**:
+  - In `.github/workflows/core-api-ci.yml`, updated the `Run tests` step with a complete `env:` block containing safe, non-production dummy placeholder values for every variable defined in `src/config/env.js`:
+    - `NODE_ENV: test`
+    - `PORT: 4000`
+    - `JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY || 'test-only-signing-key-not-for-production-use-min-32-chars' }}`
+    - `DB_HOST: localhost`
+    - `DB_PORT: 3306`
+    - `DB_USER: root`
+    - `DB_PASSWORD: root`
+    - `DB_NAME: testdb`
+    - `DB_SSL: 'false'`
+    - `DB_POOL_MIN: 1`
+    - `DB_POOL_MAX: 10`
+    - `ENABLE_SWAGGER: 'true'`
+    - `USE_SQLITE: 'true'`
+  - Updated workflow triggers to include `'feature/**'` and `.github/workflows/core-api-ci.yml` in path filters.
+  - Documented CI environment variables in `DevOps.md`.
+- **Scope & Independence**:
+  - Zero impact on local development or cloud deployments (AWS/Render), which continue to read real environment variables from their respective `.env` files and production secrets.
+  - Zero production secrets added to the workflow file.
+
+### 2026-09-26 — Phase 4: Interviews Scheduling & In-App Notifications Implementation
+
+- **Architecture & Layered Implementation (`hiregenius-core-api`)**:
+  1. **Database Schema & Migrations**:
+     - Created and executed migration `migrations/20260926_create_interviews_and_notifications_tables.js`.
+     - Table `interviews`:
+       - `id`: Auto-increment integer PK.
+       - `application_id`: Integer, foreign key to `applications.id` with `onDelete('CASCADE')`, `unique()` constraint enforcing 1:1 interview per application.
+       - `scheduled_at`: Datetime, NOT NULL.
+       - `meeting_link`: String(1024), nullable.
+       - `status`: Enum(`SCHEDULED`, `COMPLETED`, `CANCELLED`), default `SCHEDULED`.
+       - `created_by`: BigInteger/unsigned, NOT NULL (recruiter user ID).
+       - `created_at`, `updated_at`: Timestamps.
+     - Table `notifications`:
+       - `id`: Auto-increment integer PK.
+       - `user_id`: BigInteger/unsigned, NOT NULL (recipient user ID).
+       - `type`: Enum(`APPLICATION_RECEIVED`, `INTERVIEW_SCHEDULED`, `INTERVIEW_CANCELLED`, `STATUS_CHANGED`), NOT NULL.
+       - `message`: Text, NOT NULL.
+       - `related_entity_type`: String(64), nullable (`INTERVIEW`, `APPLICATION`).
+       - `related_entity_id`: Integer, nullable.
+       - `is_read`: Boolean, NOT NULL default `false`.
+       - `created_at`: Timestamp.
+  2. **Notifications Module (`src/modules/notifications/`)**:
+     - `notifications.repository.js`: Implemented `create`, `findById`, `findByUser` (with `isRead` boolean filter and pagination), `markAsRead`, and `markAllAsRead`.
+     - `notifications.service.js`: Centralized notification dispatcher (`createNotification`) supporting both positional and object arguments; `getMyNotifications` with pagination; `markAsRead` with strict ownership check (403 if `user_id !== req.user.userId`); `markAllAsRead`.
+     - `notifications.controller.js`: Exposes `getMyNotifications`, `markAsRead`, and `markAllAsRead` returning standardized `ApiResponse`.
+     - `notifications.routes.js`: Mounted at `/api/notifications` with `verifyJwt` and `requireRole('RECRUITER', 'CANDIDATE', 'ADMIN')`. Routes `/read-all` before `/:id/read` to avoid route shadowing.
+     - `notifications.validation.js` & `notifications.openapi.js`: Zod query/param schemas and registered OpenAPI 3.0 specs.
+  3. **Interviews Module (`src/modules/interviews/`)**:
+     - `interviews.repository.js`: Implemented `create`, `findById`, `findByApplicationId`, `findByRecruiter` (joins jobs, applications, candidates, users), and `findByCandidate` (ordered by `scheduled_at` ASC).
+     - `interviews.service.js`:
+       - `scheduleInterview`: Validates application existence; enforces recruiter job ownership (403); rejects past datetime with 400 Bad Request; enforces duplicate prevention via pre-check + DB unique constraint catch (409 Conflict); updates application status to `INTERVIEW`; triggers `INTERVIEW_SCHEDULED` notification for candidate.
+       - `getRecruiterInterviews`: Lists interviews for recruiter with filters and pagination.
+       - `getInterviewById`: Enforces dual-ownership access (owning recruiter or applicant candidate, 403 otherwise).
+       - `updateInterview`: Enforces recruiter ownership; rejects past dates (400); updates `scheduledAt`, `meetingLink`, `status`; triggers `INTERVIEW_CANCELLED` notification when status is changed to `CANCELLED`.
+       - `getCandidateInterviews`: Lists upcoming interviews for authenticated candidate.
+     - `interviews.routes.js`: Mounted at `/api/interviews` (`POST /`, `GET /`, `GET /:id`, `PATCH /:id`) and exports `candidatesInterviewsRouter` mounted at `/api/candidates/me/interviews`.
+     - `interviews.validation.js` & `interviews.openapi.js`: Zod validation schemas enforcing future datetime, positive integer IDs, URL format for meeting links, and registered OpenAPI specs.
+  4. **Phase 3 Retrofit & Integration**:
+     - Updated `applications.service.js` (`updateApplicationStatus`): Calls `notificationsService.createNotification` with type `STATUS_CHANGED` and message `"Your application for \"<job_title>\" has been updated to <status>."` whenever a recruiter updates an application status.
+     - Updated `errorHandler.js`: Refined unique constraint error mapping to distinguish interview duplicates from application duplicates.
+     - Mounted routes in `src/app.js`: `/api/interviews`, `/api/notifications`, `/api/candidates/me/interviews`.
+     - Updated `src/config/swagger.js`: Registered `registerInterviewsOpenApi` and `registerNotificationsOpenApi`.
+
+- **Verification Results**:
+  1. **Automated Unit & Integration Test Suites**:
+     - `npm run lint`: 0 errors across entire codebase.
+     - `npx jest`: 8/8 test suites passed, 88/88 tests passed (including 11 new tests in `notifications.test.js` and 15 new tests in `interviews.test.js`).
+  2. **Live HTTP Curl Verification (Port 4000 against MySQL)**:
+     - All 14 live scenarios verified successfully with signed tokens (Recruiter: 25, Candidate: 8):
+       - `GET /api/notifications` -> 200 (empty notifications)
+       - `POST /api/interviews` (past date) -> 400 Bad Request ("Interview cannot be scheduled in the past")
+       - `POST /api/interviews` (candidate token) -> 403 Forbidden
+       - `POST /api/interviews` (recruiter valid) -> 201 Created (ID 1, status SCHEDULED)
+       - `POST /api/interviews` (duplicate attempt) -> 409 Conflict ("An interview has already been scheduled for this application")
+       - `GET /api/interviews` (recruiter) -> 200 OK (returned interview with joined job and candidate details)
+       - `GET /api/candidates/me/interviews` (candidate) -> 200 OK
+       - `GET /api/notifications` (candidate) -> 200 OK (received `INTERVIEW_SCHEDULED` notification)
+       - `PATCH /api/interviews/1` (recruiter cancels) -> 200 OK (status CANCELLED)
+       - `GET /api/notifications` (candidate) -> 200 OK (received `INTERVIEW_CANCELLED` notification)
+       - `PATCH /api/notifications/:id/read` -> 200 OK (`is_read: true`)
+       - `PATCH /api/notifications/read-all` -> 200 OK (`updatedCount: 1`)
+       - `PATCH /api/applications/58/status` (recruiter updates to `HIRED`) -> 200 OK
+       - `GET /api/notifications` (candidate) -> 200 OK (received `STATUS_CHANGED` notification)
+
+
+
+
+
+---
+
+### 2026-09-26 - Phase 4 Frontend Integration: Interviews & Notifications
+
+- **Scope & Objective**: Complete real backend integration for the Interview Scheduler, Candidate Interviews, and system-wide Notifications on both Recruiter and Candidate roles in hiregenius-frontend. Zero mock data remaining for interviews and notifications.
+- **Frontend Implementations**:
+  1. **API Routing (hiregenius-frontend/src/services/api.js)**:
+     - Updated isCoreRequest to route /interviews and /notifications requests to coreBaseURL (port 4000).
+  2. **Interviews Service (src/services/interviewsService.js)**:
+     - scheduleInterview: POST /api/interviews (supports integer applicationId, ISO scheduledAt, optional meetingLink).
+     - getMyInterviews: GET /api/interviews/mine (supports filtering and pagination).
+     - getCandidateInterviews: GET /api/candidates/me/interviews.
+     - getInterviewById: GET /api/interviews/:id.
+     - updateInterview: PATCH /api/interviews/:id (supports rescheduling and status changes like CANCELLED).
+  3. **Notifications Service (src/services/notificationsService.js)**:
+     - getMyNotifications: GET /api/notifications/mine (supports pagination and unreadOnly / is_read filtering).
+     - markAsRead: PATCH /api/notifications/:id/read.
+     - markAllAsRead: PATCH /api/notifications/read-all.
+  4. **Reusable Notifications Component (src/components/Notifications/NotificationsDropdown.jsx)**:
+     - Glassmorphism dropdown panel with unread badge counter, notification icons per type (INTERVIEW_SCHEDULED, INTERVIEW_CANCELLED, STATUS_CHANGED, APPLICATION_RECEIVED), relative time formatting, single mark-as-read, and mark all read.
+     - Hybrid polling pattern: initial fetch on mount, refetch on dropdown open, and 30-second background polling.
+     - Replaced all mock notification implementations across all application shells:
+       - src/components/Navbar/Navbar.jsx
+       - src/layouts/AppShell.jsx (Candidate Shell)
+       - src/layouts/RecruiterShell.jsx (Recruiter Shell - removed MOCK_NOTIFS)
+       - src/layouts/AdminShell.jsx (Admin Shell - removed MOCK_ADMIN_NOTIFS)
+  5. **Recruiter Interview Scheduler (src/pages/recruiter/RecruiterSchedulerPage.jsx)**:
+     - Full real UI replacing ModulePendingState: live summary metrics (Total, Upcoming, Completed, Cancelled), status filter tabs, search by job/candidate/email, copy meeting link, edit modal, quick cancel with confirmation, and schedule new interview modal.
+     - Scheduled date validator prevents picking past dates (min={getMinDateTimeLocal()}).
+     - Distinct error handling: 201 Created, 409 Conflict ('An interview has already been scheduled for this application'), 400 Bad Request ('Interview cannot be scheduled in the past'), 403 Forbidden.
+     - Supports pre-selected applicationId via URL query param (?applicationId=...).
+  6. **Recruiter Candidates Page (src/pages/recruiter/RecruiterCandidatesPage.jsx)**:
+     - Added 'Schedule' button on candidate applicant cards and 'Schedule Interview' in candidate profile drawer footer linking directly to /recruiter/scheduler?applicationId=...
+  7. **Candidate My Interviews (src/pages/candidate/InterviewsPage.jsx)**:
+     - Full real UI replacing placeholder: wired to interviewsService.getCandidateInterviews(), displaying upcoming and past interviews, meeting link buttons, recruiter details, and status badges.
+  8. **Candidate Applications (src/pages/candidate/ApplicationsPage.jsx)**:
+     - Status INTERVIEW applications feature a direct action button linking to /candidate/interviews.
+  9. **Preserved Boundaries**:
+     - AI Interview Room (/recruiter/ai-interview) and Candidate Ranking (/recruiter/ranking) kept strictly intact with their ModulePendingState placeholders.
+- **Verification Results**:
+  1. npm run lint in hiregenius-frontend: 0 errors across 105 files.
+  2. npm run build in hiregenius-frontend: built successfully in 1.01s with 0 errors.
+  3. npm test in hiregenius-core-api: 8/8 test suites passed, 88/88 tests passed.
+  4. Live E2E automated test against Core API (port 4000) verified all 8 test scenarios.
+
+---
+
+### 2026-09-26 - Phase 4 Core API: Real SMTP Email Delivery for Notifications
+
+- **Scope & Objective**: Add real email delivery to the existing Notifications system in `hiregenius-core-api` alongside DB-backed in-app notifications. Reused the proven SMTP configuration from `hiregenius-auth-service` without reinventing email transport or risking credential leaks.
+- **Architectural Implementation**:
+  1. **Nodemailer Service (`src/modules/email/email.service.js`)**:
+     - Configured with `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` loaded via `src/config/env.js`.
+     - Supports connection verification (`verifyConnection()`) and connection timeouts (10s connection/greeting, 15s socket).
+     - Guarded test mode: returns deterministic mocks during automated unit tests to prevent network delays and external rate-limiting.
+     - Total failure isolation: errors are caught, logged with latency metrics, and returned as `{ success: false, error }`, never throwing to parent caller.
+  2. **Responsive Email Templates (`src/modules/email/email.templates.js`)**:
+     - Modern responsive inline-styled HTML templates with brand indigo-violet accents, structured details table, CTA buttons, and plain-text fallbacks.
+     - `interviewScheduledTemplate`: Includes candidate name, job title, company, formatted human-readable date/time, and direct join meeting link.
+     - `interviewCancelledTemplate`: Includes candidate name, job title, company, scheduled time that was cancelled, and cancellation note with no active link.
+     - `statusChangedTemplate`: Tailored contextual messaging and tone for terminal stages: `SHORTLISTED` (celebratory/next steps), `HIRED` (welcoming/congratulations), `REJECTED` (professional and encouraging).
+  3. **Notification Service Integration (`src/modules/notifications/notifications.service.js`)**:
+     - Extended `createNotification` with non-blocking, asynchronous email dispatch (`dispatchNotificationEmail`).
+     - Preserved in-app notifications as the immutable single source of truth.
+     - Attached `_dispatchPromise` for deterministic unit test awaiting.
+     - Email Delivery Policy:
+       - `INTERVIEW_SCHEDULED` -> Sends email to candidate.
+       - `INTERVIEW_CANCELLED` -> Sends email to candidate.
+       - `STATUS_CHANGED` -> Sends email ONLY for terminal/positive statuses: `SHORTLISTED`, `HIRED`, `REJECTED`. Non-terminal statuses (`APPLIED`, `SCREENING`, `INTERVIEW`) do not send email.
+       - `APPLICATION_RECEIVED` -> In-app notification only (no email, preventing recruiter inbox spam).
+  4. **Database Test Harness Fix (`knexfile.js`)**:
+     - Corrected SQLite in-memory test configuration to use `pool: { min: 1, max: 1 }` when `USE_SQLITE === 'true'`, preventing multi-connection in-memory database isolation issues across concurrent and background queries.
+- **Verification Results**:
+  1. `npm test` in `hiregenius-core-api`: **9/9 test suites passed, 100/100 tests passed**.
+  2. `npm run lint` in `hiregenius-core-api`: **0 lint errors**.
+  3. Real SMTP Delivery verification script (`verify-real-email.js`):
+     - `verifyConnection()` -> `true`.
+     - Real email sent for `INTERVIEW_SCHEDULED` -> Delivered (`messageId: <3600bb5a-295e-761e-2129-c69cb50395fc@gmail.com>`).
+     - Real email sent for `INTERVIEW_CANCELLED` -> Delivered (`messageId: <413ecf4b-a0be-bf34-e07f-b698a0fe914d@gmail.com>`).
+     - Real email sent for `STATUS_CHANGED` (`SHORTLISTED`) -> Delivered (`messageId: <db5284fe-eeed-5f21-9d26-406899371e35@gmail.com>`).
+     - Failure isolation verified with deliberate bad port -> `ECONNREFUSED` handled gracefully without crashing or throwing.
+
+---
+
+### 2026-09-26 - Phase 4 Core API: Email Extensions (Job Alerts, Unsubscribe, Recruiter Preferences, Resume Updates)
+
+- **Step 0 Findings**:
+  1. **Auth Service Welcome Email**: Audited `hiregenius-auth-service`. It only implements password reset emails via `EmailService.java` / `sendPasswordResetEmail`. It does NOT send a welcome email on registration. Registration happens on Auth Service without an event bus or webhook to Core API.
+  2. **Profile Update Email Ownership Split**: Core API strictly owns the candidate profile and resume upload/re-upload (`POST /api/candidates/me/resume`). Auth Service owns user credentials (name, email, password). Therefore, profile update emails in Core API trigger exclusively on candidate resume updates/re-uploads.
+  3. **Candidate Scale in DB**: Live count in MySQL revealed 4 candidates in `users` (`role = 'CANDIDATE'`) and 4 in `candidates` table.
+- **Architectural Implementation**:
+  1. **Database Schema & Migrations (`migrations/20260927_add_job_alerts_and_recruiter_preferences.js`)**:
+     - Added indexed `job_alerts_opt_in` (boolean, default: `true`) to `candidates` table.
+     - Created `recruiter_notification_preferences` table: `recruiter_user_id` (unique, FK), `notify_on_new_application` (boolean, default: `false` [opt-in to prevent spam]), `job_alert_dispatch_enabled` (boolean, default: `true`).
+  2. **Candidate Signed Unsubscribe Token & Public Endpoint**:
+     - Implemented `generateUnsubscribeToken` / `verifyUnsubscribeToken` in `CandidatesService` using HS256 signed JWT with `env.JWT_SIGNING_KEY` (90-day expiry, purpose-restricted).
+     - Public endpoints: `GET /api/candidates/job-alerts/unsubscribe?token=...` and `POST`. Validates signature (rejecting forged/tampered tokens with 400 Bad Request) and flips `job_alerts_opt_in = false` for that candidate only. Returns clean HTML confirmation or JSON.
+  3. **Batched & Opt-In Job Alerts on Job Posting**:
+     - In `JobsService.createJob`: When job is created with status `OPEN`, dispatches background job alert emails non-blockingly without delaying the 201 response.
+     - Checks recruiter preference `shouldSendForRecruiter(recruiterId, 'job_alert_dispatch_enabled')`. If false, alerts are suppressed.
+     - Batched delivery: processes opted-in candidates in batches of 10 respecting Gmail SMTP rate limits (~500/day, max ~100 recipients/burst) with per-candidate failure isolation.
+     - Email template includes job title, company, location, excerpt, direct apply link, and mandatory signed unsubscribe URL.
+  4. **Resume Upload & Security Confirmation Emails**:
+     - `POST /api/candidates/me/resume`:
+       - First-ever upload (`isNew: true`): dispatches `WELCOME_PROFILE_SETUP` email greeting the candidate and guiding next steps.
+       - Re-upload on existing profile (`isNew: false`): dispatches `RESUME_UPDATED` security notification email with filename and formatted timestamp ("Didn't make this change? Change password immediately").
+  5. **Recruiter Notification Preferences (`src/modules/recruiters/`)**:
+     - `recruiterPreferences.repository.js`, `recruiterPreferences.service.js`, `recruiterPreferences.controller.js`, `recruiterPreferences.routes.js`.
+     - Endpoints: `GET /api/recruiters/me/notification-preferences` and `PATCH /api/recruiters/me/notification-preferences` (guarded with `verifyJwt` and `requireRole('RECRUITER')`).
+     - Centralized check: `shouldSendForRecruiter(recruiterId, preferenceKey)`.
+     - `APPLICATION_RECEIVED` notification integration: remains in-app only by default (`notify_on_new_application: false`), but if recruiter toggles `notify_on_new_application: true`, dispatches email to recruiter with applicant details and review link.
+  6. **Regression Verification for Previously-Built Rules**:
+     - Confirmed `INTERVIEW_SCHEDULED` emails candidate.
+     - Confirmed `INTERVIEW_CANCELLED` emails candidate.
+     - Confirmed `STATUS_CHANGED` emails candidate ONLY for terminal statuses (`SHORTLISTED`, `HIRED`, `REJECTED`).
+     - Confirmed `APPLICATION_RECEIVED` default behavior remains in-app only (no email).
+- **Verification Results**:
+  1. `npm run lint`: **0 errors, 0 warnings** across all files.
+  2. `npm test`: **10/10 test suites passed, 116/116 tests passed** (including comprehensive tests in `test/modules/email/emailExtensions.test.js`).
+  3. Real SMTP live verification script (`verify-real-email-extensions.js`) delivering to Gmail:
+     - Real job posted $\rightarrow$ Job alert email delivered to opted-in candidate (`messageId: <3c070246-57e4-181c-952a-76250db010f5@gmail.com>`).
+     - Unsubscribe token executed $\rightarrow$ candidate `job_alerts_opt_in` flipped to `false`.
+     - Subsequent job posted $\rightarrow$ unsubscribed candidate received 0 emails.
+     - Recruiter disabled `job_alert_dispatch_enabled: false` $\rightarrow$ job alert emails suppressed.
+     - Candidate resume re-upload $\rightarrow$ security confirmation email delivered (`messageId: <3e9e66f7-ad6e-6979-3e07-f731a5ba69da@gmail.com>`).
+     - Recruiter `APPLICATION_RECEIVED` toggle: default suppressed; opted-in delivered to recruiter (`messageId: <8c042b16-1dc3-a02f-db46-cce74e49969e@gmail.com>`).
+
+
+---
+
+### 2026-09-27 - Phase 4 Core API: MySQL 3307 Service Restoration & Email Investigation
+
+- **Issue Diagnosed**:
+  - npm start failed with ECONNREFUSED 127.0.0.1:3307 and ::1:3307.
+  - Root cause: The project database is located in scratch/mysqldata running on port 3307 (to avoid collision with Windows host MySQL80 service occupying port 3306). The background mysqld process had stopped following terminal/system restart.
+- **Resolution**:
+  - Restarted MySQL daemon with datadir pointing to scratch/mysqldata:
+    & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe" --datadir="c:\Users\visuc\OneDrive\Desktop\Hirelens\scratch\mysqldata" --port=3307 --mysqlx-port=33070 --console
+  - Verified connectivity to localhost:3307 and database hiregenius (9 registered users found intact).
+  - Verified Core API server boot (node src/server.js) successfully connected to MySQL 3307, verified Knex migrations, and bound to port 4000 without errors.
+- **Email System Audit & Bug Fix**:
+  - Investigated recipient address routing across all modules (notifications.service.js, jobs.service.js, candidates.service.js, email.service.js). Confirmed that NO call sites hardcode 'to' - all dynamically pull the recipient's registered email from users.email or candidates.candidate_email.
+  - Identified that krvisuji92@gmail.com was configured as the sender credentials (MAIL_USERNAME and MAIL_FROM in .env), causing sent emails to appear in that Gmail account's 'Sent' folder.
+  - Replaced hardcoded fallback in hiregenius-auth-service/src/main/resources/application.yml line 50: changed ${MAIL_FROM:krvisuji92@gmail.com} to generic ${MAIL_FROM:noreply@hiregenius.ai}.
+  - Enhanced runtime diagnostics in src/modules/email/email.service.js with clear pre-dispatch logging of TO, FROM, TYPE, and SUBJECT.
+- **Verification Results**:
+  - npm test: 10/10 test suites passed, 116/116 tests passed.
+  - npm run lint: 0 errors, 0 warnings.
+  - Server start verified on port 4000.
+
+### 2026-09-27 - Security Audit: Admin Credential Hardening & Email Verification Flow
+- **Security Audit & Credential Decoupling**:
+  - Completely removed hardcoded admin credentials from Flyway schema migration (`V1__init_auth_schema.sql`), `DataInitializer.java`, and OpenAPI Swagger `@ExampleObject`.
+  - Driven admin user seeding and synchronization dynamically via environment variables `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+  - Rotated the historical admin password to a strong secret stored in gitignored `.env` and updated the admin BCrypt password hash in MySQL.
+  - Diagnosed historical admin login mismatch: Swagger UI had previously displayed `"Admin123!"` while seed migration contained `"[REDACTED_HISTORICAL_PASSWORD]"`, causing 401 Bad Credentials upon copy-pasting from API documentation.
+- **Mandatory Email Verification Flow**:
+  - Added Flyway migration `V3__add_email_verification.sql` adding `email_verified` boolean column to `users` and creating `email_verification_tokens` table.
+  - Updated `AuthService.java` to dispatch verification emails containing secure 24-hour tokens upon candidate and recruiter registration.
+  - Added verification endpoints (`GET` / `POST` `/api/auth/verify-email`, `POST` `/api/auth/resend-verification` with 2-minute rate-limiting).
+  - Admin accounts and Google OAuth accounts are automatically marked `email_verified = true`.
+  - In `hiregenius-core-api`, added guards on `applyToJob` and `createJob`: unverified candidates and recruiters are blocked with 403 Forbidden until their email address is verified.
+  - In `hiregenius-frontend`, added `/verify-email` route and `VerifyEmailPage.jsx` supporting token verification, loading indicators, success redirection, and token resending.
+  - Sanitized hardcoded admin email fallbacks across frontend components (`AdminShell.jsx`, `AdminProfilePage.jsx`, `adminMock.js`) and test fixtures (`requireRole.test.js`).
+- **Verification Results**:
+  - `hiregenius-auth-service`: 38/38 unit and integration tests passed (`./mvnw test`).
+  - `hiregenius-core-api`: 10/10 test suites passed, 118/118 tests passed (`npm test`), ESLint clean (`npm run lint`).
+  - `hiregenius-frontend`: Production build succeeded in 1.26s (`npm run build`).
+  - Database schema: `V3` Flyway migration successfully applied, admin user synchronized and verified.
+
+---
+
+### 2026-09-27 - Phase 5 Core API: Dashboard & Analytics Aggregation Endpoints
+
+- **Scope & Objective**: Complete backend implementation for Phase 5 — Dashboard/Analytics aggregation endpoints in `hiregenius-core-api`. All endpoints are strictly read-only SQL aggregations (`COUNT`, `GROUP BY`, date-range filters) over existing source tables (`jobs`, `candidates`, `applications`, `interviews`, `users`) with zero new analytics cache/summary tables, ensuring metrics never drift out of sync with reality.
+- **Architectural Implementation**:
+  1. **Strict Layered Pattern & Scoping**:
+     - `src/modules/analytics/analytics.repository.js`: Encapsulates high-performance aggregation queries using indexed joins and columns.
+     - `src/modules/analytics/analytics.service.js`: Houses business logic, continuous date range generation with zero-filled gaps, and separation of all-time vs. recent window figures.
+     - `src/modules/analytics/analytics.controller.js`: Orchestrates HTTP responses using `ApiResponse.success` envelope.
+     - `src/modules/analytics/analytics.routes.js`: Guarded by `verifyJwt` and `requireRole`.
+     - `src/modules/analytics/analytics.validation.js`: Validates `?days=` and top-recruiters query parameters using Zod. Returns 400 Bad Request on invalid values (non-numeric, negative, zero, etc.).
+     - `src/modules/analytics/analytics.openapi.js`: Complete OpenAPI 3.0 specification registered in Swagger UI (`/swagger-ui`).
+  2. **Part 1 — Recruiter-Scoped Analytics (`requireRole('RECRUITER')`)**:
+     - `GET /api/analytics/recruiter/summary`: Scoped strictly to `jobs.recruiter_id = req.user.userId`. Computes `totalJobs`, `openJobs`, `closedJobs`, `totalApplications`, `totalInterviewsScheduled`, and `applicationsByStatus` (6-stage breakdown). Supports optional `?days=30`. If omitted, returns both `allTime` totals and `recent` window numbers clearly labeled in separate objects without mixing.
+     - `GET /api/analytics/recruiter/jobs-breakdown`: Per-job metrics (`jobId`, `title`, `status`, `applicationCount`, `interviewCount`) ordered by `applicationCount DESC`.
+     - `GET /api/analytics/recruiter/trend`: Continuous chronological daily application counts over `?days=30` (default) with zero-filled gaps for days with 0 applications.
+  3. **Part 2 — Candidate-Scoped Analytics (`requireRole('CANDIDATE')`)**:
+     - `GET /api/analytics/candidate/summary`: Scoped strictly to authenticated candidate's applications (`candidates.user_id = req.user.userId`). Returns `totalApplications`, full `applicationsByStatus` breakdown, `totalInterviewsScheduled`, and `totalInterviewsCompleted`.
+  4. **Part 3 — Admin Platform-Wide Analytics (`requireRole('ADMIN')`)**:
+     - `GET /api/analytics/admin/summary`: Platform-wide aggregate across all recruiters and candidates: `totalUsers` (broken down by role: recruiters, candidates, admins), `totalJobs`, `totalApplications`, `totalInterviews`, and platform-wide `applicationsByStatus`.
+     - `GET /api/analytics/admin/top-recruiters`: Ranked recruiter leaderboard with joined read-only user details (`name`, `email`).
+     - **Sort Criterion Choice**: Primary sort is **total applications received (`applicationsCount DESC`)**, with total jobs posted (`jobsCount DESC`) as secondary tie-breaker (reflecting true recruiter engagement and candidate traction). Supports optional `?sortBy=jobs` query parameter.
+     - **Sensitive Fields Audit**: Verified that no user passwords, password hashes, or security tokens are selected or exposed.
+  5. **Performance & Schema Indexes Migration (`migrations/20260927_add_analytics_performance_indexes.js`)**:
+     - Added database indexes for `jobs.created_at`, `applications.applied_at`, `applications.candidate_id`, and `interviews.created_at`.
+- **Verification Results**:
+  1. `npm run lint`: **0 errors, 0 warnings** across all 11 modules and test suites.
+  2. `npm test`: **11/11 test suites passed, 138/138 tests passed** (including 20 automated tests in `test/modules/analytics/analytics.test.js`).
+  3. **Data Isolation Confirmation**:
+     - **Cross-recruiter data isolation was tested and confirmed**: In both automated unit tests and manual live curl verifications against MySQL, Recruiter A's summary and job breakdown reflected ONLY Recruiter A's data, and Recruiter B reflected ONLY Recruiter B's data, with zero cross-contamination.
+     - Candidate isolation was tested and confirmed: Candidate 1 and Candidate 2 received strictly isolated data.
+     - Role-based authorization was confirmed: RECRUITER attempting `/api/analytics/admin/summary` received `403 Forbidden`.
+
+---
+
+### 2026-09-27 - Phase 5 Core API: Merge into Dev & AWS Deployment Readiness Audit
+
+- **Merge Execution**:
+  - `feature/core-api-phase5-analytics` was merged directly into `dev` via fast-forward (`a263c6b`).
+  - Merged `dev` was pushed to `origin/dev`.
+  - Git log confirms both the security fix (`8d91eea`) and Phase 5 (`a263c6b`) are present on `dev`.
+  - Regression testing on `dev`: `npm run lint` passed (0 errors), `npm test` passed (11/11 suites, 138/138 tests).
+  - GitHub Actions CI on `dev`: `Core API CI/CD` passed with conclusion `success`.
+- **AWS Deployment Readiness Audit Findings**:
+  1. **Environment Variables**: Audited all 19 configuration variables across `src/config/env.js` and `knexfile.js`. Identified that `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` have local fallbacks in `src/config/env.js` that should fail fast in production if unset.
+  2. **.env / Secrets Hygiene**: Verified `.env` is unversioned and ignored. `.env.example` has full placeholders. No hardcoded API keys or credentials exist in `src/`.
+  3. **Database Migrations**: Tested fresh database migration sequence against empty MySQL schema (`hiregenius_migration_test_temp`). All 5 Knex migrations executed in order without errors. Noted that user schema email verification is managed via Flyway in Auth Service.
+  4. **Health Check Endpoint**: Found that `GET /health` is process-only (no DB ping) and `GET /api/health` does not exist. Proposed adding DB `SELECT 1` ping and `/api/health` alias.
+  5. **CORS Configuration**: Found that CORS uses permissive wildcard `app.use(cors())`. Proposed restricting allowed origins via `FRONTEND_BASE_URL` / `CORS_ALLOWED_ORIGINS`.
+  6. **Logging & Crash Behavior**: Startup failures log to stderr with `process.exit(1)`. Graceful shutdown handles `SIGTERM`/`SIGINT`. Proposed adding explicit `uncaughtException` and `unhandledRejection` handlers.
+  7. **Port & Binding**: Reads `PORT` dynamically (default 4000) and binds to all interfaces (`0.0.0.0`).
+  8. **Dependency & Build Sanity**: `npm ci` completed cleanly in 14s with 0 vulnerabilities. Production dependencies are 100% pure JS with zero native compilation steps.
+  9. **CI Status**: GitHub Actions CI on `dev` passed successfully (`Core API CI/CD`).
+
+---
+
+### 2026-09-27 - Phase 5 Frontend: Real Backend Analytics & Dashboard Integration
+
+- **Scope & Objectives**: Replaced all mock/placeholder analytics data on both Recruiter and Admin dashboards with 100% real Phase 5 Core API aggregation endpoints (`/api/analytics/*`). Ensured zero leftover mock data across the entire frontend, confirmed strict cross-account tenant isolation, and verified that no fake or invented endpoints were introduced.
+- **Architectural Implementation**:
+  1. **Axios Core API Routing (`src/services/api.js`)**:
+     - Added `/analytics` and `analytics` to `isCoreRequest` in the Axios request interceptor, ensuring all analytics queries automatically route to Core API on port 4000 with the active Bearer JWT token attached.
+  2. **Analytics Client Service (`src/services/analyticsService.js`)**:
+     - Implemented canonical client wrappers matching the exact Phase 5 backend contracts:
+       - `getRecruiterSummary(days)` -> `GET /api/analytics/recruiter/summary`
+       - `getRecruiterJobsBreakdown()` -> `GET /api/analytics/recruiter/jobs-breakdown`
+       - `getRecruiterTrend(days)` -> `GET /api/analytics/recruiter/trend`
+       - `getCandidateSummary()` -> `GET /api/analytics/candidate/summary`
+       - `getAdminSummary()` -> `GET /api/analytics/admin/summary`
+       - `getAdminTopRecruiters(options)` -> `GET /api/analytics/admin/top-recruiters`
+  3. **Recruiter Portal Integration**:
+     - `RecruiterDashboardHome.jsx` (`/recruiter/dashboard`):
+       - Hero Stat Cards: Replaced mock numbers with real `totalJobs`, `openJobs`, `closedJobs`, `totalApplications`, and `totalInterviewsScheduled`. Supports date-range presets (`Last 7 Days`, `Last 30 Days`, `Last 90 Days`, `All Time`), clearly displaying both recent window figures and all-time totals without conflation.
+       - Applications Trend Area Chart: Fed continuous daily application counts from `GET /api/analytics/recruiter/trend` directly into Recharts AreaChart with zero-filled gaps preserved.
+       - Hiring Pipeline Funnel: Replaced "Phase 3 Upcoming" placeholder with real 6-stage distribution (`APPLIED`, `SCREENING`, `SHORTLISTED`, `INTERVIEW`, `HIRED`, `REJECTED`) sourced directly from `summary.applicationsByStatus` (zero duplicate API calls).
+       - Per-Job Breakdown Table: Rendered live job rows (`jobId`, `title`, `status`, `applicationCount`, `interviewCount`) ordered descending by application traction directly from `GET /api/analytics/recruiter/jobs-breakdown`.
+     - `AnalyticsPage.jsx` (`/recruiter/analytics`):
+       - Upgraded from `ModulePendingState` to a full-fledged real analytics view with date-range selector, summary stat cards, daily trend area chart, pipeline distribution bar chart, and per-job conversion rate breakdown.
+  4. **Admin Portal Integration**:
+     - `AdminDashboardHome.jsx` (`/admin/dashboard`):
+       - Removed `MOCK_ADMIN_SUMMARY` import. Wired stat cards directly to `GET /api/analytics/admin/summary` (`totalRecruiters`, `totalCandidates`, `totalJobs`, `totalInterviews`, `totalApplications`).
+     - `AdminPlatformAnalyticsPage.jsx` (`/admin/analytics`):
+       - Removed `MOCK_PLATFORM_ANALYTICS` import. Wired platform summary and 6-stage platform application funnel to `GET /api/analytics/admin/summary`.
+       - Wired Top Recruiters Leaderboard directly to `GET /api/analytics/admin/top-recruiters`. Added real backend sort toggle (`Sort by Applications` vs `Sort by Jobs`) querying `?sortBy=jobs` dynamically.
+       - Enforced role guard: non-admin access is blocked and returns graceful restriction UI on frontend on top of backend 403 enforcement.
+  5. **Candidate Scope Confirmation**:
+     - Confirmed `CandidateDashboard.jsx` already derives all stats directly from `applicationsService.getMyApplications()` and `candidatesService.getMyProfile()`. No separate mock "my stats" section existed; per prompt instructions, no new unrequested sections were created.
+  6. **Mock Cleanup & Dead Code Neutralization**:
+     - Removed `MOCK_ADMIN_SUMMARY` and `MOCK_PLATFORM_ANALYTICS` from `src/mock/admin/adminMock.js`.
+     - Re-exported real `RecruiterDashboardHome` and `AdminDashboardHome` from legacy `RecruiterDashboard.jsx` and `AdminDashboard.jsx`, eliminating all legacy mock arrays (`STATS`, `PIPELINE`, `JOBS`, `INTERVIEWS`, `ACTIVITY`, `MOCK_STATS`).
+- **Verification & Test Results**:
+  1. **Recruiter Isolation & Live Data**:
+     - Recruiter A (ID: 25): 4 jobs, 12 applications, 2 interviews, top job with 4 applications.
+     - Recruiter B (ID: 305): 2 jobs, 4 applications, 1 interview.
+     - **Confirmed zero cross-account data leakage**: switching accounts displays completely different, strictly scoped real numbers.
+  2. **Admin Aggregation Spot Check**:
+     - Admin platform summary reports 10 total jobs, matching the exact platform sum across recruiters.
+     - Top recruiters ranked Sarah Recruiter #1 (12 applications) and vishal kumar #2 (4 applications).
+  3. **Role & Security Guards**:
+     - Recruiter attempting `GET /api/analytics/admin/summary` was denied with `403 Forbidden`.
+  4. **Date Range Filters**:
+     - `?days=7` returned exactly 7 chronological zero-filled entries; `?days=90` returned 90 entries.
+  5. **Code Hygiene & Build**:
+     - Frontend `npm run lint`: **0 errors**.
+     - Frontend `npm run build`: **Success (1.58s)**.
+     - Backend `npm run lint` & `npm test`: **11/11 test suites passed, 138/138 tests passed**.
+
+---
+
+### 2026-09-27 — Admin Backend Implementation & Full Admin Console Frontend Integration
+
+- **Scope & Objectives**: Audited and built the complete Admin backend across Core API (`hiregenius-core-api`) and Auth Service (`hiregenius-auth-service`), and wired the entire Admin Console frontend (`hiregenius-frontend/src/pages/admin/*`) to live data with zero leftover mock data. Marked upcoming AI/ML features honestly as "Phase 6 Pending".
+- **Architectural Implementation**:
+  1. **Core API — Platform Settings & Quota Enforcement**:
+     - Database Migration: `migrations/20260927_create_platform_settings_table.js` (singleton settings row with ID=1, default quotas, and toggles).
+     - Module: `src/modules/admin/settings/` (`settings.repository.js`, `settings.service.js`, `settings.validation.js`, `settings.controller.js`, `settings.routes.js`).
+     - Endpoints: `GET /api/admin/settings`, `PATCH /api/admin/settings` (Zod validated, guarded by `verifyJwt` and `requireRole('ADMIN')`).
+     - Global Middleware: `src/middleware/maintenanceMode.js` enforces 503 maintenance mode for non-admin requests when enabled, while allowing admin bypass.
+     - Quota Enforcement:
+       - `jobs.service.js` enforces `maxJobsPerRecruiter` before job creation.
+       - `applications.service.js` enforces `maxCandidatesPerJob` before application creation (with `countByJob(jobId)` in repository).
+  2. **Core API — System Health & Analytics Aggregation**:
+     - System Health Module: `src/modules/admin/health/` (`GET /api/admin/health` checking MySQL latency, Auth Service ping, SMTP status, and local uploads file storage).
+     - Enhanced Analytics (`src/modules/analytics/`):
+       - `GET /api/analytics/admin/summary`: Added `completedInterviews` and real 7-day deltas (`newUsersLast7d`, `newRecruitersLast7d`, `newCandidatesLast7d`, `newJobsLast7d`, `newApplicationsLast7d`, `newInterviewsLast7d`).
+       - `GET /api/analytics/admin/trend`: Database-agnostic monthly applications vs hires trend with zero-filling (`?months=6`).
+       - `GET /api/analytics/admin/top-skills`: Parses JSON skill arrays across active jobs to compute frequency and demand percentage (`?limit=8`).
+  3. **Auth Service — User Administration & Registration Gate (Spring Boot)**:
+     - User Management Module:
+       - `UserRepository.java` extended with `JpaSpecificationExecutor<User>`.
+       - DTOs: `AdminUserResponse.java`, `UpdateUserStatusRequest.java`, `PageResponse.java`.
+       - Service: `AdminUserService.java`, `AdminUserServiceImpl.java` with dynamic JPA Specification filtering (role, active, search keyword), pagination, and safety checks (cannot disable own account; cannot disable another admin).
+       - Controller: `AdminUserController.java` (`GET /api/admin/users`, `PATCH /api/admin/users/{id}/status` guarded by `@PreAuthorize("hasRole('ADMIN')")`).
+     - Registration & Status Guard in `AuthServiceImpl.java`:
+       - Local login & Google OAuth reject deactivated users (`isActive == false`) with `DisabledException` (403 Forbidden).
+       - Local register & Google OAuth check `platform_settings.open_registration_enabled`; reject with `IllegalStateException` (400) if closed.
+  4. **Frontend Admin Console Wiring (`hiregenius-frontend`)**:
+     - Request Routing (`src/services/api.js`): Dual routing configured so `/admin/users` routes to Spring Boot (:8080) and `/admin/settings`, `/admin/health`, and `/analytics/admin/*` route to Core API (:4000).
+     - Client Service (`src/services/adminService.js`): Unified API client for admin operations.
+     - `AdminDashboardHome.jsx`: Live stat cards with 7-day delta indicators, live system health cards (DB latency, Auth service, file storage, SMTP), and honest Phase 6 AI indicators.
+     - `AdminUserManagementPage.jsx`: Live user table with server-side pagination, search debouncing, role filtering, enable/disable toggling, and self-disable protection.
+     - `AdminSystemSettingsPage.jsx`: Real settings form connected to `GET/PATCH /api/admin/settings` (maintenance mode, open registration, recruiter job quota, candidate application quota).
+     - `AdminPlatformAnalyticsPage.jsx`: Real 6-month monthly hiring trend chart (`GET /api/analytics/admin/trend`), top skills in demand (`GET /api/analytics/admin/top-skills`), top recruiters leaderboard with sort toggle, application funnel, role distribution, and Phase 6 AI match screening notice.
+     - `AdminApiKeysPage.jsx`: Replaced mock saving form with honest Phase 6 architectural panel explaining that LLM provider keys will be configured when the Python AI service is deployed.
+- **Verification & Test Results**:
+  - Core API: **13/13 test suites passed, 150/150 tests passed** (`npm test`), **0 ESLint errors/warnings** (`npm run lint`).
+  - Auth Service: **46/46 tests passed with BUILD SUCCESS** (`.\mvnw.cmd test`).
+  - Frontend: **0 ESLint errors** (`npm run lint`), production build succeeded in 1.19s (`npm run build`).
+
+---
+
+### 2026-09-27 — Bug-Fix Session: Admin Analytics 404 + User Management 500
+
+**Bug 1 — GET /api/analytics/admin/trend -> 404 Not Found**
+- **Root cause:** The hiregenius-core-api Node.js process was running an old build (started before the admin analytics routes were added). The route existed on disk in analytics.routes.js (lines 77-83) and repository method getAdminMonthlyTrend existed at line 500, but the running process didn't have them loaded.
+- **Secondary issue:** AdminPlatformAnalyticsPage.jsx used Promise.all() — when trend returned 404, the whole call rejected, zeroing all four stat cards even though /api/analytics/admin/summary was returning real data.
+- **Fix:** Killed PID 14700, restarted Core API with current code. Changed AdminPlatformAnalyticsPage.jsx to use Promise.allSettled() so each of the four fetches resolves independently; page-level error only shown if the primary summary call fails.
+- **Files changed:** hiregenius-frontend/src/pages/admin/AdminPlatformAnalyticsPage.jsx.
+- **No backend code changes** — route, controller, service, repository were all correct; stale process was the only issue.
+
+**Bug 2 — GET /api/admin/users -> 500 An unexpected server error occurred**
+- **Root cause:** hiregenius-auth-service was running a JAR built on 2026-09-17, before AdminUserController, AdminUserServiceImpl, and UserRepository (extended with JpaSpecificationExecutor) were added. Old JAR had no /api/admin/users route -> Spring MVC NoHandlerFoundException -> 500.
+- **Secondary issue:** AdminUserManagementPage.jsx always showed '{totalElements} registered accounts...' with totalElements=0 initial state, falsely claiming '0 registered accounts' while simultaneously showing an error.
+- **Fix:** Rebuilt Auth Service JAR (mvnw clean package -DskipTests), killed old PID 31100, restarted with new JAR. Verified /api/admin/users is registered via /v3/api-docs. Fixed subtitle to show 'Loading...' during load, 'Could not load account data' during error, real count only on success.
+- **Files changed:** hiregenius-frontend/src/pages/admin/AdminUserManagementPage.jsx.
+- **No backend code changes** — all Auth Service code was correct; JAR just needed rebuilding and restarting.
+
+**Verification:**
+- Core API GET /api/analytics/admin/trend?months=6 -> 200, GET /api/analytics/admin/summary -> 200, GET /api/analytics/admin/top-skills -> 200. All confirmed.
+- Auth Service /api/admin/users registered in Swagger, Auth Service started in 9.2s.
+- Core API test suite: 13/13 suites, 150/150 tests. Zero regressions.
+- Frontend: 0 lint errors, build succeeded in 1.14s.
+- **Commit:** b85abf0 on origin/dev.
+- **Untouched:** Jobs, Candidates, Applications, Interviews, Notifications, recruiter/candidate-side Analytics.
+
+### 2026-09-27 - Settings & Profile Real Backend Wiring Across All Roles
+
+- **Scope & Objectives**: Built backend support for and wired real data to Settings and Profile sections across Candidate, Recruiter, and Admin dashboards, eliminating all mock `setTimeout` saves and mock toggles.
+- **Architectural Decisions Implemented**:
+  1. **Change Password Endpoint (`hiregenius-auth-service`)**:
+     - Added DTO: `ChangePasswordRequest.java` enforcing `ValidationPatterns.PASSWORD_REGEX` (min 8 chars, >=1 digit).
+     - Service: `AuthService.java` & `AuthServiceImpl.java` implementing `changePassword(Long userId, ChangePasswordRequest request)` with BCrypt password verification. Returns 401 on incorrect current password, 400 on invalid/short new password, and 200 on success.
+     - Controller: `AuthController.java` exposing `POST /api/auth/change-password` requiring `@SecurityRequirement(name = "bearerAuth")`.
+     - Frontend: Wired to Candidate Settings (`CandidateSettingsPage.jsx`), Recruiter Profile (`RecruiterProfilePage.jsx`), and Admin Profile (`AdminProfilePage.jsx`) via unified `authService.changePassword({ currentPassword, newPassword })`.
+  2. **Identity Fields Read-Only (All 3 Roles)**:
+     - Full Name and Email inputs made strictly read-only on Candidate Settings, Recruiter Profile, and Admin Profile.
+     - Removed all mock `setTimeout` saves, save buttons, and simulated state changes for profile identity fields.
+  3. **Candidate Notification Preferences (`hiregenius-core-api`)**:
+     - Routes & Controller: `GET /api/candidates/me/preferences` and `PATCH /api/candidates/me/preferences` reading/updating `job_alerts_opt_in` on the `candidates` table.
+     - Frontend (`CandidateSettingsPage.jsx`): Replaced 3 mock toggles with 1 real live toggle (`job_alerts_opt_in`), with automatic persistence on toggle.
+     - Transactional alerts ("Application Status Updates" and "Interview Invitations") displayed as non-toggleable "Always On" notices.
+     - "AI Resume Tips & Career Advice" marked honestly as Phase 6 Pending.
+  4. **Recruiter Notification Preferences (`hiregenius-core-api`)**:
+     - Wired existing `GET /api/recruiters/me/notification-preferences` and `PATCH /api/recruiters/me/notification-preferences` via new `recruiterPreferencesService.js`.
+     - Configured `src/services/api.js` to route `/recruiters` requests to Core API (:4000).
+     - Frontend (`RecruiterSettingsPage.jsx`): Wired live toggles for `notify_on_new_application` and `job_alert_dispatch_enabled`. Remaining unbuilt toggles disabled with honest "Coming soon" indicators.
+  5. **Account Deletion Protocol**:
+     - Removed mock delete modal and simulated `setTimeout` deletion in `CandidateSettingsPage.jsx`.
+     - Replaced with an Account Support & Deletion card directing candidates to `support@hiregenius.ai` via prefilled mailto link. Destructive deletion logic safely deferred.
+  6. **UI Polish & Hero Stats**:
+     - Recruiter Profile hero stats wired to real `analyticsService.getRecruiterSummary()` (`jobs_posted`, `hired`).
+     - Admin Profile hero stat wired to real `analyticsService.getAdminSummary()` (`users_managed`).
+     - Disabled non-functional avatar upload buttons with "Coming soon" tooltips across all roles.
+     - Fixed `authService.js` export to provide default export.
+
+- **Verification**:
+  - `hiregenius-core-api`: 13/13 test suites, 154/154 tests passed.
+  - `hiregenius-auth-service`: 46/46 tests passed.
+  - `hiregenius-frontend`: ESLint 0 errors; Vite production build completed in 1.01s.
+  - Live E2E Verification: 10/10 live API tests passed against running daemons (401 on wrong password, 400 on weak password, 200 on valid change, login with new password, Candidate preference persistence, Recruiter preference persistence).
+
+### 2026-09-27 - Bug Fix: Admin Analytics Blank Screen & Error Boundary
+
+- **Issue**: Navigating to `http://localhost:5173/admin/analytics` in an InPrivate browser window rendered an empty blank screen (`#F2EFE8`).
+- **Root Cause**:
+  1. `skillsResult.value?.data` returned from Core API `GET /api/analytics/admin/top-skills` is an object: `{ totalOpenJobs: number, topSkills: Array<{ skill, count, percentage }> }`. In `AdminPlatformAnalyticsPage.jsx`, `setTopSkills(skillsResult.value?.data ?? [])` stored this object directly into state instead of unpacking `rawSkills?.topSkills`.
+  2. In JSX, `topSkills.map(...)` was called on the object, throwing an uncaught `TypeError: topSkills.map is not a function`.
+  3. Because React had no global `ErrorBoundary`, the entire React root unmounted, leaving `<div id="root">` empty and resulting in a blank page.
+- **Fixes Applied**:
+  1. `AdminPlatformAnalyticsPage.jsx`: Properly extracted `rawSkills?.topSkills` into the array state and added defensive `Array.isArray()` checks across `topSkills`, `trendData`, and `topRecruiters`.
+  2. `ErrorBoundary.jsx`: Created a global error boundary component with "Try Again" and "Reset & Sign In" options.
+  3. `main.jsx`: Wrapped `<App />` with `<ErrorBoundary>` to eliminate blank screen failures.
+  4. `authSlice.js` & `useTheme.js`: Wrapped `localStorage` in `safeStorage` helpers with try/catch to avoid `SecurityError` exceptions in InPrivate/Incognito browsing mode with strict storage protection.
+  5. Restarted Vite dev server on port 5173.
+- **Verification**:
+  - Vite production build succeeded in 1.23s.
+  - ESLint 0 errors across 109 files.
+  - Commit `51166ff` pushed to `origin/dev`.
+
+### 2026-09-27 - Email Verification via OTP, Recruiter Admin Approval, and Granular Privileges
+
+- **Feature Changes & New Admin Controls**:
+  1. **Part 1: 6-Digit Email Verification OTP (`hiregenius-auth-service`, `hiregenius-core-api`, `hiregenius-frontend`)**:
+     - Database: Dedicated `email_otps` table (`id`, `user_id`, `otp_hash`, `purpose='EMAIL_VERIFICATION'`, `expires_at`, `used`, `created_at`) created via Flyway `V4__add_email_otps.sql` and Knex `20260927_add_email_otps_and_user_privileges.js`.
+     - Security: 6-digit cryptographic OTPs generated on signup and resend, stored securely via BCrypt. 10-minute expiry window.
+     - Rate Limiting: 2-minute cooldown between OTP resends enforced via `POST /api/auth/resend-otp` (returns 400 with remaining wait seconds).
+     - Verification: `POST /api/auth/verify-email-otp` validates unverified status, matching BCrypt hash, expiration, and flags `email_verified = true` and `used = true`. Returns distinct error messages for wrong code, expired code, already-used code, and already-verified account.
+     - Deprecated old link-based `/verify-email` endpoint.
+     - Mailer: Dispatches HTML verification email with highlighted 6-digit box and explicit 10-minute validity warning.
+     - Frontend: Revamped `VerifyEmailPage.jsx` with 6-digit code entry boxes, auto-focus next, clipboard paste support, 2-minute cooldown timer, and direct redirect from `RegisterPage.jsx`.
+  2. **Part 2: Recruiter-Specific Admin Approval Layer**:
+     - Database: Added `admin_approved` BOOLEAN DEFAULT FALSE to `users`. (Admins pre-approved).
+     - Gate Check: In `jobs.service.js`, posting jobs requires `admin_approved = true` in addition to `email_verified = true`. Throws 403: `"Your recruiter account is pending admin approval."`.
+     - Admin Control:
+       - `GET /api/admin/users?pendingApproval=true`: Lists recruiters awaiting approval.
+       - `PATCH /api/admin/users/{id}/approve`: Approves recruiter, sets `admin_approved = true`, and dispatches real notification email via `EmailService.sendRecruiterApprovalEmail`: `"Your recruiter account has been approved, you can now post jobs"`.
+     - Frontend: Added "Pending Approval" filter tab in `AdminUserManagementPage.jsx` and 1-click "Approve" button.
+  3. **Part 3: Granular Role Privileges (`can_post_jobs` & `can_apply_to_jobs`)**:
+     - Database: Added `can_post_jobs` (default true) and `can_apply_to_jobs` (default true) to `users`.
+     - Independence: Completely decoupled from `is_active`. Deactivating account blocks login entirely with 403; privilege flags only restrict specific actions while allowing account login.
+     - Gate Checks:
+       - In `jobs.service.js`: If `can_post_jobs === false`, throws 403: `"Job posting has been disabled for your account by an administrator."`.
+       - In `applications.service.js`: If `can_apply_to_jobs === false`, throws 403: `"Your ability to apply to jobs has been disabled by an administrator."`.
+     - Admin Endpoint: `PATCH /api/admin/users/{id}/privileges` accepting `{ canPostJobs, canApplyToJobs }`.
+     - Frontend: Interactive toggle buttons placed next to the Status pill in `AdminUserManagementPage.jsx` for desktop and mobile views.
+
+- **Verification & Test Coverage**:
+  - `hiregenius-auth-service`: 51/51 Maven unit & integration tests passing (`BUILD SUCCESS`).
+  - `hiregenius-core-api`: 13/13 Jest test suites, 157/157 tests passing.
+  - `hiregenius-frontend`: Vite production build passed in 1.48s with 0 errors.
+  - Live End-to-End Test Suite (`scratch/verify_all_parts.js`):
+    1. Candidate OTP Registration: BCrypt hash created in `email_otps` with 10-minute expiry; 2-minute resend cooldown verified; wrong OTP rejected with 400; correct OTP verified with 200; `users.email_verified` and `email_otps.used` updated in DB; OTP replay rejected.
+    2. Recruiter Approval Gate: Unapproved recruiter blocked from posting with 403 `"Your recruiter account is pending admin approval."`; Admin queries `?pendingApproval=true`; Admin approves recruiter via `PATCH /approve`; Approval email triggered; Recruiter posts job successfully (201 Created).
+    3. Granular Privileges: Admin sets `canPostJobs = false` -> recruiter job creation blocked with 403 `"Job posting has been disabled for your account by an administrator."`; Admin restores `canPostJobs = true`; Candidate applies successfully (201); Admin sets `canApplyToJobs = false` -> candidate application blocked with 403 `"Your ability to apply to jobs has been disabled by an administrator."`; Admin restores `canApplyToJobs = true`.
+    4. Account Disable Independence: Admin disables account (`isActive = false`) -> login blocked with 403 `"Your account has been deactivated. Please contact support."`; Admin restores `isActive = true` -> login succeeds.
+
+### 2026-09-27 - Priority 0 Security Fix, Persistent In-App Verification, Guarded Permanent Deletion, and User Drill-Down
+
+- **Priority 0 (Critical Security Fix: Real-Time Account Deactivation Check)**:
+  - Root Cause: Deactivating an account only blocked new logins; existing signed JWT tokens were accepted until natural expiration because `verifyJwt.js` merely checked signature and payload expiry.
+  - Solution: Converted `verifyJwt.js` in `hiregenius-core-api` to async real-time database lookup (`db('users').where({ id: payload.userId }).first()`). Immediately throws `403 Forbidden` (`"Your account has been deactivated. Please contact support."`) if `is_active = 0`. Also verifies `!userDetails.isEnabled()` in Spring Boot Auth Service (`JwtAuthFilter.java`) and `changePassword`.
+  - Verified: Live test confirmed same-token instant 403 upon admin deactivation across both Core API and Auth Service endpoints.
+
+- **Part 1: Persistent Email Verification in Settings & Profile**:
+  - `authSlice.js`: Added `updateUser` action to update Redux user and `localStorage` dynamically without requiring logout/re-login.
+  - `EmailOtpVerificationModal.jsx`: Reusable 6-digit OTP verification modal with keyboard navigation, paste support, and 60s cooldown timer.
+  - `CandidateSettingsPage.jsx`: Added persistent verification status badge, unverified warning banner, and integrated OTP modal.
+  - `RecruiterProfilePage.jsx`: Added verification badge, OTP modal trigger, and `admin_approved` status pill & card.
+
+- **Part 3: Admin User Detail Drill-Down View**:
+  - Backend: `GET /api/admin/users/:id` in `hiregenius-core-api` returning full profile plus recruiter metrics (total jobs, application count, recent jobs) or candidate metrics (application count, recent applications, resume details).
+  - Frontend: `AdminUserDetailModal.jsx` drawer displaying complete activity metrics, account status, privilege toggles, and danger zone.
+  - Wired table rows and "Details" buttons in `AdminUserManagementPage.jsx` to open modal on click.
+
+- **Part 2: Guarded Cascade Permanent Account Deletion**:
+  - Strategy (Guarded Cascade): Atomic Knex transaction in Core API (`DELETE /api/admin/users/:id`).
+  - Guards:
+    - Self-deletion blocked (400 `"You cannot delete your own administrator account"`).
+    - Administrator account deletion blocked (400 `"Administrator accounts cannot be deleted"`).
+    - Recruiter with active (`OPEN`) jobs or in-progress applications blocked (400).
+    - Candidate with in-progress applications blocked (400).
+  - Execution: Once dependencies are resolved, purges interviews, notifications, applications, jobs, candidate profile, physical resume file, OTPs, auth tokens, and user row within an atomic transaction.
+  - Frontend: Interactive confirmation modal in `AdminUserDetailModal.jsx` requiring admin to type the target user's exact email address to confirm deletion.
+
+- **Verification**:
+  - `hiregenius-core-api`: 15/15 Jest test suites, 174/174 tests passing.
+  - Live End-to-End Test (`verify_part2_and_session.js`): All 6 live assertions passed.
+  - Priority 0 Test (`verify_priority0.js`): All 9 live checks passed.
+  - `hiregenius-frontend`: `npm run build` passed in 1.10s with 0 errors.
+
+---
+
+### 2026-09-30 — Phase A: Core API Dockerization & AWS Readiness Audit Fixes
+
+- **Branch**: `feature/core-api-aws-deployment` (cleanly branched from `dev`).
+- **Audit Fixes Implemented & Tested**:
+  1. Fatal DB Environment Validation: Missing `DB_HOST`, `DB_USER`, `DB_PASSWORD`, or `DB_NAME` when `NODE_ENV=production` throws fatal error during boot.
+  2. Database-Aware Health Checks: `GET /health` and `GET /api/health` run live `SELECT 1 AS health_check`. Returns 200 `{ status: 'UP', database: 'CONNECTED' }` or 503 `{ status: 'DOWN', database: 'DISCONNECTED' }`.
+  3. Environment-Based CORS: `cors(...)` parses comma-separated origins from `CORS_ALLOWED_ORIGINS` / `FRONTEND_BASE_URL` with credentials support.
+  4. Process Exception Handlers: Registered `uncaughtException` and `unhandledRejection` in `server.js` with clean code 1 exit.
+- **Dockerfile & .dockerignore**:
+  - `.dockerignore` created to exclude `.env`, `node_modules`, `test/`, `.git`, coverage.
+  - Multi-stage Dockerfile based on `node:20.18.0-alpine` (deps stage with clean `--omit=dev` install; runtime stage copying modules and app code).
+  - Built-in non-root user `node` (`USER node`) with `/app` directory ownership.
+  - Port 4000 exposed; `HEALTHCHECK` probing `GET /health` with 30s interval, 5s timeout, 3 retries.
+- **Local Container Verification**:
+  - Built image `hiregenius-core-api:local` (63 MB compressed content size, 297 MB on disk).
+  - Started container connected to local MySQL container over Docker network (`hiregenius_net`).
+  - Container started cleanly, performed Knex migration check, and listened on port 4000.
+  - `curl http://localhost:4000/health` and `/api/health` returned HTTP 200 `{ status: 'UP', database: 'CONNECTED' }`.
+  - Docker daemon evaluated healthcheck and marked container status as **`healthy`**.
+  - `GET /api/jobs` retrieved live seeded jobs.
+  - Clean graceful shutdown verified upon `docker stop` (`SIGTERM` received -> database connections closed -> exit 0).
+- **Future Hardening Item**:
+  - `DB_SSL=false` is acceptable for now inside the private VPC, but enabling RDS SSL/TLS (with AWS RDS global CA bundle) is flagged as a future security hardening item.
+- **Production Environment Inventory**:
+  - `DB_NAME` set to `hiregenius_core` (distinct database on the RDS instance holding Core API schema; separate from Auth Service's `hiregenius` database).
+  - `AUTH_SERVICE_URL` set to private VPC IP `http://172.31.6.0:8080`.
+
+---
+
+### 2026-09-30 — Free-Tier EC2 Deployment & Coordinated Nginx Port Cutover
+
+- **Architecture Decision**:
+  - Switched from paid AWS ECS + Fargate + ALB approach to 100% Free-Tier single EC2 instance (`13.203.243.162`, `hiregenius-auth-server`).
+  - Host Nginx acts as single reverse proxy on port 80 (and future 443).
+  - `hiregenius-auth` runs on `127.0.0.1:8080:8080` (Spring Boot, Clever Cloud / RDS).
+  - `hiregenius-core-api` runs on `127.0.0.1:4000:4000` (Node.js Express, RDS database `hiregenius_core`).
+- **Execution & Coordinated Cutover**:
+  - `hiregenius-core-api:latest` built directly on EC2 from `feature/core-api-aws-deployment`.
+  - Production `.env` generated directly on EC2 at `/var/www/hiregenius/hiregenius-core-api/.env` (chmod 600).
+  - `hiregenius-core-api` started and verified healthy on `127.0.0.1:4000` (`database: CONNECTED`).
+  - Staged Nginx configuration at `/etc/nginx/conf.d/hiregenius.conf` (`nginx -t` passed).
+  - Cutover executed atomically: old `hiregenius-auth` stopped, re-launched bound to `127.0.0.1:8080:8080`, and Nginx enabled & restarted in <100ms.
+  - Auth Service downtime window: ~34 seconds (from container stop to Spring Boot warmup complete at 20:38:20 UTC).
+- **Public Verification (All Passed against `http://13.203.243.162`)**:
+  - `GET /health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /api/health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /auth/health` -> 200 OK (Auth Service, `status: UP`).
+  - `GET /api/jobs` -> 200 OK (Core API, `status: 200, jobs: []`).
+  - `GET /api/auth/validate` -> 401 (Auth Service, `Full authentication is required`).
+  - `POST /api/auth/login` -> 401 (Auth Service, `Invalid email or password`).
+
 
 
 

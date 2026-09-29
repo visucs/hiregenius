@@ -1,73 +1,233 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { motion, useInView, animate } from 'framer-motion';
+import { useSelector } from 'react-redux';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, CartesianGrid,
+  BarChart3, Users, Briefcase, Video,
+  TrendingUp, Award, RefreshCw, AlertCircle,
+  Cpu, Layers,
+} from 'lucide-react';
+import {
+  ResponsiveContainer, BarChart, Bar,
+  XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend,
 } from 'recharts';
-import { BarChart3, TrendingUp, Users, Briefcase, Star, ArrowUpRight } from 'lucide-react';
-import { MOCK_PLATFORM_ANALYTICS } from '../../mock/admin/adminMock';
+import { selectUserRole } from '../../features/auth/authSlice';
+import analyticsService from '../../services/analyticsService';
 
-const RANGES = [
-  { label: 'Last 7 days',  value: '7d'  },
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
+/* ─── Funnel stages ───────────────────────────────────────── */
+const FUNNEL_STAGES = [
+  { key: 'APPLIED',     label: 'Applied',     color: '#818cf8' },
+  { key: 'SCREENING',   label: 'Screening',   color: '#22d3ee' },
+  { key: 'SHORTLISTED', label: 'Shortlisted', color: '#a78bfa' },
+  { key: 'INTERVIEW',   label: 'Interview',   color: '#f59e0b' },
+  { key: 'HIRED',       label: 'Hired',       color: '#4ade80' },
+  { key: 'REJECTED',    label: 'Rejected',    color: '#ef4444' },
 ];
 
-/* ─── Recharts tooltip ────────────────────────────────────── */
-const CustomTooltip = ({ active, payload, label }) => {
+/* ─── Animated counter ────────────────────────────────────── */
+const Counter = ({ to, suffix = '' }) => {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-20px' });
+  const [val, setVal] = useState(0);
+
+  useEffect(() => {
+    if (inView) {
+      const ctrl = animate(0, to || 0, {
+        duration: 1.0,
+        ease: [0.22, 1, 0.36, 1],
+        onUpdate: (v) => setVal(Math.round(v)),
+      });
+      return () => ctrl.stop();
+    }
+    setVal(to || 0);
+  }, [inView, to]);
+
+  return <span ref={ref}>{(val || 0).toLocaleString()}{suffix}</span>;
+};
+
+/* ─── Custom tooltip for Funnel BarChart ──────────────────── */
+const CustomBarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-      <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>{label}</p>
-      {payload.map(p => (
-        <p key={p.dataKey} style={{ fontSize: 12, color: p.color, fontWeight: 700 }}>{p.name}: {p.value}</p>
+    <div style={{
+      background: '#0F1420', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 10, padding: '8px 12px', color: '#F8FAFC', fontSize: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    }}>
+      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>Stage: {label}</p>
+      <p style={{ margin: '4px 0 0', fontWeight: 800, color: '#38bdf8' }}>
+        {payload[0].value} applications
+      </p>
+    </div>
+  );
+};
+
+/* ─── Custom tooltip for Monthly Trend Chart ─────────────── */
+const CustomTrendTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#0F1420', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 10, padding: '10px 14px', color: '#F8FAFC', fontSize: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    }}>
+      <p style={{ margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 700 }}>Month: {label}</p>
+      {payload.map((item) => (
+        <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, margin: '3px 0' }}>
+          <span style={{ color: item.color, fontWeight: 600 }}>{item.name}:</span>
+          <span style={{ fontWeight: 800, color: '#fff' }}>{item.value}</span>
+        </div>
       ))}
     </div>
   );
 };
 
-/* ─── Chart section card ──────────────────────────────────── */
-const ChartCard = ({ title, subtitle, stripe, children, delay = 0 }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 18 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-30px' }}
-    transition={{ duration: 0.38, delay, ease: [0.22, 1, 0.36, 1] }}
-    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}
-  >
-    {stripe && <div style={{ height: 3, background: stripe, borderRadius: '20px 20px 0 0' }} />}
-    <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
-      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{title}</p>
-      {subtitle && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{subtitle}</p>}
-    </div>
-    <div style={{ padding: '16px 20px 20px' }}>{children}</div>
-  </motion.div>
-);
-
 /* ════════════════════════════════════════════════════════════
-   ADMIN PLATFORM ANALYTICS PAGE
-════════════════════════════════════════════════════════════ */
+   ADMIN PLATFORM ANALYTICS PAGE — 100% REAL CORE API INTEGRATION
+ ════════════════════════════════════════════════════════════ */
 const AdminPlatformAnalyticsPage = () => {
-  const [range, setRange] = useState('30d');
-  const data = MOCK_PLATFORM_ANALYTICS;
+  const role = useSelector(selectUserRole);
 
-  const totalApps  = data.hiringTrend.reduce((a, b) => a + b.applications, 0);
-  const totalHires = data.hiringTrend.reduce((a, b) => a + b.hires, 0);
-  const hireRate   = totalApps > 0 ? ((totalHires / totalApps) * 100).toFixed(1) : '0.0';
-  const topSkill   = data.topSkillsDemand[0]?.skill ?? '—';
+  // Sort state for top recruiters: 'applications' | 'jobs'
+  const [sortBy, setSortBy] = useState('applications');
 
-  const SNAPSHOT = [
-    { label: 'Total Applications', value: totalApps,           color: '#818cf8', icon: Users    },
-    { label: 'Total Hires',        value: totalHires,          color: '#4ade80', icon: TrendingUp},
-    { label: 'Hire Rate',          value: `${hireRate}%`,      color: '#f59e0b', icon: Star      },
-    { label: 'Top Skill',          value: topSkill,            color: '#22d3ee', icon: Briefcase },
-  ];
+  // Backend state
+  const [summary, setSummary]             = useState(null);
+  const [topRecruiters, setTopRecruiters] = useState([]);
+  const [trendData, setTrendData]         = useState([]);
+  const [topSkills, setTopSkills]         = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+
+  // Fetch real summary, recruiters, trend, and top skills
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [sumResult, topResult, trendResult, skillsResult] = await Promise.allSettled([
+        analyticsService.getAdminSummary(),
+        analyticsService.getAdminTopRecruiters({ sortBy }),
+        analyticsService.getAdminTrend({ months: 6 }),
+        analyticsService.getAdminTopSkills({ limit: 8 }),
+      ]);
+
+      if (sumResult.status === 'fulfilled') {
+        setSummary(sumResult.value?.data ?? null);
+      } else {
+        console.error('[AdminPlatformAnalyticsPage] Summary fetch failed:', sumResult.reason);
+      }
+
+      if (topResult.status === 'fulfilled') {
+        const rawTop = topResult.value?.data;
+        setTopRecruiters(Array.isArray(rawTop) ? rawTop : (rawTop?.recruiters || []));
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Top-recruiters fetch failed:', topResult.reason?.message);
+      }
+
+      if (trendResult.status === 'fulfilled') {
+        const rawTrend = trendResult.value?.data;
+        setTrendData(Array.isArray(rawTrend) ? rawTrend : (rawTrend?.trend || []));
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Trend fetch failed:', trendResult.reason?.message);
+      }
+
+      if (skillsResult.status === 'fulfilled') {
+        const rawSkills = skillsResult.value?.data;
+        const skillsArray = Array.isArray(rawSkills)
+          ? rawSkills
+          : Array.isArray(rawSkills?.topSkills)
+            ? rawSkills.topSkills
+            : [];
+        setTopSkills(skillsArray);
+      } else {
+        console.warn('[AdminPlatformAnalyticsPage] Top-skills fetch failed:', skillsResult.reason?.message);
+      }
+
+      // Surface a page-level error only when the primary summary call fails
+      if (sumResult.status === 'rejected') {
+        const msg = sumResult.reason?.response?.data?.message || sumResult.reason?.message || 'Failed to load platform analytics';
+        setError(msg);
+      }
+    } catch (err) {
+      console.error('[AdminPlatformAnalyticsPage] Analytics query error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to load platform analytics';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+
+  }, [sortBy]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  // Derived metrics from GET /api/analytics/admin/summary
+  const totalUsers        = summary?.totalUsers?.total ?? (summary?.totalRecruiters ?? 0) + (summary?.totalCandidates ?? 0);
+  const totalRecruiters   = summary?.totalRecruiters ?? summary?.totalUsers?.recruiters ?? 0;
+  const totalCandidates   = summary?.totalCandidates ?? summary?.totalUsers?.candidates ?? 0;
+  const totalAdmins       = summary?.totalUsers?.admins ?? 0;
+  const totalJobs         = summary?.totalJobs ?? 0;
+  const totalApplications = summary?.totalApplications ?? 0;
+  const totalInterviews   = summary?.totalInterviews ?? 0;
+
+  const rawStatus = summary?.applicationsByStatus ?? {};
+  const funnelData = useMemo(() => {
+    return FUNNEL_STAGES.map((s) => ({
+      stage: s.label,
+      key: s.key,
+      count: Number(rawStatus[s.key] || 0),
+      color: s.color,
+    }));
+  }, [rawStatus]);
+
+  const hiredCount = Number(rawStatus.HIRED || 0);
+
+  // Format trend months (e.g. '2026-04' -> 'Apr '26')
+  const formattedTrend = useMemo(() => {
+    if (!Array.isArray(trendData)) return [];
+    return trendData.map((d) => {
+      let label = d.month;
+      if (d.month && typeof d.month === 'string') {
+        const parts = d.month.split('-');
+        if (parts.length >= 2) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const date = new Date(year, month - 1, 1);
+          label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        }
+      }
+      return {
+        ...d,
+        label,
+        applications: Number(d.applications || 0),
+        hires: Number(d.hires || 0),
+      };
+    });
+  }, [trendData]);
+
+  // Guard against non-admin rendering
+  if (role && role !== 'ADMIN') {
+    return (
+      <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-primary)' }}>
+        <AlertCircle size={40} style={{ color: '#ef4444', margin: '0 auto 12px' }} />
+        <h2 style={{ fontSize: 20, fontWeight: 800 }}>Access Restricted</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+          This analytics console is restricted to administrators.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100%' }}>
 
       {/* ── Dark Indigo Hero ───────────────────────────────── */}
-      <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)', padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0' }}>
+      <div style={{
+        position: 'relative', overflow: 'hidden',
+        background: 'linear-gradient(150deg, #1e1b4b 0%, #0f0d2e 55%, #13103a 100%)',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 36px) 0',
+      }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,0.10) 1.5px, transparent 1.5px)', backgroundSize: '26px 26px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -60, right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
@@ -80,168 +240,522 @@ const AdminPlatformAnalyticsPage = () => {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(129,140,248,0.95)', background: 'rgba(99,102,241,0.18)', padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(99,102,241,0.30)' }}>
                     <BarChart3 size={11} /> Platform Analytics
                   </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.10)', padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(74,222,128,0.22)' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} /> Core API Live
+                  </span>
                 </div>
-                <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>Platform Analytics</h1>
-                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)' }}>Aggregated hiring intelligence across all recruiters</p>
+                <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.04em', marginBottom: 6 }}>
+                  Platform Analytics
+                </h1>
+                <p style={{ fontSize: 13, color: 'rgba(196,200,255,0.60)', margin: 0 }}>
+                  Aggregated hiring intelligence across all recruiters, jobs, and candidates computed from source tables.
+                </p>
               </div>
 
-              {/* Range tabs */}
-              <div style={{ display: 'flex', gap: 3, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(99,102,241,0.25)', alignSelf: 'flex-start', marginTop: 4, flexWrap: 'wrap' }}>
-                {RANGES.map(r => (
-                  <button key={r.value} id={`admin-analytics-range-${r.value}`} onClick={() => setRange(r.value)}
-                    style={{ minHeight: 40, padding: '7px 16px', borderRadius: 9, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                      background: range === r.value ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'transparent',
-                      color: range === r.value ? '#fff' : 'rgba(255,255,255,0.50)',
-                      boxShadow: range === r.value ? '0 3px 12px rgba(79,70,229,0.45)' : 'none',
-                    }}
-                  >{r.label}</button>
-                ))}
-              </div>
+              {/* Refresh button */}
+              <motion.button
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                onClick={fetchAnalytics}
+                disabled={loading}
+                title="Refresh Analytics"
+                style={{
+                  minHeight: 38, minWidth: 38, borderRadius: 10,
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(99,102,241,0.30)',
+                  color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              </motion.button>
             </div>
 
-            {/* Snapshot stat chips */}
-            <div className="admin-analytics-snapshots" style={{ display: 'grid', gap: 10 }}>
-              {SNAPSHOT.map(({ label, value, color, icon: Icon }, i) => (
-                <motion.div key={label}
-                  initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.38, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
-                  className="admin-snap-chip"
-                  style={{ background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)', padding: '18px 20px 22px', position: 'relative', overflow: 'hidden', transition: 'background 0.18s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.065)'}
+            {/* Error Banner */}
+            {error && (
+              <div style={{
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)',
+                borderRadius: 14, padding: '12px 18px', marginBottom: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <AlertCircle size={18} style={{ color: '#ef4444' }} />
+                  <span style={{ fontSize: 13, color: '#fca5a5', fontWeight: 600 }}>{error}</span>
+                </div>
+                <button
+                  onClick={fetchAnalytics}
+                  style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                 >
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color}00, ${color}99, ${color}00)` }} />
-                  <div style={{ width: 36, height: 36, borderRadius: 11, background: `${color}18`, border: `1px solid ${color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-                    <Icon size={16} style={{ color }} />
-                  </div>
-                  <p style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 5 }}>{value}</p>
-                  <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(196,200,255,0.55)' }}>{label}</p>
-                </motion.div>
-              ))}
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Snapshot Stat Cards */}
+            <div className="admin-analytics-snapshots" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, paddingBottom: 28 }}>
+              {/* Card 1: Total Users */}
+              <div style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18,
+                padding: '18px 20px 22px', position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #818cf800, #818cf888, #818cf800)' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(129,140,248,0.18)', border: '1px solid rgba(129,140,248,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Users size={16} style={{ color: '#818cf8' }} />
+                </div>
+                <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1, margin: '0 0 5px' }}>
+                  {loading ? '...' : <Counter to={totalUsers} />}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(196,200,255,0.7)', margin: '0 0 2px' }}>Total Registered Users</p>
+                <p style={{ fontSize: 11, color: 'rgba(196,200,255,0.45)', margin: 0 }}>
+                  {totalRecruiters} recruiters • {totalCandidates} candidates • {totalAdmins} admins
+                </p>
+              </div>
+
+              {/* Card 2: Total Jobs */}
+              <div style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18,
+                padding: '18px 20px 22px', position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #f59e0b00, #f59e0b88, #f59e0b00)' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Briefcase size={16} style={{ color: '#f59e0b' }} />
+                </div>
+                <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1, margin: '0 0 5px' }}>
+                  {loading ? '...' : <Counter to={totalJobs} />}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(196,200,255,0.7)', margin: '0 0 2px' }}>Platform-Wide Jobs</p>
+                <p style={{ fontSize: 11, color: 'rgba(196,200,255,0.45)', margin: 0 }}>
+                  Non-deleted listings across all recruiters
+                </p>
+              </div>
+
+              {/* Card 3: Total Applications */}
+              <div style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18,
+                padding: '18px 20px 22px', position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #22d3ee00, #22d3ee88, #22d3ee00)' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(34,211,238,0.18)', border: '1px solid rgba(34,211,238,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <TrendingUp size={16} style={{ color: '#22d3ee' }} />
+                </div>
+                <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1, margin: '0 0 5px' }}>
+                  {loading ? '...' : <Counter to={totalApplications} />}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(196,200,255,0.7)', margin: '0 0 2px' }}>Total Applications</p>
+                <p style={{ fontSize: 11, color: 'rgba(196,200,255,0.45)', margin: 0 }}>
+                  Received across active recruitment jobs
+                </p>
+              </div>
+
+              {/* Card 4: Total Interviews */}
+              <div style={{
+                background: 'rgba(255,255,255,0.065)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18,
+                padding: '18px 20px 22px', position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #4ade8000, #4ade8088, #4ade8000)' }} />
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(74,222,128,0.18)', border: '1px solid rgba(74,222,128,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Video size={16} style={{ color: '#4ade80' }} />
+                </div>
+                <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1, margin: '0 0 5px' }}>
+                  {loading ? '...' : <Counter to={totalInterviews} />}
+                </p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(196,200,255,0.7)', margin: '0 0 2px' }}>Interviews Conducted</p>
+                <p style={{ fontSize: 11, color: '#4ade80', margin: 0, fontWeight: 600 }}>
+                  {hiredCount} candidates successfully hired
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      {/* ── Charts grid ───────────────────────────────────── */}
-      <div className="admin-analytics-charts" style={{ padding: 'clamp(20px, 3vw, 24px) clamp(16px, 4vw, 36px) 60px', display: 'grid', gap: 18, maxWidth: 1280, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
+      {/* ── Main Content Area ──────────────────────────────── */}
+      <div style={{ padding: 'clamp(20px, 3vw, 28px) clamp(16px, 4vw, 36px) 60px', maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Hiring Trend */}
-        <ChartCard
-          title="Hiring Trend — Applications vs Hires"
-          subtitle="Monthly pipeline volume across the platform"
-          stripe="linear-gradient(90deg, #4f46e5, #818cf8)"
-          delay={0.04}
-        >
-          <ResponsiveContainer width="100%" height={210}>
-            <AreaChart data={data.hiringTrend} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <defs>
-                <linearGradient id="appGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#818cf8" stopOpacity={0.28} />
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0}    />
-                </linearGradient>
-                <linearGradient id="hireGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#4ade80" stopOpacity={0.28} />
-                  <stop offset="95%" stopColor="#4ade80" stopOpacity={0}    />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="applications" name="Applications" stroke="#818cf8" strokeWidth={2.5} fill="url(#appGrad)" />
-              <Area type="monotone" dataKey="hires"        name="Hires"        stroke="#4ade80" strokeWidth={2.5} fill="url(#hireGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* ── Row 1: Monthly Hiring Trend + In-Demand Skills ── */}
+        <div className="admin-analytics-charts" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18 }}>
 
-        {/* Score Distribution */}
-        <ChartCard
-          title="Resume Score Distribution"
-          subtitle="Candidate score bands platform-wide"
-          stripe="linear-gradient(90deg, #06b6d4, #22d3ee)"
-          delay={0.08}
-        >
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={data.scoreDistribution} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="range" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" name="Candidates" fill="#22d3ee" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Top Skills */}
-        <ChartCard
-          title="Top Skills in Demand — Platform-wide"
-          subtitle="Most requested skills across all active job postings"
-          stripe="linear-gradient(90deg, #d97706, #f59e0b)"
-          delay={0.12}
-        >
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart layout="vertical" data={data.topSkillsDemand} margin={{ top: 4, right: 12, bottom: 0, left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="skill" type="category" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" name="Job Posts" fill="#f59e0b" radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Snapshot detail card */}
-        <ChartCard
-          title={`Platform Snapshot (${range})`}
-          subtitle="Key performance indicators for selected period"
-          stripe="linear-gradient(90deg, #16a34a, #4ade80)"
-          delay={0.16}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {SNAPSHOT.map(({ label, value, color, icon: Icon }) => (
-              <div key={label}
-                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 14, background: 'var(--card-row-bg)', border: '1px solid var(--card-row-border)', transition: 'all 0.15s', cursor: 'default' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = `${color}30`; e.currentTarget.style.background = `${color}07`; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card-row-border)'; e.currentTarget.style.background = 'var(--card-row-bg)'; }}
-              >
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: `${color}14`, border: `1px solid ${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={15} style={{ color }} />
-                </div>
-                <span style={{ flex: 1, fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>{label}</span>
-                <span style={{ fontSize: 18, fontWeight: 900, color, letterSpacing: '-0.03em' }}>{value}</span>
+          {/* Monthly Hiring Trend (GET /api/analytics/admin/trend) */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #4f46e5, #818cf8, #4ade80)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{
+              padding: '16px 20px 12px', borderBottom: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Monthly Platform Hiring Trend
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                  Applications submitted vs successful hires (past 6 months)
+                </p>
               </div>
-            ))}
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+                6 Months
+              </span>
+            </div>
+            <div style={{ padding: '18px 16px 12px' }}>
+              {loading ? (
+                <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
+                </div>
+              ) : formattedTrend.length === 0 ? (
+                <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <BarChart3 size={30} style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No monthly activity recorded yet</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={formattedTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <Tooltip content={<CustomTrendTooltip />} />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: 11, paddingBottom: 10 }}
+                    />
+                    <Bar dataKey="applications" name="Applications" fill="#818cf8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="hires" name="Hires" fill="#4ade80" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
-        </ChartCard>
+
+          {/* Top In-Demand Skills (GET /api/analytics/admin/top-skills) */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #22d3ee, #818cf8)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Top Skills in Demand
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                Most requested skills across active job listings
+              </p>
+            </div>
+            <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 260, overflowY: 'auto' }}>
+              {loading ? (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
+                </div>
+              ) : !Array.isArray(topSkills) || topSkills.length === 0 ? (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <Layers size={28} style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No skills tagged in active jobs yet</p>
+                </div>
+              ) : (
+                topSkills.map((s) => (
+                  <div key={s.skill}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {s.skill}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#818cf8' }}>
+                        {s.count} {s.count === 1 ? 'job' : 'jobs'} <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>({s.percentage}%)</span>
+                      </span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.min(s.percentage, 100)}%`,
+                          borderRadius: 999,
+                          background: 'linear-gradient(90deg, #4f46e5, #818cf8)',
+                          transition: 'width 0.6s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Top Recruiters Leaderboard (GET /api/analytics/admin/top-recruiters) ── */}
+        <div style={{
+          background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+          borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+        }}>
+          <div style={{ height: 3, background: 'linear-gradient(90deg, #4f46e5, #818cf8, #22d3ee)', borderRadius: '20px 20px 0 0' }} />
+          <div style={{
+            padding: '18px 24px 14px', borderBottom: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: 12,
+          }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Top Recruiters Leaderboard
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                GET /api/analytics/admin/top-recruiters — ranked by candidate engagement & job volume
+              </p>
+            </div>
+
+            {/* Sort Toggle: applications vs jobs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Rank by:</span>
+              <div style={{ display: 'flex', gap: 3, padding: 3, borderRadius: 10, background: 'var(--card-row-bg)', border: '1px solid var(--border)' }}>
+                <button
+                  id="admin-sort-applications"
+                  onClick={() => setSortBy('applications')}
+                  style={{
+                    padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
+                    background: sortBy === 'applications' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'transparent',
+                    color: sortBy === 'applications' ? '#fff' : 'var(--text-secondary)',
+                    boxShadow: sortBy === 'applications' ? '0 2px 8px rgba(79,70,229,0.35)' : 'none',
+                  }}
+                >
+                  Applications
+                </button>
+                <button
+                  id="admin-sort-jobs"
+                  onClick={() => setSortBy('jobs')}
+                  style={{
+                    padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                    border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
+                    background: sortBy === 'jobs' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'transparent',
+                    color: sortBy === 'jobs' ? '#fff' : 'var(--text-secondary)',
+                    boxShadow: sortBy === 'jobs' ? '0 2px 8px rgba(79,70,229,0.35)' : 'none',
+                  }}
+                >
+                  Jobs Posted
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: '12px 16px' }}>
+            {loading ? (
+              <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                <RefreshCw size={24} className="animate-spin" style={{ color: '#818cf8', margin: '0 auto 8px' }} />
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading recruiter rankings...</p>
+              </div>
+            ) : topRecruiters.length === 0 ? (
+              <div style={{ padding: '36px 16px', textAlign: 'center' }}>
+                <Award size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>No Recruiters Found</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No recruiter accounts have posted jobs or received applications yet.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '10px 14px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>RANK</th>
+                      <th style={{ padding: '10px 14px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>RECRUITER</th>
+                      <th style={{ padding: '10px 14px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textAlign: 'right' }}>TOTAL JOBS</th>
+                      <th style={{ padding: '10px 14px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, textAlign: 'right' }}>APPLICATIONS RECEIVED</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topRecruiters.map((r, index) => {
+                      const badgeColor = index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : null;
+                      return (
+                        <tr
+                          key={r.recruiterId}
+                          style={{ borderBottom: '1px solid var(--card-row-border)', transition: 'background 0.15s ease' }}
+                        >
+                          <td style={{ padding: '14px 14px', fontWeight: 800 }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: 24, height: 24, borderRadius: '50%',
+                              background: badgeColor ? `${badgeColor}22` : 'var(--card-row-bg)',
+                              color: badgeColor || 'var(--text-muted)',
+                              fontSize: 11, border: badgeColor ? `1px solid ${badgeColor}44` : '1px solid var(--border)',
+                            }}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 14px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {r.name || `Recruiter #${r.recruiterId}`}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                {r.email || `recruiter_${r.recruiterId}@platform.local`}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                              <Briefcase size={13} style={{ color: '#f59e0b' }} />
+                              {r.jobsCount}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                              <Users size={13} style={{ color: '#818cf8' }} />
+                              {r.applicationsCount}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Row 3: Platform-Wide Funnel BarChart + Role Breakdown ── */}
+        <div className="admin-analytics-charts" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18 }}>
+
+          {/* Platform Application Funnel */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #4f46e5, #818cf8)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Platform-Wide Application Funnel
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                Distribution of candidate applications across all 6 pipeline stages
+              </p>
+            </div>
+            <div style={{ padding: '18px 16px 12px' }}>
+              {loading ? (
+                <div style={{ height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw size={22} className="animate-spin" style={{ color: '#818cf8' }} />
+                </div>
+              ) : totalApplications === 0 ? (
+                <div style={{ height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                  <BarChart3 size={30} style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No applications recorded on the platform</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={230}>
+                  <BarChart data={funnelData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                    <Tooltip content={<CustomBarTooltip />} />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                      {funnelData.map((entry) => (
+                        <Cell key={entry.key} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* User Role Distribution Snapshot */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #22d3ee, #4ade80)', borderRadius: '20px 20px 0 0' }} />
+            <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Platform Population Breakdown
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '3px 0 0' }}>
+                Account distribution by user role
+              </p>
+            </div>
+            <div style={{ padding: '20px 22px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { label: 'Recruiters', count: totalRecruiters, color: '#818cf8', pct: totalUsers > 0 ? Math.round((totalRecruiters / totalUsers) * 100) : 0 },
+                { label: 'Candidates', count: totalCandidates, color: '#22d3ee', pct: totalUsers > 0 ? Math.round((totalCandidates / totalUsers) * 100) : 0 },
+                { label: 'Administrators', count: totalAdmins, color: '#4ade80', pct: totalUsers > 0 ? Math.round((totalAdmins / totalUsers) * 100) : 0 },
+              ].map((roleItem) => (
+                <div key={roleItem.label}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {roleItem.label}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: roleItem.color }}>
+                      {roleItem.count} <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>({roleItem.pct}%)</span>
+                    </span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 999, background: 'var(--card-row-bg)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${roleItem.pct}%`,
+                        borderRadius: 999,
+                        background: roleItem.color,
+                        transition: 'width 0.6s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <div style={{
+                marginTop: 10, padding: '12px 14px', borderRadius: 12,
+                background: 'var(--card-row-bg)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Total Accounts</span>
+                <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>{totalUsers}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Phase 6 Notice: AI Candidate Match & Resume Screening ── */}
+        <div style={{
+          background: 'rgba(99,102,241,0.06)',
+          border: '1px dashed rgba(99,102,241,0.30)',
+          borderRadius: 20,
+          padding: '20px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(99,102,241,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Cpu size={20} style={{ color: '#818cf8' }} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  AI Candidate Match & Resume Screening Analytics
+                </p>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', background: 'rgba(99,102,241,0.20)', color: '#a5b4fc', padding: '2px 8px', borderRadius: 999 }}>
+                  Phase 6 Architecture
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                Candidate semantic match distribution, AI interview grading curves, and automated scoring metrics will be activated when the Python FastAPI AI service connects.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <style>{`
-        .admin-analytics-snapshots {
-          grid-template-columns: repeat(4, 1fr);
-        }
-        .admin-snap-chip {
-          border-radius: 16px 16px 0 0;
-        }
-        .admin-analytics-charts {
-          grid-template-columns: 1fr 1fr;
-        }
-        @media (max-width: 900px) {
-          .admin-analytics-snapshots {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          .admin-snap-chip {
-            border-radius: 16px !important;
-            margin-bottom: 4px;
-          }
-          .admin-analytics-charts {
-            grid-template-columns: 1fr;
-          }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 1024px) {
+          .admin-analytics-snapshots { grid-template-columns: repeat(2, 1fr) !important; }
+          .admin-analytics-charts { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
-          .admin-analytics-snapshots {
-            grid-template-columns: 1fr;
-          }
+          .admin-analytics-snapshots { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
