@@ -1783,6 +1783,30 @@ pm run build completed successfully with 0 errors.
   - `DB_NAME` set to `hiregenius_core` (distinct database on the RDS instance holding Core API schema; separate from Auth Service's `hiregenius` database).
   - `AUTH_SERVICE_URL` set to private VPC IP `http://172.31.6.0:8080`.
 
+---
+
+### 2026-09-30 — Free-Tier EC2 Deployment & Coordinated Nginx Port Cutover
+
+- **Architecture Decision**:
+  - Switched from paid AWS ECS + Fargate + ALB approach to 100% Free-Tier single EC2 instance (`13.203.243.162`, `hiregenius-auth-server`).
+  - Host Nginx acts as single reverse proxy on port 80 (and future 443).
+  - `hiregenius-auth` runs on `127.0.0.1:8080:8080` (Spring Boot, Clever Cloud / RDS).
+  - `hiregenius-core-api` runs on `127.0.0.1:4000:4000` (Node.js Express, RDS database `hiregenius_core`).
+- **Execution & Coordinated Cutover**:
+  - `hiregenius-core-api:latest` built directly on EC2 from `feature/core-api-aws-deployment`.
+  - Production `.env` generated directly on EC2 at `/var/www/hiregenius/hiregenius-core-api/.env` (chmod 600).
+  - `hiregenius-core-api` started and verified healthy on `127.0.0.1:4000` (`database: CONNECTED`).
+  - Staged Nginx configuration at `/etc/nginx/conf.d/hiregenius.conf` (`nginx -t` passed).
+  - Cutover executed atomically: old `hiregenius-auth` stopped, re-launched bound to `127.0.0.1:8080:8080`, and Nginx enabled & restarted in <100ms.
+  - Auth Service downtime window: ~34 seconds (from container stop to Spring Boot warmup complete at 20:38:20 UTC).
+- **Public Verification (All Passed against `http://13.203.243.162`)**:
+  - `GET /health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /api/health` -> 200 OK (Core API, `database: CONNECTED`).
+  - `GET /auth/health` -> 200 OK (Auth Service, `status: UP`).
+  - `GET /api/jobs` -> 200 OK (Core API, `status: 200, jobs: []`).
+  - `GET /api/auth/validate` -> 401 (Auth Service, `Full authentication is required`).
+  - `POST /api/auth/login` -> 401 (Auth Service, `Invalid email or password`).
+
 
 
 
