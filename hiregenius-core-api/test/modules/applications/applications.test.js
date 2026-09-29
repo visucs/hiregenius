@@ -18,12 +18,13 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
   const candidate1Token = makeToken({ userId: 301, email: 'candidate1@hiregenius.ai', role: 'CANDIDATE' });
   const candidate2Token = makeToken({ userId: 302, email: 'candidate2@hiregenius.ai', role: 'CANDIDATE' });
   const unverifiedCandidateToken = makeToken({ userId: 305, email: 'unverified@hiregenius.ai', role: 'CANDIDATE' });
+  const disabledCandidateToken = makeToken({ userId: 306, email: 'disabled.candidate@hiregenius.ai', role: 'CANDIDATE' });
 
   let openJobId;
   let closedJobId;
   let candidate1Id;
 
-  const TEST_USER_IDS = [101, 202, 301, 302, 305];
+  const TEST_USER_IDS = [101, 202, 301, 302, 305, 306];
 
   beforeAll(async () => {
     await db.migrate.latest();
@@ -36,7 +37,19 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
         t.string('role');
         t.string('password').nullable();
         t.boolean('email_verified').defaultTo(true);
+        t.boolean('admin_approved').defaultTo(true);
+        t.boolean('can_post_jobs').defaultTo(true);
+        t.boolean('can_apply_to_jobs').defaultTo(true);
       });
+    } else {
+      const hasAdminApproved = await db.schema.hasColumn('users', 'admin_approved');
+      if (!hasAdminApproved) {
+        await db.schema.alterTable('users', (t) => {
+          t.boolean('admin_approved').defaultTo(true);
+          t.boolean('can_post_jobs').defaultTo(true);
+          t.boolean('can_apply_to_jobs').defaultTo(true);
+        });
+      }
     }
   });
 
@@ -52,11 +65,12 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
 
     // 0. Seed test users
     await db('users').insert([
-      { id: 101, name: 'Alice Recruiter', email: 'recruiter1@hiregenius.ai', role: 'RECRUITER', password: 'hash', email_verified: true },
-      { id: 202, name: 'Bob Recruiter', email: 'recruiter2@hiregenius.ai', role: 'RECRUITER', password: 'hash', email_verified: true },
-      { id: 301, name: 'Charlie Candidate', email: 'candidate1@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: true },
-      { id: 302, name: 'David Candidate', email: 'candidate2@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: true },
-      { id: 305, name: 'Unverified Candidate', email: 'unverified@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: false },
+      { id: 101, name: 'Alice Recruiter', email: 'recruiter1@hiregenius.ai', role: 'RECRUITER', password: 'hash', email_verified: true, admin_approved: true, can_post_jobs: true },
+      { id: 202, name: 'Bob Recruiter', email: 'recruiter2@hiregenius.ai', role: 'RECRUITER', password: 'hash', email_verified: true, admin_approved: true, can_post_jobs: true },
+      { id: 301, name: 'Charlie Candidate', email: 'candidate1@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: true, can_apply_to_jobs: true },
+      { id: 302, name: 'David Candidate', email: 'candidate2@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: true, can_apply_to_jobs: true },
+      { id: 305, name: 'Unverified Candidate', email: 'unverified@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: false, can_apply_to_jobs: true },
+      { id: 306, name: 'Disabled Candidate', email: 'disabled.candidate@hiregenius.ai', role: 'CANDIDATE', password: 'hash', email_verified: true, can_apply_to_jobs: false },
     ]);
 
     // 1. Create Open Job owned by Recruiter 1
@@ -133,6 +147,17 @@ describe('Applications Module - End-to-End & Ownership Enforcement', () => {
       expect(res.status).toBe(403);
       expect(res.body.status).toBe(403);
       expect(res.body.message).toMatch(/Please verify your email address to apply for jobs/i);
+    });
+
+    test('should reject application when candidate ability to apply is disabled by admin (403)', async () => {
+      const res = await request(app)
+        .post('/api/applications')
+        .set('Authorization', `Bearer ${disabledCandidateToken}`)
+        .send({ jobId: openJobId });
+
+      expect(res.status).toBe(403);
+      expect(res.body.status).toBe(403);
+      expect(res.body.message).toMatch(/Your ability to apply to jobs has been disabled by an administrator/i);
     });
 
     test('should reject when candidate has no resume on file (400)', async () => {

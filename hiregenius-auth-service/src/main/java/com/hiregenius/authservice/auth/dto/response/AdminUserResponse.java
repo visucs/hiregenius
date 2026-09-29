@@ -15,6 +15,9 @@ public class AdminUserResponse {
     private AuthProvider authProvider;
     private boolean active;
     private boolean emailVerified;
+    private boolean adminApproved;
+    private boolean canPostJobs;
+    private boolean canApplyToJobs;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -22,7 +25,9 @@ public class AdminUserResponse {
     }
 
     public AdminUserResponse(Long id, String name, String email, Role role, AuthProvider authProvider,
-                             boolean active, boolean emailVerified, LocalDateTime createdAt, LocalDateTime updatedAt) {
+                             boolean active, boolean emailVerified, boolean adminApproved,
+                             boolean canPostJobs, boolean canApplyToJobs,
+                             LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -30,6 +35,9 @@ public class AdminUserResponse {
         this.authProvider = authProvider;
         this.active = active;
         this.emailVerified = emailVerified;
+        this.adminApproved = adminApproved;
+        this.canPostJobs = canPostJobs;
+        this.canApplyToJobs = canApplyToJobs;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -46,6 +54,9 @@ public class AdminUserResponse {
                 user.getAuthProvider(),
                 user.isActive(),
                 user.isEmailVerified(),
+                user.isAdminApproved(),
+                user.isCanPostJobs(),
+                user.isCanApplyToJobs(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
@@ -105,6 +116,30 @@ public class AdminUserResponse {
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
+    }
+
+    public boolean isAdminApproved() {
+        return adminApproved;
+    }
+
+    public void setAdminApproved(boolean adminApproved) {
+        this.adminApproved = adminApproved;
+    }
+
+    public boolean isCanPostJobs() {
+        return canPostJobs;
+    }
+
+    public void setCanPostJobs(boolean canPostJobs) {
+        this.canPostJobs = canPostJobs;
+    }
+
+    public boolean isCanApplyToJobs() {
+        return canApplyToJobs;
+    }
+
+    public void setCanApplyToJobs(boolean canApplyToJobs) {
+        this.canApplyToJobs = canApplyToJobs;
     }
 
     public LocalDateTime getCreatedAt() {

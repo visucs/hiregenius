@@ -8,11 +8,12 @@ import toast from 'react-hot-toast';
 import {
   UserCircle, Camera, Lock, Mail, Building2, Shield,
   AlertCircle, CheckCircle2, Eye, EyeOff,
-  User, Key, Briefcase, Info,
+  User, Key, Briefcase, Info, AlertTriangle, Clock, ShieldCheck,
 } from 'lucide-react';
 import { selectUser } from '../../features/auth/authSlice';
 import authService from '../../services/authService';
 import analyticsService from '../../services/analyticsService';
+import EmailOtpVerificationModal from '../../components/common/EmailOtpVerificationModal';
 
 /* ─── Validation schema for Password Change ───────────────── */
 const pwdSchema = z.object({
@@ -141,6 +142,31 @@ const RecruiterProfilePage = () => {
   // Password change form
   const pwdForm = useForm({ resolver: zodResolver(pwdSchema) });
 
+  // Email verification & Admin approval state
+  const isEmailVerified = Boolean(user?.email_verified ?? user?.emailVerified);
+  const isAdminApproved = Boolean(user?.admin_approved ?? user?.adminApproved);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  const handleStartVerification = async () => {
+    if (!user?.email) {
+      toast.error('No email address associated with account');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      const res = await authService.resendOtp({ email: user.email, purpose: 'EMAIL_VERIFICATION' });
+      toast.success(res?.data?.message || 'Verification code sent to your email.');
+      setShowOtpModal(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Verification code requested';
+      toast(msg, { icon: 'ℹ️' });
+      setShowOtpModal(true);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
   // Fetch real recruiter summary stats (GET /api/analytics/recruiter/summary)
   useEffect(() => {
     let isMounted = true;
@@ -251,6 +277,15 @@ const RecruiterProfilePage = () => {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(107,138,58,0.22)', color: '#a3e635', border: '1px solid rgba(107,138,58,0.35)' }}>
                     <Shield size={11} /> Recruiter
                   </span>
+                  {isAdminApproved ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(52,211,153,0.14)', color: '#34d399', border: '1px solid rgba(52,211,153,0.28)' }}>
+                      <ShieldCheck size={11} /> Approved by Admin
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(245,158,11,0.14)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.28)' }}>
+                      <Clock size={11} /> Pending Admin Approval
+                    </span>
+                  )}
                   {user?.company && (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, background: 'rgba(96,165,250,0.14)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.28)' }}>
                       <Briefcase size={11} /> {user.company}
@@ -297,15 +332,136 @@ const RecruiterProfilePage = () => {
               />
             </Field>
 
-            <Field label="Email Address" icon={Mail} hint="Verified primary email address.">
-              <input
-                id="profile-email"
-                type="email"
-                readOnly
-                value={user?.email ?? ''}
-                style={inputStyle(true, false, true)}
-              />
+            <Field label="Email Address" icon={Mail} hint={isEmailVerified ? "Verified primary email address." : "Email verification required to post jobs."}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="profile-email"
+                  type="email"
+                  readOnly
+                  value={user?.email ?? ''}
+                  style={{ ...inputStyle(true, false, true), paddingRight: 110 }}
+                />
+                {isEmailVerified ? (
+                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#34d399', background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.24)', padding: '3px 8px', borderRadius: 999 }}>
+                    <ShieldCheck size={10} /> Verified
+                  </span>
+                ) : (
+                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.30)', padding: '3px 8px', borderRadius: 999 }}>
+                    <AlertTriangle size={10} /> Unverified
+                  </span>
+                )}
+              </div>
             </Field>
+
+            {/* Unverified Email Warning Banner */}
+            {!isEmailVerified && (
+              <div style={{
+                padding: '16px 20px',
+                borderRadius: 14,
+                background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.28)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: 'wrap',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 'min(100%, 280px)' }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.30)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#f59e0b',
+                    flexShrink: 0,
+                  }}>
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#fbbf24', margin: '0 0 2px' }}>
+                      Your email address is not verified
+                    </p>
+                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.75)', margin: 0, lineHeight: 1.4 }}>
+                      You cannot post jobs until you verify your email.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartVerification}
+                  disabled={sendingOtp}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    padding: '9px 18px',
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+                    color: '#000',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    border: 'none',
+                    cursor: sendingOtp ? 'wait' : 'pointer',
+                    boxShadow: '0 2px 10px rgba(245, 158, 11, 0.35)',
+                    transition: 'all 0.15s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Mail size={14} />
+                  {sendingOtp ? 'Sending code…' : 'Send Verification Code'}
+                </button>
+              </div>
+            )}
+
+            {/* Recruiter Account Approval Status Card */}
+            <div style={{
+              padding: '14px 18px',
+              borderRadius: 14,
+              background: isAdminApproved ? 'rgba(52,211,153,0.06)' : 'rgba(245,158,11,0.06)',
+              border: `1px solid ${isAdminApproved ? 'rgba(52,211,153,0.22)' : 'rgba(245,158,11,0.25)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 14,
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {isAdminApproved ? (
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399', flexShrink: 0 }}>
+                    <ShieldCheck size={18} />
+                  </div>
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245,158,11,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
+                    <Clock size={18} />
+                  </div>
+                )}
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 800, color: isAdminApproved ? '#34d399' : '#fbbf24', margin: '0 0 2px' }}>
+                    {isAdminApproved ? 'Approved by Admin' : 'Pending Admin Approval'}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                    {isAdminApproved
+                      ? 'Your account is approved by an administrator to post jobs.'
+                      : 'Your account is awaiting administrator review before you can post jobs.'}
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: 999,
+                color: isAdminApproved ? '#34d399' : '#fbbf24',
+                background: isAdminApproved ? 'rgba(52,211,153,0.12)' : 'rgba(245,158,11,0.15)',
+                border: `1px solid ${isAdminApproved ? 'rgba(52,211,153,0.28)' : 'rgba(245,158,11,0.28)'}`,
+              }}>
+                {isAdminApproved ? 'Approved' : 'Pending Review'}
+              </span>
+            </div>
 
             {user?.company && (
               <Field label="Company" icon={Building2} hint="Company affiliation.">
@@ -377,6 +533,12 @@ const RecruiterProfilePage = () => {
           </form>
         </Section>
       </div>
+
+      <EmailOtpVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        email={user?.email ?? ''}
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

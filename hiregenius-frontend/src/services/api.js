@@ -39,7 +39,8 @@ api.interceptors.request.use(
       config.url.startsWith('/recruiters') || config.url.startsWith('recruiters') ||
       config.url.startsWith('/analytics') || config.url.startsWith('analytics') ||
       config.url.startsWith('/admin/settings') || config.url.startsWith('admin/settings') ||
-      config.url.startsWith('/admin/health') || config.url.startsWith('admin/health')
+      config.url.startsWith('/admin/health') || config.url.startsWith('admin/health') ||
+      ((['get', 'delete'].includes(config.method?.toLowerCase())) && /^\/?admin\/users\/\d+/.test(config.url))
     );
     if (isCoreRequest) {
       config.baseURL = coreBaseURL;
@@ -55,6 +56,8 @@ api.interceptors.request.use(
       config.url.includes('/auth/forgot-password') ||
       config.url.includes('/auth/reset-password') ||
       config.url.includes('/auth/verify-email') ||
+      config.url.includes('/auth/verify-email-otp') ||
+      config.url.includes('/auth/resend-otp') ||
       config.url.includes('/auth/resend-verification')
     );
     if (isAuthRequest && (!config.timeout || config.timeout < 30000)) {

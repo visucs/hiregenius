@@ -56,6 +56,12 @@ const authSlice = createSlice({
       safeStorage.setItem(TOKEN_KEY, token);
       safeStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     },
+    updateUser(state, action) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+        safeStorage.setItem(USER_KEY, JSON.stringify(state.user));
+      }
+    },
     setLoading(state, action) {
       state.isLoading = action.payload;
     },
@@ -77,7 +83,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, setLoading, setError, clearError, logout } =
+export const { setCredentials, updateUser, setLoading, setError, clearError, logout } =
   authSlice.actions;
 
 // Selectors

@@ -9,12 +9,13 @@ import toast from 'react-hot-toast';
 import {
   Settings, User, Lock, Bell, Sun, Moon, LogOut, Mail,
   Upload, ShieldCheck, AlertTriangle, Eye, EyeOff,
-  FileText, CheckCircle2, Shield, Info, Sparkles,
+  FileText, CheckCircle2, Shield, Info, Sparkles, Clock,
 } from 'lucide-react';
-import { logout, selectUser } from '../../features/auth/authSlice';
+import { logout, selectUser, updateUser } from '../../features/auth/authSlice';
 import useTheme from '../../hooks/useTheme';
 import candidatesService from '../../services/candidatesService';
 import authService from '../../services/authService';
+import EmailOtpVerificationModal from '../../components/common/EmailOtpVerificationModal';
 
 /* ─── Zod schema for Password Change ──────────────────────── */
 const passwordSchema = z.object({
@@ -244,6 +245,30 @@ const CandidateSettingsPage = () => {
     }
   };
 
+  // Email verification state
+  const isEmailVerified = Boolean(user?.email_verified ?? user?.emailVerified);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  const handleStartVerification = async () => {
+    if (!user?.email) {
+      toast.error('No email address associated with account');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      const res = await authService.resendOtp({ email: user.email, purpose: 'EMAIL_VERIFICATION' });
+      toast.success(res?.data?.message || 'Verification code sent to your email.');
+      setShowOtpModal(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Verification code requested';
+      toast(msg, { icon: 'ℹ️' });
+      setShowOtpModal(true);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
   const handleLogout = () => {
     dispatch(logout());
     toast.success('Logged out');
@@ -310,20 +335,91 @@ const CandidateSettingsPage = () => {
                 />
               </Field>
 
-              <Field label="Email Address" hint="Verified primary email managed by Auth Service.">
+              <Field label="Email Address" hint={isEmailVerified ? "Verified primary email managed by Auth Service." : "Email verification required to apply to jobs."}>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="email"
                     readOnly
                     value={user?.email || ''}
-                    style={{ ...inputStyle(false, true), paddingRight: 90 }}
+                    style={{ ...inputStyle(false, true), paddingRight: 110 }}
                   />
-                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#34d399', background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.24)', padding: '3px 8px', borderRadius: 999 }}>
-                    <ShieldCheck size={10} /> Verified
-                  </span>
+                  {isEmailVerified ? (
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#34d399', background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.24)', padding: '3px 8px', borderRadius: 999 }}>
+                      <ShieldCheck size={10} /> Verified
+                    </span>
+                  ) : (
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.30)', padding: '3px 8px', borderRadius: 999 }}>
+                      <AlertTriangle size={10} /> Unverified
+                    </span>
+                  )}
                 </div>
               </Field>
             </div>
+
+            {/* Unverified Email Warning Banner */}
+            {!isEmailVerified && (
+              <div style={{
+                padding: '16px 20px',
+                borderRadius: 14,
+                background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.28)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: 'wrap',
+                marginTop: 6,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 'min(100%, 280px)' }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.30)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#f59e0b',
+                    flexShrink: 0,
+                  }}>
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: '#fbbf24', margin: '0 0 2px' }}>
+                      Your email address is not verified
+                    </p>
+                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.75)', margin: 0, lineHeight: 1.4 }}>
+                      You cannot apply to jobs until you verify your email.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartVerification}
+                  disabled={sendingOtp}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    padding: '9px 18px',
+                    borderRadius: 10,
+                    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+                    color: '#000',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    border: 'none',
+                    cursor: sendingOtp ? 'wait' : 'pointer',
+                    boxShadow: '0 2px 10px rgba(245, 158, 11, 0.35)',
+                    transition: 'all 0.15s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Mail size={14} />
+                  {sendingOtp ? 'Sending code…' : 'Send Verification Code'}
+                </button>
+              </div>
+            )}
           </div>
         </Section>
 
@@ -650,6 +746,12 @@ const CandidateSettingsPage = () => {
           </div>
         </Section>
       </div>
+
+      <EmailOtpVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        email={user?.email || ''}
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

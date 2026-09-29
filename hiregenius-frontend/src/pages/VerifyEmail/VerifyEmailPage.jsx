@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
@@ -10,71 +10,163 @@ import {
   RefreshCw,
   Loader2,
   Sparkles,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { authService } from '../../services/authService';
 import GradientButton from '../../components/GradientButton/GradientButton';
 
+const COOLDOWN_SECONDS = 120; // 2-minute cooldown
+
 const VerifyEmailPage = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const navigate = useNavigate();
 
-  const [status, setStatus] = useState(token ? 'loading' : 'idle');
+  const emailParam = searchParams.get('email') || '';
+  const [email, setEmail] = useState(emailParam);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const inputRefs = useRef([]);
+
+  const [status, setStatus] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
-  const [resendEmail, setResendEmail] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
 
+  // If email came via search params and user registered just now, start cooldown
   useEffect(() => {
-    if (!token) {
-      setStatus('idle');
+    if (emailParam) {
+      setEmail(emailParam);
+      setCooldown(COOLDOWN_SECONDS);
+    }
+  }, [emailParam]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
+
+  // Focus the first empty digit on load
+  useEffect(() => {
+    if (status !== 'success' && inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [status]);
+
+  // Handle single digit input
+  const handleDigitChange = (index, value) => {
+    const cleanValue = value.replace(/\D/g, ''); // Digits only
+    if (!cleanValue) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
       return;
     }
 
-    let isMounted = true;
-    setStatus('loading');
-
-    authService
-      .verifyEmail(token)
-      .then(() => {
-        if (isMounted) {
-          setStatus('success');
-          toast.success('Email verified successfully! You can now log in.');
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
-          setStatus('error');
-          const msg =
-            err?.response?.data?.message ||
-            'The verification link is invalid or has expired. Please request a new one below.';
-          setErrorMessage(msg);
+    // If user pasted or typed multiple digits
+    if (cleanValue.length > 1) {
+      const pastedDigits = cleanValue.slice(0, 6).split('');
+      const newOtp = [...otp];
+      pastedDigits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newOtp[index + i] = digit;
         }
       });
+      setOtp(newOtp);
+      const nextIndex = Math.min(index + pastedDigits.length, 5);
+      inputRefs.current[nextIndex]?.focus();
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [token]);
+    const newOtp = [...otp];
+    newOtp[index] = cleanValue;
+    setOtp(newOtp);
 
-  const handleResend = async (e) => {
+    // Auto-advance to next input
+    if (index < 5 && cleanValue) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
     e.preventDefault();
-    if (!resendEmail || !resendEmail.trim()) {
+    const pastedData = e.clipboardData.getData('text').trim().replace(/\D/g, '');
+    if (!pastedData) return;
+
+    const digits = pastedData.slice(0, 6).split('');
+    const newOtp = [...otp];
+    digits.forEach((digit, i) => {
+      newOtp[i] = digit;
+    });
+    setOtp(newOtp);
+    const targetIdx = Math.min(digits.length, 5);
+    inputRefs.current[targetIdx]?.focus();
+  };
+
+  const fullOtp = otp.join('');
+
+  const handleVerify = async (e) => {
+    e?.preventDefault();
+    if (!email || !email.trim()) {
       toast.error('Please enter your email address');
+      return;
+    }
+    if (fullOtp.length !== 6) {
+      toast.error('Please enter all 6 digits of your verification code');
+      return;
+    }
+
+    setStatus('submitting');
+    setErrorMessage('');
+
+    try {
+      await authService.verifyEmailOtp({
+        email: email.trim(),
+        otp: fullOtp,
+      });
+      setStatus('success');
+      toast.success('Email verified successfully! You can now log in.');
+    } catch (err) {
+      setStatus('error');
+      const msg =
+        err?.response?.data?.message ||
+        'Verification failed. The code may be incorrect, expired, or already used.';
+      setErrorMessage(msg);
+      toast.error(msg);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0 || isResending) return;
+    if (!email || !email.trim()) {
+      toast.error('Please enter your email address to receive a code');
       return;
     }
 
     setIsResending(true);
-    setResendSuccess(false);
+    setErrorMessage('');
 
     try {
-      const res = await authService.resendVerification({ email: resendEmail.trim() });
-      setResendSuccess(true);
-      toast.success(res?.data?.message || 'Verification email dispatched. Please check your inbox.');
+      const res = await authService.resendOtp({ email: email.trim() });
+      setCooldown(COOLDOWN_SECONDS);
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+      toast.success(res?.data?.message || 'New 6-digit verification code sent to your email.');
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
-        'Failed to resend verification email. Please wait 2 minutes or try again later.';
+        'Failed to resend verification code. Please wait 2 minutes before requesting again.';
+      setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setIsResending(false);
@@ -116,7 +208,7 @@ const VerifyEmailPage = () => {
         transition={{ duration: 0.4 }}
         style={{
           width: '100%',
-          maxWidth: '460px',
+          maxWidth: '480px',
           background: 'rgba(21, 27, 44, 0.85)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -156,32 +248,15 @@ const VerifyEmailPage = () => {
               margin: '0 0 8px 0',
             }}
           >
-            Email Verification
+            Verify Your Email
           </h1>
           <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0 }}>
-            Account security and notifications verification
+            Enter the 6-digit verification code sent to your email address
           </p>
         </div>
 
-        {/* State 1: Loading / Verifying */}
-        {status === 'loading' && (
-          <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <Loader2
-              size={44}
-              color="#6366F1"
-              style={{ animation: 'spin 1s linear infinite', marginBottom: '16px' }}
-            />
-            <p style={{ fontSize: '15px', color: '#E2E8F0', fontWeight: 600, margin: '0 0 6px 0' }}>
-              Verifying your email...
-            </p>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
-              Connecting to HireGenius authentication services
-            </p>
-          </div>
-        )}
-
-        {/* State 2: Success */}
-        {status === 'success' && (
+        {/* State: Success */}
+        {status === 'success' ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div
               style={{
@@ -202,7 +277,7 @@ const VerifyEmailPage = () => {
               Email Successfully Verified!
             </h2>
             <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.5, marginBottom: '28px' }}>
-              Your account is fully activated. You can now post jobs, apply for positions, and receive critical platform notifications.
+              Your email has been verified. You can now sign in and access the HireGenius AI platform.
             </p>
             <Link to="/login" style={{ textDecoration: 'none', display: 'block' }}>
               <GradientButton fullWidth size="lg">
@@ -210,12 +285,11 @@ const VerifyEmailPage = () => {
               </GradientButton>
             </Link>
           </div>
-        )}
-
-        {/* State 3: Error or Idle (Resend Form) */}
-        {(status === 'error' || status === 'idle') && (
-          <div>
-            {status === 'error' && (
+        ) : (
+          /* Form for Entering Email and 6-digit OTP */
+          <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Error Banner */}
+            {status === 'error' && errorMessage && (
               <div
                 style={{
                   background: 'rgba(239, 68, 68, 0.12)',
@@ -225,13 +299,12 @@ const VerifyEmailPage = () => {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '12px',
-                  marginBottom: '24px',
                 }}
               >
                 <AlertCircle size={20} color="#EF4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <p style={{ fontSize: '13px', fontWeight: 600, color: '#FCA5A5', margin: '0 0 2px 0' }}>
-                    Verification Unsuccessful
+                    Verification Failed
                   </p>
                   <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0, lineHeight: 1.4 }}>
                     {errorMessage}
@@ -240,120 +313,193 @@ const VerifyEmailPage = () => {
               </div>
             )}
 
-            {status === 'idle' && (
-              <div
+            {/* Email Address */}
+            <div>
+              <label
+                htmlFor="verify-email"
                 style={{
-                  background: 'rgba(99, 102, 241, 0.10)',
-                  border: '1px solid rgba(99, 102, 241, 0.22)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  marginBottom: '24px',
+                  display: 'block',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#E2E8F0',
+                  marginBottom: '6px',
                 }}
               >
-                <Mail size={20} color="#818CF8" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#C7D2FE', margin: '0 0 2px 0' }}>
-                    Need a verification link?
-                  </p>
-                  <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0, lineHeight: 1.4 }}>
-                    Enter your registered email below to receive a fresh verification link.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleResend} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label
-                  htmlFor="resend-email"
+                Registered Email
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail
+                  size={16}
+                  color="#64748B"
                   style={{
-                    display: 'block',
+                    position: 'absolute',
+                    left: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <input
+                  id="verify-email"
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 42px',
+                    borderRadius: '12px',
+                    background: 'rgba(11, 15, 25, 0.7)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#F8FAFC',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = '#6366F1')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
+                />
+              </div>
+            </div>
+
+            {/* 6-Digit Code Inputs */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label
+                  style={{
                     fontSize: '13px',
                     fontWeight: 500,
                     color: '#E2E8F0',
-                    marginBottom: '6px',
                   }}
                 >
-                  Registered Email Address
+                  6-Digit Verification Code
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail
-                    size={16}
-                    color="#64748B"
-                    style={{
-                      position: 'absolute',
-                      left: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                  <input
-                    id="resend-email"
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                    value={resendEmail}
-                    onChange={(e) => setResendEmail(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px 12px 42px',
-                      borderRadius: '12px',
-                      background: 'rgba(11, 15, 25, 0.7)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: '#F8FAFC',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.2s',
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = '#6366F1')}
-                    onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
-                  />
-                </div>
+                <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                  Valid for 10 minutes
+                </span>
               </div>
 
-              {resendSuccess && (
-                <div
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.12)',
-                    border: '1px solid rgba(34, 197, 94, 0.25)',
-                    borderRadius: '10px',
-                    padding: '10px 14px',
-                    fontSize: '13px',
-                    color: '#86EFAC',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Verification email sent! Please check your spam or inbox folder.
-                </div>
-              )}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(6, 1fr)',
+                  gap: '8px',
+                }}
+                onPaste={handlePaste}
+              >
+                {otp.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => (inputRefs.current[idx] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={idx === 0 ? 6 : 1}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    style={{
+                      height: '52px',
+                      textAlign: 'center',
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      background: digit ? 'rgba(99, 102, 241, 0.12)' : 'rgba(11, 15, 25, 0.7)',
+                      border: digit
+                        ? '1.5px solid #6366F1'
+                        : '1px solid rgba(255, 255, 255, 0.12)',
+                      color: '#F8FAFC',
+                      outline: 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onFocus={(e) => {
+                      e.target.select();
+                      e.target.style.borderColor = '#818CF8';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.18)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = digit ? '#6366F1' : 'rgba(255, 255, 255, 0.12)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
 
-              <GradientButton
-                type="submit"
-                fullWidth
-                size="md"
-                disabled={isResending}
-                style={{ marginTop: '8px' }}
+            {/* Verify Button */}
+            <GradientButton
+              type="submit"
+              fullWidth
+              size="lg"
+              disabled={status === 'submitting' || fullOtp.length !== 6 || !email.trim()}
+              style={{ marginTop: '8px' }}
+            >
+              {status === 'submitting' ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" style={{ marginRight: '8px' }} />
+                  Verifying Code...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={16} style={{ marginRight: '8px' }} />
+                  Verify Email
+                </>
+              )}
+            </GradientButton>
+
+            {/* Resend OTP Section with Cooldown */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '8px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                fontSize: '13px',
+              }}
+            >
+              <span style={{ color: '#94A3B8' }}>Didn't receive the code?</span>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={cooldown > 0 || isResending || !email.trim()}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: cooldown > 0 ? '#64748B' : '#818CF8',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  transition: 'color 0.15s ease',
+                }}
               >
                 {isResending ? (
                   <>
-                    <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />
-                    Sending link...
+                    <RefreshCw size={13} className="animate-spin" />
+                    Sending...
+                  </>
+                ) : cooldown > 0 ? (
+                  <>
+                    <RefreshCw size={13} />
+                    Resend in {Math.floor(cooldown / 60)}:{(cooldown % 60).toString().padStart(2, '0')}
                   </>
                 ) : (
                   <>
-                    <RefreshCw size={16} style={{ marginRight: '8px' }} />
-                    Resend Verification Link
+                    <RefreshCw size={13} />
+                    Resend Code
                   </>
                 )}
-              </GradientButton>
-            </form>
+              </button>
+            </div>
 
-            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+            {/* Back to Sign In Link */}
+            <div style={{ textAlign: 'center', marginTop: '8px' }}>
               <Link
                 to="/login"
                 style={{
@@ -366,7 +512,7 @@ const VerifyEmailPage = () => {
                 Back to Sign In
               </Link>
             </div>
-          </div>
+          </form>
         )}
       </motion.div>
     </div>

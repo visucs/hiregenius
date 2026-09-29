@@ -1683,4 +1683,76 @@ pm run build completed successfully with 0 errors.
   - ESLint 0 errors across 109 files.
   - Commit `51166ff` pushed to `origin/dev`.
 
+### 2026-09-27 - Email Verification via OTP, Recruiter Admin Approval, and Granular Privileges
+
+- **Feature Changes & New Admin Controls**:
+  1. **Part 1: 6-Digit Email Verification OTP (`hiregenius-auth-service`, `hiregenius-core-api`, `hiregenius-frontend`)**:
+     - Database: Dedicated `email_otps` table (`id`, `user_id`, `otp_hash`, `purpose='EMAIL_VERIFICATION'`, `expires_at`, `used`, `created_at`) created via Flyway `V4__add_email_otps.sql` and Knex `20260927_add_email_otps_and_user_privileges.js`.
+     - Security: 6-digit cryptographic OTPs generated on signup and resend, stored securely via BCrypt. 10-minute expiry window.
+     - Rate Limiting: 2-minute cooldown between OTP resends enforced via `POST /api/auth/resend-otp` (returns 400 with remaining wait seconds).
+     - Verification: `POST /api/auth/verify-email-otp` validates unverified status, matching BCrypt hash, expiration, and flags `email_verified = true` and `used = true`. Returns distinct error messages for wrong code, expired code, already-used code, and already-verified account.
+     - Deprecated old link-based `/verify-email` endpoint.
+     - Mailer: Dispatches HTML verification email with highlighted 6-digit box and explicit 10-minute validity warning.
+     - Frontend: Revamped `VerifyEmailPage.jsx` with 6-digit code entry boxes, auto-focus next, clipboard paste support, 2-minute cooldown timer, and direct redirect from `RegisterPage.jsx`.
+  2. **Part 2: Recruiter-Specific Admin Approval Layer**:
+     - Database: Added `admin_approved` BOOLEAN DEFAULT FALSE to `users`. (Admins pre-approved).
+     - Gate Check: In `jobs.service.js`, posting jobs requires `admin_approved = true` in addition to `email_verified = true`. Throws 403: `"Your recruiter account is pending admin approval."`.
+     - Admin Control:
+       - `GET /api/admin/users?pendingApproval=true`: Lists recruiters awaiting approval.
+       - `PATCH /api/admin/users/{id}/approve`: Approves recruiter, sets `admin_approved = true`, and dispatches real notification email via `EmailService.sendRecruiterApprovalEmail`: `"Your recruiter account has been approved, you can now post jobs"`.
+     - Frontend: Added "Pending Approval" filter tab in `AdminUserManagementPage.jsx` and 1-click "Approve" button.
+  3. **Part 3: Granular Role Privileges (`can_post_jobs` & `can_apply_to_jobs`)**:
+     - Database: Added `can_post_jobs` (default true) and `can_apply_to_jobs` (default true) to `users`.
+     - Independence: Completely decoupled from `is_active`. Deactivating account blocks login entirely with 403; privilege flags only restrict specific actions while allowing account login.
+     - Gate Checks:
+       - In `jobs.service.js`: If `can_post_jobs === false`, throws 403: `"Job posting has been disabled for your account by an administrator."`.
+       - In `applications.service.js`: If `can_apply_to_jobs === false`, throws 403: `"Your ability to apply to jobs has been disabled by an administrator."`.
+     - Admin Endpoint: `PATCH /api/admin/users/{id}/privileges` accepting `{ canPostJobs, canApplyToJobs }`.
+     - Frontend: Interactive toggle buttons placed next to the Status pill in `AdminUserManagementPage.jsx` for desktop and mobile views.
+
+- **Verification & Test Coverage**:
+  - `hiregenius-auth-service`: 51/51 Maven unit & integration tests passing (`BUILD SUCCESS`).
+  - `hiregenius-core-api`: 13/13 Jest test suites, 157/157 tests passing.
+  - `hiregenius-frontend`: Vite production build passed in 1.48s with 0 errors.
+  - Live End-to-End Test Suite (`scratch/verify_all_parts.js`):
+    1. Candidate OTP Registration: BCrypt hash created in `email_otps` with 10-minute expiry; 2-minute resend cooldown verified; wrong OTP rejected with 400; correct OTP verified with 200; `users.email_verified` and `email_otps.used` updated in DB; OTP replay rejected.
+    2. Recruiter Approval Gate: Unapproved recruiter blocked from posting with 403 `"Your recruiter account is pending admin approval."`; Admin queries `?pendingApproval=true`; Admin approves recruiter via `PATCH /approve`; Approval email triggered; Recruiter posts job successfully (201 Created).
+    3. Granular Privileges: Admin sets `canPostJobs = false` -> recruiter job creation blocked with 403 `"Job posting has been disabled for your account by an administrator."`; Admin restores `canPostJobs = true`; Candidate applies successfully (201); Admin sets `canApplyToJobs = false` -> candidate application blocked with 403 `"Your ability to apply to jobs has been disabled by an administrator."`; Admin restores `canApplyToJobs = true`.
+    4. Account Disable Independence: Admin disables account (`isActive = false`) -> login blocked with 403 `"Your account has been deactivated. Please contact support."`; Admin restores `isActive = true` -> login succeeds.
+
+### 2026-09-27 - Priority 0 Security Fix, Persistent In-App Verification, Guarded Permanent Deletion, and User Drill-Down
+
+- **Priority 0 (Critical Security Fix: Real-Time Account Deactivation Check)**:
+  - Root Cause: Deactivating an account only blocked new logins; existing signed JWT tokens were accepted until natural expiration because `verifyJwt.js` merely checked signature and payload expiry.
+  - Solution: Converted `verifyJwt.js` in `hiregenius-core-api` to async real-time database lookup (`db('users').where({ id: payload.userId }).first()`). Immediately throws `403 Forbidden` (`"Your account has been deactivated. Please contact support."`) if `is_active = 0`. Also verifies `!userDetails.isEnabled()` in Spring Boot Auth Service (`JwtAuthFilter.java`) and `changePassword`.
+  - Verified: Live test confirmed same-token instant 403 upon admin deactivation across both Core API and Auth Service endpoints.
+
+- **Part 1: Persistent Email Verification in Settings & Profile**:
+  - `authSlice.js`: Added `updateUser` action to update Redux user and `localStorage` dynamically without requiring logout/re-login.
+  - `EmailOtpVerificationModal.jsx`: Reusable 6-digit OTP verification modal with keyboard navigation, paste support, and 60s cooldown timer.
+  - `CandidateSettingsPage.jsx`: Added persistent verification status badge, unverified warning banner, and integrated OTP modal.
+  - `RecruiterProfilePage.jsx`: Added verification badge, OTP modal trigger, and `admin_approved` status pill & card.
+
+- **Part 3: Admin User Detail Drill-Down View**:
+  - Backend: `GET /api/admin/users/:id` in `hiregenius-core-api` returning full profile plus recruiter metrics (total jobs, application count, recent jobs) or candidate metrics (application count, recent applications, resume details).
+  - Frontend: `AdminUserDetailModal.jsx` drawer displaying complete activity metrics, account status, privilege toggles, and danger zone.
+  - Wired table rows and "Details" buttons in `AdminUserManagementPage.jsx` to open modal on click.
+
+- **Part 2: Guarded Cascade Permanent Account Deletion**:
+  - Strategy (Guarded Cascade): Atomic Knex transaction in Core API (`DELETE /api/admin/users/:id`).
+  - Guards:
+    - Self-deletion blocked (400 `"You cannot delete your own administrator account"`).
+    - Administrator account deletion blocked (400 `"Administrator accounts cannot be deleted"`).
+    - Recruiter with active (`OPEN`) jobs or in-progress applications blocked (400).
+    - Candidate with in-progress applications blocked (400).
+  - Execution: Once dependencies are resolved, purges interviews, notifications, applications, jobs, candidate profile, physical resume file, OTPs, auth tokens, and user row within an atomic transaction.
+  - Frontend: Interactive confirmation modal in `AdminUserDetailModal.jsx` requiring admin to type the target user's exact email address to confirm deletion.
+
+- **Verification**:
+  - `hiregenius-core-api`: 15/15 Jest test suites, 174/174 tests passing.
+  - Live End-to-End Test (`verify_part2_and_session.js`): All 6 live assertions passed.
+  - Priority 0 Test (`verify_priority0.js`): All 9 live checks passed.
+  - `hiregenius-frontend`: `npm run build` passed in 1.10s with 0 errors.
+
+
 

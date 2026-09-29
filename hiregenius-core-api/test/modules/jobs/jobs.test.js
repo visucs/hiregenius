@@ -16,6 +16,8 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
   const recruiter1Token = makeToken({ userId: 101, email: 'recruiter1@hiregenius.ai', role: 'RECRUITER' });
   const recruiter2Token = makeToken({ userId: 202, email: 'recruiter2@hiregenius.ai', role: 'RECRUITER' });
   const unverifiedRecruiterToken = makeToken({ userId: 105, email: 'unverified.recruiter@hiregenius.ai', role: 'RECRUITER' });
+  const unapprovedRecruiterToken = makeToken({ userId: 106, email: 'unapproved.recruiter@hiregenius.ai', role: 'RECRUITER' });
+  const disabledRecruiterToken = makeToken({ userId: 107, email: 'disabled.recruiter@hiregenius.ai', role: 'RECRUITER' });
   const candidateToken = makeToken({ userId: 303, email: 'candidate@hiregenius.ai', role: 'CANDIDATE' });
 
   beforeAll(async () => {
@@ -30,7 +32,19 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
         t.string('role');
         t.string('password').nullable();
         t.boolean('email_verified').defaultTo(true);
+        t.boolean('admin_approved').defaultTo(true);
+        t.boolean('can_post_jobs').defaultTo(true);
+        t.boolean('can_apply_to_jobs').defaultTo(true);
       });
+    } else {
+      const hasAdminApproved = await db.schema.hasColumn('users', 'admin_approved');
+      if (!hasAdminApproved) {
+        await db.schema.alterTable('users', (t) => {
+          t.boolean('admin_approved').defaultTo(true);
+          t.boolean('can_post_jobs').defaultTo(true);
+          t.boolean('can_apply_to_jobs').defaultTo(true);
+        });
+      }
     }
   });
 
@@ -39,15 +53,68 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
     await db('jobs').del();
     const hasUsers = await db.schema.hasTable('users');
     if (hasUsers) {
-      await db('users').where('id', 105).del();
-      await db('users').insert({
-        id: 105,
-        name: 'Unverified Recruiter',
-        email: 'unverified.recruiter@hiregenius.ai',
-        role: 'RECRUITER',
-        password: 'hash',
-        email_verified: false,
-      });
+      await db('users').whereIn('id', [101, 105, 106, 107, 202, 303]).del();
+      await db('users').insert([
+        {
+          id: 101,
+          name: 'Verified Approved Recruiter',
+          email: 'recruiter1@hiregenius.ai',
+          role: 'RECRUITER',
+          password: 'hash',
+          email_verified: true,
+          admin_approved: true,
+          can_post_jobs: true,
+        },
+        {
+          id: 202,
+          name: 'Recruiter Two',
+          email: 'recruiter2@hiregenius.ai',
+          role: 'RECRUITER',
+          password: 'hash',
+          email_verified: true,
+          admin_approved: true,
+          can_post_jobs: true,
+        },
+        {
+          id: 303,
+          name: 'Test Candidate',
+          email: 'candidate@hiregenius.ai',
+          role: 'CANDIDATE',
+          password: 'hash',
+          email_verified: true,
+          can_apply_to_jobs: true,
+        },
+        {
+          id: 105,
+          name: 'Unverified Recruiter',
+          email: 'unverified.recruiter@hiregenius.ai',
+          role: 'RECRUITER',
+          password: 'hash',
+          email_verified: false,
+          admin_approved: true,
+          can_post_jobs: true,
+        },
+        {
+          id: 106,
+          name: 'Unapproved Recruiter',
+          email: 'unapproved.recruiter@hiregenius.ai',
+          role: 'RECRUITER',
+          password: 'hash',
+          email_verified: true,
+          admin_approved: false,
+          can_post_jobs: true,
+        },
+        {
+          id: 107,
+          name: 'Disabled Recruiter',
+          email: 'disabled.recruiter@hiregenius.ai',
+          role: 'RECRUITER',
+          password: 'hash',
+          email_verified: true,
+          admin_approved: true,
+          can_post_jobs: false,
+        },
+      ]);
     }
   });
 
@@ -56,7 +123,7 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
     await db('jobs').del();
     const hasUsers = await db.schema.hasTable('users');
     if (hasUsers) {
-      await db('users').where('id', 105).del();
+      await db('users').whereIn('id', [101, 105, 106, 107]).del();
     }
     await db.destroy();
   });
@@ -109,6 +176,38 @@ describe('Jobs Module - End-to-End & Ownership Enforcement', () => {
       expect(res.status).toBe(403);
       expect(res.body.status).toBe(403);
       expect(res.body.message).toMatch(/Please verify your email address to post jobs/i);
+    });
+
+    test('should reject request when recruiter account is pending admin approval (403)', async () => {
+      const res = await request(app)
+        .post('/api/jobs')
+        .set('Authorization', `Bearer ${unapprovedRecruiterToken}`)
+        .send({
+          title: 'Senior Backend Engineer',
+          company: 'Acme Corp',
+          skills: ['Node.js', 'MySQL'],
+          description: 'Build robust enterprise APIs',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.status).toBe(403);
+      expect(res.body.message).toMatch(/Your recruiter account is pending admin approval/i);
+    });
+
+    test('should reject request when recruiter job posting has been disabled by admin (403)', async () => {
+      const res = await request(app)
+        .post('/api/jobs')
+        .set('Authorization', `Bearer ${disabledRecruiterToken}`)
+        .send({
+          title: 'Senior Backend Engineer',
+          company: 'Acme Corp',
+          skills: ['Node.js', 'MySQL'],
+          description: 'Build robust enterprise APIs',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.status).toBe(403);
+      expect(res.body.message).toMatch(/Job posting has been disabled for your account by an administrator/i);
     });
 
     test('should create job and enforce recruiter_id strictly from JWT (201)', async () => {

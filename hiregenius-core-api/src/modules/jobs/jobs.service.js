@@ -15,15 +15,26 @@ class JobsService {
    * Recruiter ID comes strictly from authenticated user — never from request body.
    */
   async createJob(recruiterId, jobData) {
-    // 0. Recruiter email must be verified
+    // 0. Recruiter email must be verified, admin approved, and job posting enabled
     let user;
     try {
-      user = await db('users').where('id', Number(recruiterId)).first('email_verified');
+      user = await db('users').where('id', Number(recruiterId)).first();
     } catch {
-      // Table or column might not exist in isolated test environments
+      // Table might not exist in isolated mock environments
     }
-    if (user && (user.email_verified === 0 || user.email_verified === false)) {
-      throw ApiError.forbidden('Please verify your email address to post jobs.');
+    if (user) {
+      if (user.is_active === 0 || user.is_active === false) {
+        throw ApiError.forbidden('Your account has been deactivated. Please contact support.');
+      }
+      if (user.email_verified === 0 || user.email_verified === false) {
+        throw ApiError.forbidden('Please verify your email address to post jobs.');
+      }
+      if (user.admin_approved === 0 || user.admin_approved === false) {
+        throw ApiError.forbidden('Your recruiter account is pending admin approval.');
+      }
+      if (user.can_post_jobs === 0 || user.can_post_jobs === false) {
+        throw ApiError.forbidden('Job posting has been disabled for your account by an administrator.');
+      }
     }
 
     // 0.1 Check max_jobs_per_recruiter platform limit

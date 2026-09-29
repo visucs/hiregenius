@@ -1,15 +1,17 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const ApiError = require('../utils/ApiError');
+const db = require('../config/db');
 
 /**
  * JWT Verification Middleware
  * Validates HS256 tokens locally against JWT_SIGNING_KEY.
- * Never calls external network services for verification.
- * Attaches req.user = { userId, email, role } on success.
- * Missing, expired, or tampered tokens return 401 Unauthorized, never 500.
+ * Queries the database in real-time to ensure the account is still active (is_active)
+ * and attaches fresh user permissions/flags to prevent stale JWT privilege escalation.
+ * Missing, expired, or tampered tokens return 401 Unauthorized.
+ * Deactivated accounts immediately return 403 Forbidden.
  */
-function verifyJwt(req, res, next) {
+async function verifyJwt(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -23,27 +25,46 @@ function verifyJwt(req, res, next) {
 
   const token = parts[1];
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, env.JWT_SIGNING_KEY, {
+    decoded = jwt.verify(token, env.JWT_SIGNING_KEY, {
       algorithms: ['HS256'],
     });
 
     if (!decoded.userId) {
       return next(ApiError.unauthorized('Token payload missing userId'));
     }
-
-    req.user = {
-      userId: Number(decoded.userId),
-      email: decoded.sub || decoded.email || null,
-      role: decoded.role || null,
-    };
-
-    return next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
       return next(ApiError.unauthorized('Token has expired'));
     }
     return next(ApiError.unauthorized('Invalid or tampered token'));
+  }
+
+  // Real-time lookup of live user status to prevent stale JWT bypass
+  try {
+    const user = await db('users').where({ id: Number(decoded.userId) }).first();
+    if (!user) {
+      return next(ApiError.unauthorized('User not found'));
+    }
+
+    if (user.is_active === 0 || user.is_active === false) {
+      return next(ApiError.forbidden('Your account has been deactivated. Please contact support.'));
+    }
+
+    req.user = {
+      userId: Number(decoded.userId),
+      email: user.email || decoded.sub || decoded.email || null,
+      role: user.role || decoded.role || null,
+      is_active: user.is_active === 1 || user.is_active === true,
+      email_verified: user.email_verified === 1 || user.email_verified === true,
+      admin_approved: user.admin_approved === 1 || user.admin_approved === true,
+      can_post_jobs: user.can_post_jobs === 1 || user.can_post_jobs === true,
+      can_apply_to_jobs: user.can_apply_to_jobs === 1 || user.can_apply_to_jobs === true,
+    };
+    return next();
+  } catch (err) {
+    return next(err);
   }
 }
 

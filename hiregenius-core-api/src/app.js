@@ -9,6 +9,7 @@ const recruiterPreferencesRouter = require('./modules/recruiters/recruiterPrefer
 const analyticsRouter = require('./modules/analytics/analytics.routes');
 const settingsRouter = require('./modules/admin/settings/settings.routes');
 const adminHealthRouter = require('./modules/admin/health/health.routes');
+const adminUsersRouter = require('./modules/admin/users/users.routes');
 const maintenanceMode = require('./middleware/maintenanceMode');
 const errorHandler = require('./middleware/errorHandler');
 const ApiError = require('./utils/ApiError');
@@ -70,6 +71,7 @@ app.use('/api/recruiters', recruiterPreferencesRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/admin/settings', settingsRouter);
 app.use('/api/admin/health', adminHealthRouter);
+app.use('/api/admin/users', adminUsersRouter);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

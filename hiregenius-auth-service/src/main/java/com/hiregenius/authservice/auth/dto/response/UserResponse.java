@@ -12,17 +12,24 @@ public class UserResponse {
     private Role role;
     private AuthProvider authProvider;
     private boolean emailVerified;
+    private boolean adminApproved;
+    private boolean canPostJobs;
+    private boolean canApplyToJobs;
 
     public UserResponse() {
     }
 
-    public UserResponse(Long id, String name, String email, Role role, AuthProvider authProvider, boolean emailVerified) {
+    public UserResponse(Long id, String name, String email, Role role, AuthProvider authProvider,
+                        boolean emailVerified, boolean adminApproved, boolean canPostJobs, boolean canApplyToJobs) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.role = role;
         this.authProvider = authProvider;
         this.emailVerified = emailVerified;
+        this.adminApproved = adminApproved;
+        this.canPostJobs = canPostJobs;
+        this.canApplyToJobs = canApplyToJobs;
     }
 
     public static UserResponse fromEntity(User user) {
@@ -35,7 +42,10 @@ public class UserResponse {
                 user.getEmail(),
                 user.getRole(),
                 user.getAuthProvider(),
-                user.isEmailVerified()
+                user.isEmailVerified(),
+                user.isAdminApproved(),
+                user.isCanPostJobs(),
+                user.isCanApplyToJobs()
         );
     }
 
@@ -85,5 +95,29 @@ public class UserResponse {
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
+    }
+
+    public boolean isAdminApproved() {
+        return adminApproved;
+    }
+
+    public void setAdminApproved(boolean adminApproved) {
+        this.adminApproved = adminApproved;
+    }
+
+    public boolean isCanPostJobs() {
+        return canPostJobs;
+    }
+
+    public void setCanPostJobs(boolean canPostJobs) {
+        this.canPostJobs = canPostJobs;
+    }
+
+    public boolean isCanApplyToJobs() {
+        return canApplyToJobs;
+    }
+
+    public void setCanApplyToJobs(boolean canApplyToJobs) {
+        this.canApplyToJobs = canApplyToJobs;
     }
 }

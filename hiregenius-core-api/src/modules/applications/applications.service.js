@@ -12,15 +12,23 @@ class ApplicationsService {
    * Candidate ID strictly derived from authenticated JWT user — never trusted from body
    */
   async applyToJob(userId, jobId) {
-    // 0. Candidate email must be verified
+    // 0. Candidate email must be verified and job applying enabled
     let user;
     try {
-      user = await db('users').where('id', Number(userId)).first('email_verified');
+      user = await db('users').where('id', Number(userId)).first();
     } catch {
-      // Table or column might not exist in isolated test environments
+      // Table might not exist in isolated mock environments
     }
-    if (user && (user.email_verified === 0 || user.email_verified === false)) {
-      throw ApiError.forbidden('Please verify your email address to apply for jobs.');
+    if (user) {
+      if (user.is_active === 0 || user.is_active === false) {
+        throw ApiError.forbidden('Your account has been deactivated. Please contact support.');
+      }
+      if (user.email_verified === 0 || user.email_verified === false) {
+        throw ApiError.forbidden('Please verify your email address to apply for jobs.');
+      }
+      if (user.can_apply_to_jobs === 0 || user.can_apply_to_jobs === false) {
+        throw ApiError.forbidden('Your ability to apply to jobs has been disabled by an administrator.');
+      }
     }
 
     // 1. Candidate must have a profile and uploaded resume

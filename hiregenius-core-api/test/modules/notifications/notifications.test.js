@@ -19,14 +19,40 @@ describe('Notifications Module - End-to-End & Ownership Enforcement', () => {
 
   beforeAll(async () => {
     await db.migrate.latest();
+    const hasUsers = await db.schema.hasTable('users');
+    if (!hasUsers) {
+      await db.schema.createTable('users', (t) => {
+        t.increments('id').primary();
+        t.string('name');
+        t.string('email').unique();
+        t.string('role');
+        t.string('password').nullable();
+        t.boolean('email_verified').defaultTo(true);
+        t.boolean('admin_approved').defaultTo(true);
+        t.boolean('can_post_jobs').defaultTo(true);
+        t.boolean('can_apply_to_jobs').defaultTo(true);
+      });
+    }
   });
 
   beforeEach(async () => {
     await db('notifications').del();
+    const hasUsers = await db.schema.hasTable('users');
+    if (hasUsers) {
+      await db('users').whereIn('id', [501, 502]).del();
+      await db('users').insert([
+        { id: 501, name: 'User One', email: 'user1@hiregenius.ai', role: 'RECRUITER', password: 'hash' },
+        { id: 502, name: 'User Two', email: 'user2@hiregenius.ai', role: 'CANDIDATE', password: 'hash' },
+      ]);
+    }
   });
 
   afterAll(async () => {
     await db('notifications').del();
+    const hasUsers = await db.schema.hasTable('users');
+    if (hasUsers) {
+      await db('users').whereIn('id', [501, 502]).del();
+    }
     await db.destroy();
   });
 

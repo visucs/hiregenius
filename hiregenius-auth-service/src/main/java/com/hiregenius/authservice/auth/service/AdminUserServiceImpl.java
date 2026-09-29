@@ -26,14 +26,16 @@ public class AdminUserServiceImpl implements AdminUserService {
     private static final Logger log = LoggerFactory.getLogger(AdminUserServiceImpl.class);
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
-    public AdminUserServiceImpl(UserRepository userRepository) {
+    public AdminUserServiceImpl(UserRepository userRepository, EmailService emailService) {
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<AdminUserResponse> getUsers(int page, int size, Role role, Boolean active, String search) {
+    public PageResponse<AdminUserResponse> getUsers(int page, int size, Role role, Boolean active, String search, Boolean pendingApproval) {
         int validatedPage = Math.max(page, 0);
         int validatedSize = Math.min(Math.max(size, 1), 100);
 
@@ -42,7 +44,11 @@ public class AdminUserServiceImpl implements AdminUserService {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (role != null) {
+            if (pendingApproval != null && pendingApproval) {
+                predicates.add(cb.equal(root.get("role"), Role.RECRUITER));
+                predicates.add(cb.equal(root.get("emailVerified"), true));
+                predicates.add(cb.equal(root.get("adminApproved"), false));
+            } else if (role != null) {
                 predicates.add(cb.equal(root.get("role"), role));
             }
 
@@ -92,6 +98,56 @@ public class AdminUserServiceImpl implements AdminUserService {
                 currentAdmin != null ? currentAdmin.getId() : "system",
                 savedUser.getId(), savedUser.getEmail(), active);
 
+        return AdminUserResponse.fromEntity(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse approveRecruiter(Long targetUserId, SecurityUser currentAdmin) {
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + targetUserId));
+
+        if (targetUser.getRole() != Role.RECRUITER) {
+            throw new IllegalArgumentException("Admin approval is only applicable to recruiter accounts");
+        }
+
+        targetUser.setAdminApproved(true);
+        User savedUser = userRepository.save(targetUser);
+
+        log.info("Admin [id={}] approved recruiter [id={}, email={}]",
+                currentAdmin != null ? currentAdmin.getId() : "system",
+                savedUser.getId(), savedUser.getEmail());
+
+        emailService.sendRecruiterApprovalEmail(savedUser.getEmail(), savedUser.getName());
+
+        return AdminUserResponse.fromEntity(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateUserPrivileges(Long targetUserId, Boolean canPostJobs, Boolean canApplyToJobs, SecurityUser currentAdmin) {
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + targetUserId));
+
+        if (targetUser.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Cannot modify privileges of administrator accounts");
+        }
+
+        if (targetUser.getRole() == Role.RECRUITER && canPostJobs != null) {
+            targetUser.setCanPostJobs(canPostJobs);
+            log.info("Admin [id={}] updated recruiter [id={}, email={}] canPostJobs to {}",
+                    currentAdmin != null ? currentAdmin.getId() : "system",
+                    targetUser.getId(), targetUser.getEmail(), canPostJobs);
+        }
+
+        if (targetUser.getRole() == Role.CANDIDATE && canApplyToJobs != null) {
+            targetUser.setCanApplyToJobs(canApplyToJobs);
+            log.info("Admin [id={}] updated candidate [id={}, email={}] canApplyToJobs to {}",
+                    currentAdmin != null ? currentAdmin.getId() : "system",
+                    targetUser.getId(), targetUser.getEmail(), canApplyToJobs);
+        }
+
+        User savedUser = userRepository.save(targetUser);
         return AdminUserResponse.fromEntity(savedUser);
     }
 }

@@ -18,6 +18,20 @@ describe('Admin Analytics Extensions (Trend & Top Skills)', () => {
 
   beforeAll(async () => {
     await db.migrate.latest();
+    const hasUsers = await db.schema.hasTable('users');
+    if (!hasUsers) {
+      await db.schema.createTable('users', (t) => {
+        t.increments('id').primary();
+        t.string('name');
+        t.string('email').unique();
+        t.string('role');
+        t.string('password').nullable();
+        t.boolean('email_verified').defaultTo(true);
+        t.boolean('admin_approved').defaultTo(true);
+        t.boolean('can_post_jobs').defaultTo(true);
+        t.boolean('can_apply_to_jobs').defaultTo(true);
+      });
+    }
   });
 
   beforeEach(async () => {
@@ -26,6 +40,14 @@ describe('Admin Analytics Extensions (Trend & Top Skills)', () => {
     await db('applications').del();
     await db('candidates').del();
     await db('jobs').del();
+    const hasUsers = await db.schema.hasTable('users');
+    if (hasUsers) {
+      await db('users').whereIn('id', [401, 101]).del();
+      await db('users').insert([
+        { id: 401, name: 'Admin User', email: 'admin@hiregenius.ai', role: 'ADMIN', password: 'hash' },
+        { id: 101, name: 'Recruiter User', email: 'recruiter@hiregenius.ai', role: 'RECRUITER', password: 'hash' },
+      ]);
+    }
 
     // Create jobs with skills
     await db('jobs').insert([

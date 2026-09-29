@@ -27,6 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -194,5 +196,81 @@ class AdminUserControllerTest {
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message", containsString("deactivated")));
+    }
+
+    @Test
+    @DisplayName("9. GET /api/admin/users?pendingApproval=true returns email-verified unapproved recruiters")
+    void getPendingApprovalUsers() throws Exception {
+        // Recruiter Alice: verified email, not approved
+        recruiterUser.setEmailVerified(true);
+        recruiterUser.setAdminApproved(false);
+        userRepository.save(recruiterUser);
+
+        // Candidate Bob: verified email (should NOT appear in pending recruiter approvals)
+        candidateUser.setEmailVerified(true);
+        userRepository.save(candidateUser);
+
+        mockMvc.perform(get("/api/admin/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("pendingApproval", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content", hasSize(1)))
+                .andExpect(jsonPath("$.data.content[0].email").value("alice@hiregenius.ai"))
+                .andExpect(jsonPath("$.data.content[0].adminApproved").value(false));
+    }
+
+    @Test
+    @DisplayName("10. PATCH /api/admin/users/{id}/approve approves recruiter and dispatches notification email")
+    void approveRecruiterSuccess() throws Exception {
+        recruiterUser.setEmailVerified(true);
+        recruiterUser.setAdminApproved(false);
+        userRepository.save(recruiterUser);
+
+        mockMvc.perform(patch("/api/admin/users/" + recruiterUser.getId() + "/approve")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.adminApproved").value(true));
+
+        User updated = userRepository.findById(recruiterUser.getId()).orElseThrow();
+        assertTrue(updated.isAdminApproved());
+
+        // Verify email was dispatched
+        verify(emailService, times(1)).sendRecruiterApprovalEmail(
+                eq("alice@hiregenius.ai"),
+                eq("Recruiter Alice")
+        );
+    }
+
+    @Test
+    @DisplayName("11. PATCH /api/admin/users/{id}/privileges updates can_post_jobs and can_apply_to_jobs")
+    void updatePrivilegesSuccess() throws Exception {
+        // Toggle recruiter canPostJobs to false
+        com.hiregenius.authservice.auth.dto.request.UpdateUserPrivilegesRequest recruiterPriv =
+                new com.hiregenius.authservice.auth.dto.request.UpdateUserPrivilegesRequest(false, null);
+
+        mockMvc.perform(patch("/api/admin/users/" + recruiterUser.getId() + "/privileges")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(recruiterPriv)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.canPostJobs").value(false));
+
+        User updatedRecruiter = userRepository.findById(recruiterUser.getId()).orElseThrow();
+        assertFalse(updatedRecruiter.isCanPostJobs());
+
+        // Toggle candidate canApplyToJobs to false
+        com.hiregenius.authservice.auth.dto.request.UpdateUserPrivilegesRequest candidatePriv =
+                new com.hiregenius.authservice.auth.dto.request.UpdateUserPrivilegesRequest(null, false);
+
+        mockMvc.perform(patch("/api/admin/users/" + candidateUser.getId() + "/privileges")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(candidatePriv)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.canApplyToJobs").value(false));
+
+        User updatedCandidate = userRepository.findById(candidateUser.getId()).orElseThrow();
+        assertFalse(updatedCandidate.isCanApplyToJobs());
     }
 }

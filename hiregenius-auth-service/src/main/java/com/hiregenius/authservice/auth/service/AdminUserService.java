@@ -7,7 +7,11 @@ import com.hiregenius.authservice.security.SecurityUser;
 
 public interface AdminUserService {
 
-    PageResponse<AdminUserResponse> getUsers(int page, int size, Role role, Boolean active, String search);
+    PageResponse<AdminUserResponse> getUsers(int page, int size, Role role, Boolean active, String search, Boolean pendingApproval);
 
     AdminUserResponse updateUserStatus(Long targetUserId, boolean active, SecurityUser currentAdmin);
+
+    AdminUserResponse approveRecruiter(Long targetUserId, SecurityUser currentAdmin);
+
+    AdminUserResponse updateUserPrivileges(Long targetUserId, Boolean canPostJobs, Boolean canApplyToJobs, SecurityUser currentAdmin);
 }

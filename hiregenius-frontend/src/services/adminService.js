@@ -10,7 +10,11 @@ import api from './api';
 export const adminService = {
   // User Management
   getUsers: (params) => api.get('/admin/users', { params }),
+  getUserDetail: (id) => api.get(`/admin/users/${id}`),
   updateUserStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }),
+  approveRecruiter: (id) => api.patch(`/admin/users/${id}/approve`),
+  updateUserPrivileges: (id, payload) => api.patch(`/admin/users/${id}/privileges`, payload),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
 
   // Platform Settings
   getSettings: () => api.get('/admin/settings'),

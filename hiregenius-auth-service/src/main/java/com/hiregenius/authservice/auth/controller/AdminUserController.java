@@ -1,5 +1,6 @@
 package com.hiregenius.authservice.auth.controller;
 
+import com.hiregenius.authservice.auth.dto.request.UpdateUserPrivilegesRequest;
 import com.hiregenius.authservice.auth.dto.request.UpdateUserStatusRequest;
 import com.hiregenius.authservice.auth.dto.response.AdminUserResponse;
 import com.hiregenius.authservice.auth.entity.Role;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping({"/api/admin/users", "/admin/users"})
-@Tag(name = "Admin User Management", description = "Endpoints for administrator user management and account status toggling")
+@Tag(name = "Admin User Management", description = "Endpoints for administrator user management, recruiter approval, and account/privilege status toggling")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminUserController {
 
@@ -42,7 +43,8 @@ public class AdminUserController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) String search
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean pendingApproval
     ) {
         Role roleEnum = null;
         if (role != null && !role.trim().isEmpty()) {
@@ -53,7 +55,7 @@ public class AdminUserController {
             }
         }
 
-        PageResponse<AdminUserResponse> result = adminUserService.getUsers(page, size, roleEnum, active, search);
+        PageResponse<AdminUserResponse> result = adminUserService.getUsers(page, size, roleEnum, active, search, pendingApproval);
         return ResponseEntity.ok(ApiResponse.ok("Users retrieved successfully", result));
     }
 
@@ -68,5 +70,33 @@ public class AdminUserController {
         AdminUserResponse updatedUser = adminUserService.updateUserStatus(id, request.getActive(), currentAdmin);
         String action = request.getActive() ? "enabled" : "disabled";
         return ResponseEntity.ok(ApiResponse.ok("User account " + action + " successfully", updatedUser));
+    }
+
+    @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Approve a recruiter account to allow job posting (ADMIN only)")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> approveRecruiter(
+            @PathVariable Long id,
+            @AuthenticationPrincipal SecurityUser currentAdmin
+    ) {
+        AdminUserResponse updatedUser = adminUserService.approveRecruiter(id, currentAdmin);
+        return ResponseEntity.ok(ApiResponse.ok("Recruiter account approved successfully", updatedUser));
+    }
+
+    @PatchMapping("/{id}/privileges")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update granular user privileges (can_post_jobs or can_apply_to_jobs) (ADMIN only)")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserPrivileges(
+            @PathVariable Long id,
+            @RequestBody UpdateUserPrivilegesRequest request,
+            @AuthenticationPrincipal SecurityUser currentAdmin
+    ) {
+        AdminUserResponse updatedUser = adminUserService.updateUserPrivileges(
+                id,
+                request.getCanPostJobs(),
+                request.getCanApplyToJobs(),
+                currentAdmin
+        );
+        return ResponseEntity.ok(ApiResponse.ok("User privileges updated successfully", updatedUser));
     }
 }

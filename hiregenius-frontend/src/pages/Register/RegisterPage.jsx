@@ -50,8 +50,8 @@ const RegisterPage = () => {
     try {
       const res = await authService.register(payload);
       dispatch(setCredentials({ token: res.data.token, user: res.data.user }));
-      toast.success('Account created! Welcome to HireGenius AI.');
-      navigate(ROLE_HOME[res.data.user?.role] || '/dashboard');
+      toast.success('Account created! Please enter the 6-digit verification code sent to your email.');
+      navigate(`/verify-email?email=${encodeURIComponent(payload.email)}`);
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));

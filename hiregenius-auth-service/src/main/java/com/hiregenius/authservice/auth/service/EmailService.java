@@ -12,11 +12,19 @@ public interface EmailService {
     void sendPasswordResetEmail(String toEmail, String userName, String resetLink);
 
     /**
-     * Sends an HTML email verification message containing a secure confirmation link.
+     * Sends an HTML email verification message containing a 6-digit one-time code (OTP).
      *
      * @param toEmail the recipient's email address
      * @param userName the recipient's display name
-     * @param verificationLink the full email verification URL
+     * @param otpCode the 6-digit verification code
      */
-    void sendVerificationEmail(String toEmail, String userName, String verificationLink);
+    void sendVerificationOtpEmail(String toEmail, String userName, String otpCode);
+
+    /**
+     * Sends an HTML notification to a recruiter when their account is approved by an administrator.
+     *
+     * @param toEmail the recipient's email address
+     * @param userName the recruiter's display name
+     */
+    void sendRecruiterApprovalEmail(String toEmail, String userName);
 }
