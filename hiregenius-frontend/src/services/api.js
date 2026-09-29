@@ -13,7 +13,7 @@ const authBaseURL = rawBaseURL.endsWith('/api')
   ? rawBaseURL
   : `${rawBaseURL.replace(/\/+$/, '')}/api`;
 
-const rawCoreURL = import.meta.env.VITE_CORE_API_URL || 'http://localhost:4000/api';
+const rawCoreURL = import.meta.env.VITE_CORE_API_URL || '/api';
 const coreBaseURL = rawCoreURL.endsWith('/api')
   ? rawCoreURL
   : `${rawCoreURL.replace(/\/+$/, '')}/api`;
