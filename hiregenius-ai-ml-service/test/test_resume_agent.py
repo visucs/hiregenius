@@ -155,7 +155,7 @@ class TestResumeParseEndpoint(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_api_parse_resume_success(self):
-        """Confirm /api/resume/parse extracts text and returns ParsedResume JSON."""
+        """Confirm /api/resume/parse extracts text, persists resume, and returns ParsedResumeResponse."""
         upload_file = UploadFile(
             filename="david_resume.pdf",
             file=io.BytesIO(self.sample_pdf_bytes),
@@ -163,13 +163,17 @@ class TestResumeParseEndpoint(unittest.IsolatedAsyncioTestCase):
 
         with patch(
             "app.api.resume.parse_resume_text", new_callable=AsyncMock
-        ) as mock_agent:
+        ) as mock_agent, patch(
+            "app.api.resume.save_parsed_resume", new_callable=AsyncMock
+        ) as mock_save:
             mock_agent.return_value = self.mock_parsed
-            res = await parse_resume(upload_file)
+            mock_save.return_value = "mock_doc_id_123"
+            res = await parse_resume(file=upload_file, candidate_id="cand_test_david")
 
-        self.assertIsInstance(res, ParsedResume)
-        self.assertEqual(res.full_name, "David Kumar")
-        self.assertIn("FastAPI", res.skills)
+        self.assertEqual(res.id, "mock_doc_id_123")
+        self.assertEqual(res.candidate_id, "cand_test_david")
+        self.assertEqual(res.parsed_data.full_name, "David Kumar")
+        self.assertIn("FastAPI", res.parsed_data.skills)
 
     async def test_api_parse_resume_rejects_too_short_text_as_ocr_required(self):
         """Confirm resumes with <50 chars of extracted text return 422 OCR required error."""
@@ -201,7 +205,7 @@ startxref
         )
 
         with self.assertRaises(HTTPException) as ctx:
-            await parse_resume(upload_file)
+            await parse_resume(file=upload_file, candidate_id="cand_test_david")
 
         self.assertEqual(ctx.exception.status_code, 422)
         self.assertIn("Optical Character Recognition (OCR) is required", ctx.exception.detail)
@@ -218,7 +222,7 @@ startxref
         ) as mock_agent:
             mock_agent.side_effect = ResumeParsingError("Failed to parse resume: Invalid LLM JSON")
             with self.assertRaises(HTTPException) as ctx:
-                await parse_resume(upload_file)
+                await parse_resume(file=upload_file, candidate_id="cand_test_david")
 
         self.assertEqual(ctx.exception.status_code, 422)
         self.assertIn("Invalid LLM JSON", ctx.exception.detail)
@@ -235,10 +239,11 @@ startxref
         ) as mock_agent:
             mock_agent.side_effect = ResumeParsingConfigError("GEMINI_API_KEY is not configured.")
             with self.assertRaises(HTTPException) as ctx:
-                await parse_resume(upload_file)
+                await parse_resume(file=upload_file, candidate_id="cand_test_david")
 
         self.assertEqual(ctx.exception.status_code, 503)
         self.assertIn("GEMINI_API_KEY is not configured", ctx.exception.detail)
+
 
 
 if __name__ == "__main__":

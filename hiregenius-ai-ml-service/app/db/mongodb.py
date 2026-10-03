@@ -36,6 +36,15 @@ class MongoDBManager:
             )
             self.db = self.client[settings.MONGODB_DB_NAME]
             # Collection reference for candidate resumes (Phase 6 resume parsing storage)
+            # Stored document schema:
+            # {
+            #     "candidate_id": str,
+            #     "original_filename": str,
+            #     "raw_text": str,
+            #     "parsed_data": dict (ParsedResume model_dump),
+            #     "parsed_at": datetime,
+            #     "model_version": str
+            # }
             self.resumes_collection = self.db["resumes"]
 
             # Verify connectivity immediately on startup with a lightweight ping
@@ -43,6 +52,14 @@ class MongoDBManager:
             logger.info(
                 f"[MongoDB] Successfully connected to MongoDB database: '{settings.MONGODB_DB_NAME}'"
             )
+
+            # Ensure unique index on candidate_id to support 1-resume-per-candidate upserts
+            try:
+                await self.resumes_collection.create_index("candidate_id", unique=True)
+                logger.info("[MongoDB] Ensured unique index on 'resumes.candidate_id'.")
+            except Exception as idx_err:
+                logger.warning(f"[MongoDB] Notice: Could not create unique index on candidate_id: {idx_err}")
+
         except Exception as e:
             logger.error(f"[MongoDB] Failed to connect to MongoDB: {e}")
             if settings.ENV == "production":

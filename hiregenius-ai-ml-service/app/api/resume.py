@@ -1,12 +1,25 @@
+from datetime import datetime, timezone
 import logging
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
-from app.models.resume import ParsedResume
+from app.config import settings
+from app.models.resume import (
+    ParsedResume,
+    ParsedResumeResponse,
+    SavedResumeResponse,
+)
 from app.services.resume_agent import (
     ResumeParsingConfigError,
     ResumeParsingError,
     parse_resume_text,
 )
+from app.services.resume_repository import (
+    DatabaseNotConnectedError,
+    ResumeRepositoryError,
+    get_parsed_resume_by_candidate_id,
+    save_parsed_resume,
+)
+
 from app.services.text_extraction import (
     CorruptedFileError,
     EmptyFileError,
@@ -113,13 +126,21 @@ async def extract_resume_text(
 
 @router.post(
     "/parse",
-    response_model=ParsedResume,
-    summary="Parse resume file into structured JSON via Gemini AI Agent",
-    description="Extracts raw text from uploaded PDF or DOCX resume and utilizes LangChain + Google Gemini to return structured candidate data.",
+    response_model=ParsedResumeResponse,
+    summary="Parse resume file into structured JSON via Gemini AI Agent and persist to MongoDB",
+    description="Extracts raw text from uploaded PDF or DOCX resume, utilizes LangChain + Google Gemini to return structured candidate data, and persists the record to MongoDB.",
 )
 async def parse_resume(
-    file: UploadFile = File(..., description="Resume file in .pdf or .docx format (max 5MB)")
+    file: UploadFile = File(..., description="Resume file in .pdf or .docx format (max 5MB)"),
+    candidate_id: str = Form(..., description="Candidate ID from Core API"),
 ):
+    clean_candidate_id = candidate_id.strip()
+    if not clean_candidate_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="candidate_id cannot be empty.",
+        )
+
     # Step 1: Extract raw text from resume file
     extracted_res = await extract_resume_text(file)
     raw_text = extracted_res.extracted_text
@@ -138,7 +159,6 @@ async def parse_resume(
     # Step 3: Run Gemini AI parsing agent
     try:
         parsed_resume = await parse_resume_text(raw_text)
-        return parsed_resume
     except ResumeParsingConfigError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -149,3 +169,74 @@ async def parse_resume(
             status_code=422,
             detail=str(e),
         )
+
+    # Step 4: Persist structured parsed resume to MongoDB
+    now_utc = datetime.now(timezone.utc)
+    try:
+        doc_id = await save_parsed_resume(
+            candidate_id=clean_candidate_id,
+            filename=extracted_res.filename,
+            raw_text=raw_text,
+            parsed_data=parsed_resume,
+            model_version=settings.GEMINI_MODEL,
+        )
+    except DatabaseNotConnectedError as e:
+        logger.error(f"Cannot save parsed resume for '{clean_candidate_id}': MongoDB not connected: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service unavailable. Parsed resume could not be persisted.",
+        )
+    except ResumeRepositoryError as e:
+        logger.error(f"Failed to save parsed resume for '{clean_candidate_id}': {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to persist parsed resume to database.",
+        )
+
+    return ParsedResumeResponse(
+        id=doc_id,
+        candidate_id=clean_candidate_id,
+        original_filename=extracted_res.filename,
+        parsed_data=parsed_resume,
+        parsed_at=now_utc,
+        model_version=settings.GEMINI_MODEL,
+    )
+
+
+@router.get(
+    "/{candidate_id}",
+    response_model=SavedResumeResponse,
+    summary="Retrieve previously parsed resume for a candidate",
+    description="Retrieves the stored parsed resume data and raw extraction for a given candidate_id from MongoDB.",
+)
+async def get_candidate_resume(candidate_id: str):
+    clean_candidate_id = candidate_id.strip()
+    if not clean_candidate_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="candidate_id cannot be empty.",
+        )
+
+    try:
+        doc = await get_parsed_resume_by_candidate_id(clean_candidate_id)
+    except DatabaseNotConnectedError as e:
+        logger.error(f"Cannot fetch parsed resume for '{clean_candidate_id}': MongoDB not connected: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service unavailable. Cannot retrieve resume.",
+        )
+    except ResumeRepositoryError as e:
+        logger.error(f"Failed to retrieve resume for '{clean_candidate_id}': {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error while retrieving resume.",
+        )
+
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No parsed resume found for candidate_id '{clean_candidate_id}'.",
+        )
+
+    return doc
+

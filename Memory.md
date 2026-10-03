@@ -1925,6 +1925,37 @@ pm run build completed successfully with 0 errors.
 - **Next**:
   - Phase 6 Part E: MongoDB persistence for parsed resumes (`resumes` collection storage).
 
+---
+
+### 2026-10-03 — Phase 6 Part E: Save Parsed Resume to MongoDB
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part E (Persist parsed resume data into MongoDB Atlas `resumes` collection with upsert semantics)
+- **Design Decision**:
+  - Implemented **Upsert (Replace)**: Overwrites any existing parsed resume for `candidate_id` with the new parse, matching Core API Phase 3's one-resume-per-candidate architecture. Guaranteed at database level with a unique index on `candidate_id`.
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/models/resume.py`: Added `ResumeDocument`, `ParsedResumeResponse`, and `SavedResumeResponse` with computed `_id` field ensuring compatibility with callers expecting either `id` or `_id`.
+    - `app/db/mongodb.py`: Documented document schema and added automatic unique index creation on `candidate_id` upon startup.
+    - `app/services/resume_repository.py`: Created repository layer with `save_parsed_resume(candidate_id, filename, raw_text, parsed_data)` and `get_parsed_resume_by_candidate_id(candidate_id)`. Includes atomic upsert logic via `update_one` and graceful custom exception handling (`DatabaseNotConnectedError`, `ResumeRepositoryError`).
+    - `app/api/resume.py`: Updated `POST /api/resume/parse` to accept required form field `candidate_id: str = Form(...)`, extract & parse, persist to MongoDB, and return `ParsedResumeResponse` with document `id` and `_id`. Added `GET /api/resume/{candidate_id}` returning `SavedResumeResponse` (HTTP 404 if not found).
+    - `test/test_resume_repository.py`: 9 unit and integration tests using an in-memory async Motor collection simulation (testing save & retrieve parity, upsert duplicate prevention, nonexistent candidate 404, disconnected DB 503, and invalid candidate_id 400).
+    - `test/test_resume_agent.py`: Updated existing endpoint tests to supply `candidate_id` and test `ParsedResumeResponse`.
+    - `README.md`: Documented updated `/parse` form contract, new `GET /{candidate_id}` endpoint, and 32 unit tests.
+- **Live Verification**:
+  - Live execution against real Google Gemini (`gemini-3.8-flash`) and real MongoDB Atlas cluster:
+    1. `GET /api/resume/test_cand_david_phase6` returned `HTTP 404 Not Found` before save.
+    2. `POST /api/resume/parse` with `candidate_id=test_cand_david_phase6` and `real_resume_david_kumar.pdf` succeeded (`HTTP 200 OK`, `_id: 6ac09ca8e0ddafc19265a7d1`).
+    3. `GET /api/resume/test_cand_david_phase6` returned the saved document with full raw text, parsed JSON, timestamp, and model version.
+    4. Second parse with same `candidate_id=test_cand_david_phase6` using `real_resume_alex_smith.docx` succeeded (`HTTP 200 OK`) and preserved the same document `_id` (`6ac09ca8e0ddafc19265a7d1`), fully replacing previous data with Alex Smith's details.
+    5. Atlas verification confirmed exact document count for candidate remained 1 (no duplicates). Cleaned up test document afterwards.
+- **Verification**:
+  - Full automated test suite (32 tests across 3 modules) passed in `0.423s` (`OK`).
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part F: Core API integration (wiring Core API resume upload to call AI-ML service).
+
+
 
 
 

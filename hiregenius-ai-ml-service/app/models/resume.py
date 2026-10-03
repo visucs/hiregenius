@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class EducationItem(BaseModel):
@@ -73,3 +74,48 @@ class ParsedResume(BaseModel):
         default_factory=list,
         description="Notable personal, academic, or professional projects",
     )
+
+
+class ResumeDocument(BaseModel):
+    """Schema representing the persisted resume document in MongoDB resumes collection."""
+
+    candidate_id: str = Field(..., description="Unique identifier of candidate from Core API")
+    original_filename: str = Field(..., description="Original filename of the uploaded resume")
+    raw_text: str = Field(..., description="Raw text extracted from the document")
+    parsed_data: ParsedResume = Field(..., description="Structured parsed resume data")
+    parsed_at: datetime = Field(..., description="Timestamp of when resume was parsed and stored")
+    model_version: str = Field(..., description="Model identifier used during parsing")
+
+
+class ParsedResumeResponse(BaseModel):
+    """API response model for POST /api/resume/parse."""
+
+    id: str = Field(..., description="MongoDB document ObjectId string")
+    candidate_id: str = Field(..., description="Candidate ID associated with this resume")
+    original_filename: str = Field(..., description="Original filename of the uploaded resume")
+    parsed_data: ParsedResume = Field(..., description="Structured parsed resume data")
+    parsed_at: datetime = Field(..., description="Timestamp of when resume was parsed")
+    model_version: str = Field(..., description="Gemini model version used for parsing")
+
+    @computed_field(alias="_id")
+    @property
+    def mongo_id(self) -> str:
+        return self.id
+
+
+class SavedResumeResponse(BaseModel):
+    """API response model for GET /api/resume/{candidate_id}."""
+
+    id: str = Field(..., description="MongoDB document ObjectId string")
+    candidate_id: str = Field(..., description="Candidate ID associated with this resume")
+    original_filename: str = Field(..., description="Original filename of the uploaded resume")
+    raw_text: str = Field(..., description="Raw text extracted from the document")
+    parsed_data: ParsedResume = Field(..., description="Structured parsed resume data")
+    parsed_at: datetime = Field(..., description="Timestamp of when resume was parsed")
+    model_version: str = Field(..., description="Gemini model version used for parsing")
+
+    @computed_field(alias="_id")
+    @property
+    def mongo_id(self) -> str:
+        return self.id
+

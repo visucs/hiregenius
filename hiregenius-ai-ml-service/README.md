@@ -33,14 +33,16 @@ hiregenius-ai-ml-service/
 │   ├── services/
 │   │   ├── __init__.py          # Business logic services
 │   │   ├── text_extraction.py   # PDF and DOCX parsing & extraction dispatcher
-│   │   └── resume_agent.py      # LangChain + Gemini structured resume parsing agent
+│   │   ├── resume_agent.py      # LangChain + Gemini structured resume parsing agent
+│   │   └── resume_repository.py # MongoDB persistence & upsert operations for candidate resumes
 │   └── models/
 │       ├── __init__.py          # Pydantic schemas
-│       └── resume.py            # ParsedResume, EducationItem, ExperienceItem, ProjectItem
+│       └── resume.py            # ParsedResume, ParsedResumeResponse, SavedResumeResponse
 ├── test/
 │   ├── __init__.py              # Test suite package
 │   ├── test_text_extraction.py  # 14 unit and endpoint integration tests
 │   ├── test_resume_agent.py     # 9 unit and mock LLM integration tests
+│   ├── test_resume_repository.py# 9 unit and repository persistence tests
 │   └── fixtures/                # Sample resumes (.pdf, .docx, corrupted, etc.)
 ├── requirements.txt             # Core dependencies including langchain & gemini
 ├── .env.example                 # Example environment variables (PORT, MONGODB_URI, GEMINI_API_KEY)
@@ -163,48 +165,82 @@ Expected response (HTTP 200 OK):
 }
 ```
 
-### 4.4. AI Resume Parsing (`POST /api/resume/parse`)
+### 4.4. AI Resume Parsing & Persistence (`POST /api/resume/parse`)
 
-Extracts text and applies LangChain + Google Gemini to return structured candidate data:
+Extracts text, applies LangChain + Google Gemini to return structured candidate data, and upserts the record into MongoDB (`resumes` collection):
 
 ```bash
 curl -X POST "http://localhost:8000/api/resume/parse" \
+  -F "candidate_id=cand_test_001" \
   -F "file=@/path/to/resume.pdf"
 ```
 
 Expected response (HTTP 200 OK):
 ```json
 {
-  "full_name": "David Kumar",
-  "email": "david.kumar@hiregenius.ai",
-  "phone": "+1 415 555 2671",
-  "skills": ["Python", "Go", "FastAPI", "MongoDB Atlas", "Docker"],
-  "education": [],
-  "experience": [
-    {
-      "title": "Lead Backend Engineer",
-      "company": "TechCorp AI",
-      "duration": "2022 - Present",
-      "description": "Designed distributed AI orchestration pipelines with Python and FastAPI."
-    }
-  ],
-  "certifications": [],
-  "projects": []
+  "id": "6ac09ca8e0ddafc19265a7d1",
+  "_id": "6ac09ca8e0ddafc19265a7d1",
+  "candidate_id": "cand_test_001",
+  "original_filename": "resume.pdf",
+  "parsed_data": {
+    "full_name": "David Kumar",
+    "email": "david.kumar@hiregenius.ai",
+    "phone": "+1 415 555 2671",
+    "skills": ["Python", "Go", "FastAPI", "MongoDB Atlas", "Docker"],
+    "education": [],
+    "experience": [
+      {
+        "title": "Lead Backend Engineer",
+        "company": "TechCorp AI",
+        "duration": "2022 - Present",
+        "description": "Designed distributed AI orchestration pipelines with Python and FastAPI."
+      }
+    ],
+    "certifications": [],
+    "projects": []
+  },
+  "parsed_at": "2026-10-03T06:11:51.960297Z",
+  "model_version": "gemini-3.8-flash"
 }
 ```
 
 Validation & Error Handling:
 - **Scanned/Image-only PDF (<50 chars text)**: Returns **HTTP 422 Unprocessable Content** explaining that OCR is required.
+- **Missing or empty candidate_id**: Returns **HTTP 400 Bad Request**.
 - **Unsupported extension**: Returns **HTTP 400 Bad Request**.
 - **Oversized file (>5MB)**: Returns **HTTP 400 Bad Request**.
 - **Corrupted file**: Returns **HTTP 422 Unprocessable Content**.
 
-### 4.5. Running Automated Tests
+### 4.5. Retrieve Parsed Resume (`GET /api/resume/{candidate_id}`)
 
-Run the test suite via `unittest` (all LLM calls are mocked):
+Retrieves previously persisted resume data for a specific candidate:
 
 ```bash
-python -m unittest discover -s test -v
+curl http://localhost:8000/api/resume/cand_test_001
+```
+
+Expected response (HTTP 200 OK):
+```json
+{
+  "id": "6ac09ca8e0ddafc19265a7d1",
+  "_id": "6ac09ca8e0ddafc19265a7d1",
+  "candidate_id": "cand_test_001",
+  "original_filename": "resume.pdf",
+  "raw_text": "David Kumar - Senior Backend Engineer...",
+  "parsed_data": { ... },
+  "parsed_at": "2026-10-03T06:11:51.960000",
+  "model_version": "gemini-3.8-flash"
+}
+```
+
+If candidate has no parsed resume, returns **HTTP 404 Not Found**.
+
+### 4.6. Running Automated Tests
+
+Run the test suite via `unittest` (all MongoDB and LLM calls are mocked):
+
+```bash
+python -m unittest discover -s test -p "test_*.py" -v
 ```
 
 ---
@@ -234,5 +270,7 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
 - [x] **Phase 6 Part A**: Project setup & skeleton (`FastAPI`, `PORT=8000`, `GET /health`, multi-stage Dockerfile, CI workflow).
 - [x] **Phase 6 Part B**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, live Atlas connectivity).
 - [x] **Phase 6 Part C**: Resume text extraction (PDF / DOCX processing via `pypdf` & `python-docx`, 5MB limit, 400/422 validation, automated test suite).
-- [x] **Phase 6 Part D (Current)**: Resume Parsing Agent (LangChain + Google Gemini structured output, anti-hallucination prompt, OCR quality gate, mocked test suite).
-- [ ] **Phase 6 Part E (Next)**: MongoDB persistence for parsed resumes (`resumes` collection storage).
+- [x] **Phase 6 Part D**: Resume Parsing Agent (LangChain + Google Gemini structured output, anti-hallucination prompt, OCR quality gate, mocked test suite).
+- [x] **Phase 6 Part E (Current)**: Save Parsed Resume to MongoDB (`save_parsed_resume`, `get_parsed_resume_by_candidate_id`, upsert-by-candidate_id, 32 automated tests).
+- [ ] **Phase 6 Part F (Next)**: Core API integration (wiring Core API resume upload to call AI-ML service).
+
