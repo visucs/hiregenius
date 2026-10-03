@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 6 Part A complete (AI/ML Service Setup & Skeleton) | Core API deployed | Auth Service deployed | Frontend live
+- **Active Phase:** Phase 6 Part B complete (MongoDB Connection & Resume Repository) | Core API deployed | Auth Service deployed | Frontend live
 - **Last Updated:** 2026-10-03
 
 ## Repo / Service Locations
 - Frontend: hiregenius-frontend/ (live on Vercel)
 - Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
 - Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Part A setup complete)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A & B complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -1844,8 +1844,33 @@ pm run build completed successfully with 0 errors.
   - Part B: MongoDB connection & document repository (`resume_json` collection).
   - Part C: Resume text extraction pipeline (PDF/DOCX handling).
   - Part D: Resume Parsing Agent with Google Gemini structured output.
-  - Part E: Resume scoring model & skill matching.
-  - Part F: Core API orchestration integration.
+
+---
+
+### 2026-10-03 — Phase 6 Part B: MongoDB Connection & Resume Repository Setup
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part B (MongoDB Connectivity & Resume Collection ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `pymongo>=4.6.0,<5.0.0` and `motor>=3.3.0,<4.0.0` for asynchronous MongoDB support.
+    - `app/config.py`: Extended configuration to read `MONGODB_URI` and `MONGODB_DB_NAME` (default: `"hiregenius_ai"`). Added fatal-if-missing validation in production (`RuntimeError`) while logging clear warnings in local/development environments. Added dual fallback loading checking both service-level `.env` and root `.env`.
+    - `.env.example`: Updated with `MONGODB_URI` placeholder and `MONGODB_DB_NAME=hiregenius_ai`.
+    - `app/db/__init__.py`: Package init for database layer.
+    - `app/db/mongodb.py`: Async connection manager (`MongoDBManager`) utilizing `AsyncIOMotorClient`, exposing `get_database()`, `get_resumes_collection()` (`resumes` collection reference for parsed resume JSON), and a lightweight `ping()` health command.
+    - `app/main.py`: Modern FastAPI `lifespan` context manager ensuring graceful connection establishment on startup and clean connection pool closure on shutdown. Updated `GET /health` to perform a database ping: returns HTTP 200 `{"service": "ai-ml-service", "status": "UP", "mongodb": "CONNECTED"}` when healthy, or HTTP 503 `{"service": "ai-ml-service", "status": "DOWN", "mongodb": "DISCONNECTED"}` when unreachable.
+    - `README.md`: Documented MongoDB configuration, async Motor client lifecycle, collection access, and database-aware health check response codes.
+  - `.github/workflows/ai-ml-service-ci.yml`:
+    - Updated smoke test suite with unit mock tests verifying both HTTP 200 CONNECTED and HTTP 503 DISCONNECTED paths without requiring an external MongoDB connection in CI.
+- **Verification**:
+  - Verified local venv package installation of `pymongo` and `motor`.
+  - Verified startup and shutdown lifecycle hooks execute cleanly.
+  - Verified `GET /health` properly returns HTTP 503 DISCONNECTED when unconfigured, and HTTP 200 CONNECTED when ping succeeds.
+  - Verified fatal error is thrown in production when `MONGODB_URI` is missing.
+  - Verified zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part C: Resume text extraction (PDF / DOCX processing).
+
 
 
 

@@ -8,10 +8,10 @@ Microservice responsible for Generative AI agents, resume parsing, candidate sco
 
 - **Framework**: FastAPI (Python 3.11+)
 - **Server**: Uvicorn ASGI
+- **Database Driver**: `motor` (async MongoDB driver) & `pymongo`
 - **Validation & Settings**: Pydantic v2, Python-dotenv
 - **Containerization**: Docker (multi-stage, non-root user `appuser`)
-- **Future Additions (Parts B–F)**:
-  - MongoDB (`motor` / `pymongo`) for agent logs, JSON resume storage, and memory
+- **Future Additions (Parts C–D)**:
   - LangChain / LangGraph for multi-agent orchestration
   - Google Gemini API (`google-generativeai`) for LLM parsing & evaluation
 
@@ -22,17 +22,20 @@ Microservice responsible for Generative AI agents, resume parsing, candidate sco
 ```
 hiregenius-ai-ml-service/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                  # FastAPI app entrypoint (/health endpoint)
-│   ├── config.py                # Centralized env var loading (mirrors Core API's env.js)
+│   ├── __init__.py              # Application package marker
+│   ├── main.py                  # FastAPI app entrypoint with async lifespan & /health
+│   ├── config.py                # Centralized env var loading & validation (mirrors Core API's env.js)
 │   ├── api/
-│   │   └── __init__.py          # API route modules (added in subsequent parts)
+│   │   └── __init__.py          # API route modules (for subsequent parts)
+│   ├── db/
+│   │   ├── __init__.py          # Database package marker
+│   │   └── mongodb.py           # Async Motor client, lifespan hooks & resumes collection
 │   ├── services/
-│   │   └── __init__.py          # Business logic services (added in subsequent parts)
+│   │   └── __init__.py          # Business logic services (for subsequent parts)
 │   └── models/
-│       └── __init__.py          # Pydantic schemas (added in subsequent parts)
-├── requirements.txt             # Core dependencies (fastapi, uvicorn, python-dotenv, pydantic)
-├── .env.example                 # Example environment variables
+│       └── __init__.py          # Pydantic schemas (for subsequent parts)
+├── requirements.txt             # fastapi, uvicorn, python-dotenv, pydantic, pymongo, motor
+├── .env.example                 # Example environment variables (PORT, MONGODB_URI, MONGODB_DB_NAME)
 ├── .gitignore                   # Ignores venvs, cache, and secrets
 ├── Dockerfile                   # Multi-stage production container
 └── README.md                    # Setup and development documentation
@@ -46,7 +49,7 @@ hiregenius-ai-ml-service/
 
 - Python 3.11+ installed (`python --version`)
 - `pip` package manager installed
-- Docker (optional, for containerized execution)
+- MongoDB instance (MongoDB Atlas cluster or local MongoDB)
 
 ### 3.2. Virtual Environment Convention
 
@@ -82,7 +85,7 @@ python -m venv venv
 
 ### 3.3. Install Dependencies
 
-With the virtual environment activated, install the minimal Phase 6 Part A dependencies:
+With the virtual environment activated:
 
 ```bash
 pip install --upgrade pip
@@ -97,9 +100,11 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-Default configuration:
+Set your configuration values:
 ```env
 PORT=8000
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DB_NAME=hiregenius_ai
 ```
 
 ---
@@ -121,17 +126,27 @@ python -m app.main
 
 ### 4.2. Verify Health Check
 
-Query the health endpoint:
+Query the database-aware health endpoint:
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-Expected JSON response:
+- **When MongoDB is connected (HTTP 200 OK)**:
 ```json
 {
   "service": "ai-ml-service",
-  "status": "UP"
+  "status": "UP",
+  "mongodb": "CONNECTED"
+}
+```
+
+- **When MongoDB is unreachable / disconnected (HTTP 503 Service Unavailable)**:
+```json
+{
+  "service": "ai-ml-service",
+  "status": "DOWN",
+  "mongodb": "DISCONNECTED"
 }
 ```
 
@@ -154,22 +169,24 @@ docker build -t hiregenius-ai-ml-service:latest .
 ### 5.2. Run the Docker Container
 
 ```bash
-docker run -d --name hiregenius-ai-ml-service -p 8000:8000 hiregenius-ai-ml-service:latest
+docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
+  -e MONGODB_URI="<your_mongodb_uri>" \
+  -e MONGODB_DB_NAME="hiregenius_ai" \
+  hiregenius-ai-ml-service:latest
 ```
 
 Check health status:
 ```bash
 docker ps
-# Status will indicate "(healthy)" once the HEALTHCHECK passes
+# Status will indicate "(healthy)" once the HEALTHCHECK passes against /health
 ```
 
 ---
 
 ## 6. Phase Status & Roadmap
 
-- [x] **Phase 6 Part A (Current)**: Project setup & skeleton only (`FastAPI`, `PORT=8000`, `GET /health`, multi-stage Dockerfile, CI workflow).
-- [ ] **Phase 6 Part B (Pending)**: MongoDB connection & configuration (`MONGODB_URI`, `resume_json` collection).
+- [x] **Phase 6 Part A**: Project setup & skeleton (`FastAPI`, `PORT=8000`, `GET /health`, multi-stage Dockerfile, CI workflow).
+- [x] **Phase 6 Part B (Current)**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, DB-aware `/health` with 503 fallback).
 - [ ] **Phase 6 Part C (Pending)**: Resume text extraction (PDF / DOCX processing).
 - [ ] **Phase 6 Part D (Pending)**: Resume Parsing Agent (Google Gemini structured extraction).
-- [ ] **Phase 6 Part E (Pending)**: ML Resume Scoring & skill matching logic.
-- [ ] **Phase 6 Part F (Pending)**: Core API & Spring Boot orchestration integration.
+- [ ] **Future / Tentative**: Core API integration & scoring workflows.
