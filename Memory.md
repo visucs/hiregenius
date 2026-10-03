@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 2 complete âœ“ | Recruiter Dashboard âœ“ | Admin Dashboard âœ“ | Candidate Dashboard color-matched âœ“
-- **Last Updated:** 2026-09-07
+- **Active Phase:** Phase 6 Part A complete (AI/ML Service Setup & Skeleton) | Core API deployed | Auth Service deployed | Frontend live
+- **Last Updated:** 2026-10-03
 
 ## Repo / Service Locations
-- Frontend: `hiregenius-frontend/` â† active
-- Backend: `hiregenius-backend/` â† not started yet
-- AI Service: `hiregenius-ai-service/` â† not started yet
-- ML Service: `hiregenius-ml-service/` â† not started yet
+- Frontend: hiregenius-frontend/ (live on Vercel)
+- Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
+- Core API: hiregenius-core-api/ (live on EC2 / 4000)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Part A setup complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -403,7 +403,8 @@ pm run lint inside hiregenius-frontend/ (Passed with 0 errors).
 pm run build inside hiregenius-frontend/ (Passed, 2935 modules transformed).
 - Updated hiregenius-frontend/Dockerfile base image from 
 ode:20.11.1-alpine to 
-ode:20-alpine (Node >= 20.19.0) to support ite v8.2.1 / olldown (util.styleText).
+ode:20-alpine (Node >= 20.19.0) to support ite v8.2.1 / 
+olldown (util.styleText).
 - Tested docker build -t hiregenius-frontend:test . (Passed).
 - Tested docker run on exposed port 8080 and verified HTTP GET returned 200 OK.
 
@@ -477,7 +478,8 @@ pm run build build command, and dist output directory for monorepo configuration
   - Removed import.meta.env.DEV restriction so Demo 1-Click logins are available in production deployments (Vercel, GitHub Pages).
   - Configured realistic demo personas:
     - **Candidate**: Alex Morgan (candidate@hiregenius.ai) -> /candidate/dashboard
-    - **Recruiter**: Sarah Chen (ecruiter@hiregenius.ai) -> /recruiter/dashboard
+    - **Recruiter**: Sarah Chen (
+ecruiter@hiregenius.ai) -> /recruiter/dashboard
     - **Admin**: Marcus Vance (dmin@hiregenius.ai) -> /admin/dashboard
   - Added responsive $\ge 44 touch-target 1-click login cards with role-specific accent colors and persona badges.
   - Implemented graceful offline fallback in onSubmit: If backend API is unreachable/offline and a user enters any demo email, they are seamlessly authenticated to the corresponding demo dashboard.
@@ -620,12 +622,16 @@ pm run build (0 errors in 1.22s).
 - **Note for other services**: hiregenius-core-api (or any other service sharing the users schema) should ensure enum fields mapped to VARCHAR columns explicitly use string/VARCHAR JDBC typing to avoid similar schema validation failures.
 - **Verification**: mvn clean verify passed with 0 errors, 14/14 tests passing.
 
-### 2026-09-16 â€” Align All User Entity Enum Fields (ole, uth_provider) with VARCHAR Schema
-- **Issue**: Render deployment failed during Hibernate schema validation for the ole column:
+### 2026-09-16 â€” Align All User Entity Enum Fields (
+ole, uth_provider) with VARCHAR Schema
+- **Issue**: Render deployment failed during Hibernate schema validation for the 
+ole column:
   Schema-validation: wrong column type encountered in column [role] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('recruiter','candidate','admin') (Types#ENUM)]
-- **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both ole VARCHAR(50) and uth_provider VARCHAR(50).
+- **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both 
+ole VARCHAR(50) and uth_provider VARCHAR(50).
 - **Fields Updated in User.java**:
-  1. ole:
+  1. 
+ole:
      `java
      @Enumerated(EnumType.STRING)
      @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -648,7 +654,8 @@ pm run build (0 errors in 1.22s).
   1. hiregenius-frontend/src/services/authService.js:
      - Updated googleLogin(payload) to send a real HTTP POST request to /auth/google-login via Axios with { ...data, data } normalized return.
      - Preserved mockGoogleLoginApiCall(payload) in the file as an unreferenced fallback for offline development.
-     - Verified login, egister, and orgotPassword were already wired to real backend endpoints.
+     - Verified login, 
+egister, and orgotPassword were already wired to real backend endpoints.
   2. hiregenius-frontend/src/pages/Login/LoginPage.jsx:
      - Removed demo info banner and the "Demo Portals (1-Click)" section containing Candidate, Recruiter, and Admin bypass buttons.
      - Removed DEMO_ACCOUNTS map and devLogin handler.
@@ -1806,6 +1813,40 @@ pm run build completed successfully with 0 errors.
   - `GET /api/jobs` -> 200 OK (Core API, `status: 200, jobs: []`).
   - `GET /api/auth/validate` -> 401 (Auth Service, `Full authentication is required`).
   - `POST /api/auth/login` -> 401 (Auth Service, `Invalid email or password`).
+
+---
+
+### 2026-10-03 — Phase 6 Part A: AI/ML Service Setup & Project Skeleton
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part A (Project Setup and Skeleton ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/__init__.py`: Package init for the service.
+    - `app/main.py`: Minimal FastAPI application exposing `GET /health` returning `{"service": "ai-ml-service", "status": "UP"}`.
+    - `app/config.py`: Centralized environment variable loader using `python-dotenv`, defining `PORT` (default 8000) and `ENV` (default "development"), mirroring Core API's disciplined `env.js` pattern.
+    - `app/api/__init__.py`, `app/services/__init__.py`, `app/models/__init__.py`: Scaffolded subpackages for route handlers, business logic, and Pydantic schemas.
+    - `requirements.txt`: Restricted strictly to `fastapi`, `uvicorn`, `python-dotenv`, `pydantic`.
+    - `.env.example`: Configured with `PORT=8000`.
+    - `.gitignore`: Comprehensive rules for Python virtual environments (`venv/`, `.venv/`), bytecode cache (`__pycache__/`), and environment secrets (`.env`).
+    - `Dockerfile`: Multi-stage production container based on `python:3.11-slim`, non-root user `appuser` (UID 1000), internal Python-based `HEALTHCHECK` probing `GET /health`, exposing port 8000.
+    - `README.md`: Full documentation covering virtual environment convention (`python -m venv venv`), activation on Windows & Linux, dependency installation, local execution, Docker usage, and Phase 6 roadmap.
+  - `.github/workflows/ai-ml-service-ci.yml`:
+    - GitHub Actions CI workflow triggered only on changes to `hiregenius-ai-ml-service/**` and the workflow file itself across `main`, `dev`, and `feature/**`.
+    - Installs dependencies from `requirements.txt` on Python 3.11 and executes smoke checks ensuring `app.main` imports cleanly and FastAPI config initializes properly.
+    - Tests Docker container build.
+    - Contains GHCR container build-and-push step for pushes to `main`.
+- **Verification**:
+  - Verified local Python 3.13 venv setup and package installation.
+  - Verified local server running on port 8000; `GET http://localhost:8000/health` returned `{"service": "ai-ml-service", "status": "UP"}`.
+  - Verified zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Pending (Subsequent Phase 6 Parts)**:
+  - Part B: MongoDB connection & document repository (`resume_json` collection).
+  - Part C: Resume text extraction pipeline (PDF/DOCX handling).
+  - Part D: Resume Parsing Agent with Google Gemini structured output.
+  - Part E: Resume scoring model & skill matching.
+  - Part F: Core API orchestration integration.
+
 
 
 
