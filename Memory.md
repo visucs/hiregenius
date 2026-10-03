@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 6 Part C complete (Resume Text Extraction PDF/DOCX) | Core API deployed | Auth Service deployed | Frontend live
+- **Active Phase:** Phase 6 Part D complete (Resume Parsing Agent with LangChain + Google Gemini) | Core API deployed | Auth Service deployed | Frontend live
 - **Last Updated:** 2026-10-03
 
 ## Repo / Service Locations
 - Frontend: hiregenius-frontend/ (live on Vercel)
 - Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
 - Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A, B & C complete)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A, B, C & D complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -1899,6 +1899,28 @@ pm run build completed successfully with 0 errors.
   - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
 - **Next**:
   - Phase 6 Part D: Resume Parsing Agent (Google Gemini structured extraction).
+
+---
+
+### 2026-10-03 — Phase 6 Part D: Resume Parsing Agent (LangChain + Google Gemini)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part D (Resume Parsing Agent with LangChain + Google Gemini Structured Output)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `langchain>=0.3.0,<0.4.0`, `langchain-google-genai>=2.0.0,<3.0.0`, and `google-generativeai>=0.8.0,<1.0.0` with verified version compatibility.
+    - `app/config.py`: Extended configuration to read `GEMINI_API_KEY` and `GEMINI_MODEL` (default `"gemini-1.5-flash"`). Enforces fatal-in-production check while logging warning in development.
+    - `app/models/resume.py`: Pydantic v2 structured contract `ParsedResume` with sub-models (`EducationItem`, `ExperienceItem`, `ProjectItem`). Fields (`full_name`, `email`, `phone`, `skills`, `education`, `experience`, `certifications`, `projects`) are nullable / optional to accommodate incomplete resumes gracefully.
+    - `app/services/resume_agent.py`: LangChain-powered resume parser implementing `with_structured_output(ParsedResume)`. Configured with rigorous anti-hallucination prompt instructing model never to invent or extrapolate unstated skills/facts. Wraps all LLM exceptions in custom `ResumeParsingError` / `ResumeParsingConfigError` to prevent raw stack trace leakage.
+    - `app/api/resume.py`: Registered `POST /api/resume/parse` endpoint. Reuses text extraction from Part C, enforces a quality gate rejecting resumes with <50 characters as requiring OCR (HTTP 422), invokes the parsing agent, and returns structured `ParsedResume` JSON.
+    - `test/test_resume_agent.py`: 9 comprehensive unit and integration tests with mocked Gemini calls, validating output schema mapping, empty input rejection, unconfigured API key handling (503), LLM exception wrapping (422), and the <50 character OCR quality gate.
+    - `README.md`: Documented `/parse` endpoint, schema, and local execution instructions.
+- **Verification**:
+  - Full automated test suite (23 tests: 14 from Part C + 9 from Part D) passed in `0.279s` (`OK`).
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part E: MongoDB persistence for parsed resumes (`resumes` collection storage).
+
 
 
 

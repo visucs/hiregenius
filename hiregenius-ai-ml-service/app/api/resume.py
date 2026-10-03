@@ -1,6 +1,12 @@
 import logging
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
+from app.models.resume import ParsedResume
+from app.services.resume_agent import (
+    ResumeParsingConfigError,
+    ResumeParsingError,
+    parse_resume_text,
+)
 from app.services.text_extraction import (
     CorruptedFileError,
     EmptyFileError,
@@ -16,6 +22,7 @@ router = APIRouter(prefix="/api/resume", tags=["Resume Processing"])
 # 5MB file size limit (matching Core API resume upload standard from Phase 3)
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+MIN_RESUME_TEXT_CHARS = 50
 
 
 class ExtractedTextResponse(BaseModel):
@@ -87,13 +94,13 @@ async def extract_resume_text(
     except (EncryptedFileError, CorruptedFileError) as e:
         logger.warning(f"Unprocessable resume document '{filename}': {e}")
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail=f"Cannot extract text from '{filename}': {str(e)}",
         )
     except Exception as e:
         logger.error(f"Unexpected extraction failure on '{filename}': {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail=f"Failed to extract text from '{filename}': Document processing error.",
         )
 
@@ -102,3 +109,43 @@ async def extract_resume_text(
         extracted_text=extracted_text,
         character_count=len(extracted_text),
     )
+
+
+@router.post(
+    "/parse",
+    response_model=ParsedResume,
+    summary="Parse resume file into structured JSON via Gemini AI Agent",
+    description="Extracts raw text from uploaded PDF or DOCX resume and utilizes LangChain + Google Gemini to return structured candidate data.",
+)
+async def parse_resume(
+    file: UploadFile = File(..., description="Resume file in .pdf or .docx format (max 5MB)")
+):
+    # Step 1: Extract raw text from resume file
+    extracted_res = await extract_resume_text(file)
+    raw_text = extracted_res.extracted_text
+
+    # Step 2: Quality gate - reject suspiciously short text (likely scanned image without text layer)
+    if len(raw_text.strip()) < MIN_RESUME_TEXT_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Extracted text from '{extracted_res.filename}' is too short ({len(raw_text.strip())} chars). "
+                "The document appears to be a scanned or image-based resume with no extractable text layer. "
+                "Optical Character Recognition (OCR) is required and is currently out of scope."
+            ),
+        )
+
+    # Step 3: Run Gemini AI parsing agent
+    try:
+        parsed_resume = await parse_resume_text(raw_text)
+        return parsed_resume
+    except ResumeParsingConfigError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+    except ResumeParsingError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=str(e),
+        )

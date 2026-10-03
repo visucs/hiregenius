@@ -8,13 +8,11 @@ Microservice responsible for Generative AI agents, resume parsing, candidate sco
 
 - **Framework**: FastAPI (Python 3.11+)
 - **Server**: Uvicorn ASGI
+- **AI / LLM Integration**: LangChain (`langchain`, `langchain-google-genai`) & Google Gemini API (`google-generativeai`)
 - **Document Extractors**: `pypdf` (PDF text extraction), `python-docx` (Word DOCX extraction), `python-multipart`
 - **Database Driver**: `motor` (async MongoDB driver) & `pymongo`
 - **Validation & Settings**: Pydantic v2, Python-dotenv
 - **Containerization**: Docker (multi-stage, non-root user `appuser`)
-- **Future Additions (Part D)**:
-  - LangChain / LangGraph for multi-agent orchestration
-  - Google Gemini API (`google-generativeai`) for LLM parsing & evaluation
 
 ---
 
@@ -28,21 +26,24 @@ hiregenius-ai-ml-service/
 │   ├── config.py                # Centralized env var loading & validation (mirrors Core API's env.js)
 │   ├── api/
 │   │   ├── __init__.py          # API route modules
-│   │   └── resume.py            # POST /api/resume/extract-text endpoint
+│   │   └── resume.py            # POST /extract-text and POST /parse endpoints
 │   ├── db/
 │   │   ├── __init__.py          # Database package marker
 │   │   └── mongodb.py           # Async Motor client, lifespan hooks & resumes collection
 │   ├── services/
 │   │   ├── __init__.py          # Business logic services
-│   │   └── text_extraction.py   # PDF and DOCX parsing & extraction dispatcher
+│   │   ├── text_extraction.py   # PDF and DOCX parsing & extraction dispatcher
+│   │   └── resume_agent.py      # LangChain + Gemini structured resume parsing agent
 │   └── models/
-│       └── __init__.py          # Pydantic schemas
+│       ├── __init__.py          # Pydantic schemas
+│       └── resume.py            # ParsedResume, EducationItem, ExperienceItem, ProjectItem
 ├── test/
 │   ├── __init__.py              # Test suite package
 │   ├── test_text_extraction.py  # 14 unit and endpoint integration tests
+│   ├── test_resume_agent.py     # 9 unit and mock LLM integration tests
 │   └── fixtures/                # Sample resumes (.pdf, .docx, corrupted, etc.)
-├── requirements.txt             # fastapi, uvicorn, python-dotenv, pydantic, pymongo, motor, pypdf, python-docx, python-multipart
-├── .env.example                 # Example environment variables (PORT, MONGODB_URI, MONGODB_DB_NAME)
+├── requirements.txt             # Core dependencies including langchain & gemini
+├── .env.example                 # Example environment variables (PORT, MONGODB_URI, GEMINI_API_KEY)
 ├── .gitignore                   # Ignores venvs, cache, and secrets
 ├── Dockerfile                   # Multi-stage production container
 └── README.md                    # Setup and development documentation
@@ -57,6 +58,7 @@ hiregenius-ai-ml-service/
 - Python 3.11+ installed (`python --version`)
 - `pip` package manager installed
 - MongoDB instance (MongoDB Atlas cluster or local MongoDB)
+- Google Gemini API Key (obtain from [Google AI Studio](https://aistudio.google.com/))
 
 ### 3.2. Virtual Environment Convention
 
@@ -110,6 +112,8 @@ Set your configuration values:
 PORT=8000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.p0wadbv.mongodb.net
 MONGODB_DB_NAME=hiregenius_ai
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 ---
@@ -159,15 +163,45 @@ Expected response (HTTP 200 OK):
 }
 ```
 
+### 4.4. AI Resume Parsing (`POST /api/resume/parse`)
+
+Extracts text and applies LangChain + Google Gemini to return structured candidate data:
+
+```bash
+curl -X POST "http://localhost:8000/api/resume/parse" \
+  -F "file=@/path/to/resume.pdf"
+```
+
+Expected response (HTTP 200 OK):
+```json
+{
+  "full_name": "David Kumar",
+  "email": "david.kumar@hiregenius.ai",
+  "phone": "+1 415 555 2671",
+  "skills": ["Python", "Go", "FastAPI", "MongoDB Atlas", "Docker"],
+  "education": [],
+  "experience": [
+    {
+      "title": "Lead Backend Engineer",
+      "company": "TechCorp AI",
+      "duration": "2022 - Present",
+      "description": "Designed distributed AI orchestration pipelines with Python and FastAPI."
+    }
+  ],
+  "certifications": [],
+  "projects": []
+}
+```
+
 Validation & Error Handling:
-- Unsupported extensions (e.g. `.txt`): Returns **HTTP 400 Bad Request**.
-- Empty files (0 bytes): Returns **HTTP 400 Bad Request**.
-- Oversized files (> 5MB): Returns **HTTP 400 Bad Request**.
-- Corrupted/unreadable files: Returns **HTTP 422 Unprocessable Content**.
+- **Scanned/Image-only PDF (<50 chars text)**: Returns **HTTP 422 Unprocessable Content** explaining that OCR is required.
+- **Unsupported extension**: Returns **HTTP 400 Bad Request**.
+- **Oversized file (>5MB)**: Returns **HTTP 400 Bad Request**.
+- **Corrupted file**: Returns **HTTP 422 Unprocessable Content**.
 
-### 4.4. Running Automated Tests
+### 4.5. Running Automated Tests
 
-Run the test suite via `unittest`:
+Run the test suite via `unittest` (all LLM calls are mocked):
 
 ```bash
 python -m unittest discover -s test -v
@@ -179,8 +213,6 @@ python -m unittest discover -s test -v
 
 ### 5.1. Build the Docker Image
 
-The Dockerfile uses a multi-stage build on `python:3.11-slim` with a dedicated non-root user (`appuser`):
-
 ```bash
 docker build -t hiregenius-ai-ml-service:latest .
 ```
@@ -191,6 +223,7 @@ docker build -t hiregenius-ai-ml-service:latest .
 docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
   -e MONGODB_URI="<your_mongodb_uri>" \
   -e MONGODB_DB_NAME="hiregenius_ai" \
+  -e GEMINI_API_KEY="<your_gemini_api_key>" \
   hiregenius-ai-ml-service:latest
 ```
 
@@ -200,5 +233,6 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
 
 - [x] **Phase 6 Part A**: Project setup & skeleton (`FastAPI`, `PORT=8000`, `GET /health`, multi-stage Dockerfile, CI workflow).
 - [x] **Phase 6 Part B**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, live Atlas connectivity).
-- [x] **Phase 6 Part C (Current)**: Resume text extraction (PDF / DOCX processing via `pypdf` & `python-docx`, 5MB limit, 400/422 validation, automated test suite).
-- [ ] **Phase 6 Part D (Next)**: Resume Parsing Agent (Google Gemini structured extraction).
+- [x] **Phase 6 Part C**: Resume text extraction (PDF / DOCX processing via `pypdf` & `python-docx`, 5MB limit, 400/422 validation, automated test suite).
+- [x] **Phase 6 Part D (Current)**: Resume Parsing Agent (LangChain + Google Gemini structured output, anti-hallucination prompt, OCR quality gate, mocked test suite).
+- [ ] **Phase 6 Part E (Next)**: MongoDB persistence for parsed resumes (`resumes` collection storage).
