@@ -1915,11 +1915,16 @@ pm run build completed successfully with 0 errors.
     - `app/api/resume.py`: Registered `POST /api/resume/parse` endpoint. Reuses text extraction from Part C, enforces a quality gate rejecting resumes with <50 characters as requiring OCR (HTTP 422), invokes the parsing agent, and returns structured `ParsedResume` JSON.
     - `test/test_resume_agent.py`: 9 comprehensive unit and integration tests with mocked Gemini calls, validating output schema mapping, empty input rejection, unconfigured API key handling (503), LLM exception wrapping (422), and the <50 character OCR quality gate.
     - `README.md`: Documented `/parse` endpoint, schema, and local execution instructions.
+- **Live Verification**:
+  - Live execution of `POST /api/resume/parse` against Google Gemini API using `gemini-3.8-flash`:
+    - `real_resume_david_kumar.pdf`: Successfully parsed in ~2s. Extracted 100% accurate skills (`Python`, `Go`, `Java`, `TypeScript`, `SQL`, `FastAPI`, `Spring Boot`, `Celery`, `Docker`, `Kubernetes`, `Nginx`, `MongoDB Atlas`, `MySQL`, `Redis`, `PostgreSQL`) and lead engineer experience at `TechCorp AI`. Zero hallucination in empty fields (`education`, `certifications`, `projects` correctly returned `[]`).
+    - OCR-gate: Verified live with short text PDF (<50 characters), returning HTTP 422 Unprocessable Content with explicit message indicating document requires OCR.
 - **Verification**:
-  - Full automated test suite (23 tests: 14 from Part C + 9 from Part D) passed in `0.279s` (`OK`).
+  - Full automated test suite (23 tests: 14 from Part C + 9 from Part D) passed in `0.314s` (`OK`).
   - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
 - **Next**:
   - Phase 6 Part E: MongoDB persistence for parsed resumes (`resumes` collection storage).
+
 
 
 
