@@ -35,7 +35,7 @@ class Settings:
 
     # Google Gemini Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment."""
