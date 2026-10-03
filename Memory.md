@@ -1955,6 +1955,43 @@ pm run build completed successfully with 0 errors.
 - **Next**:
   - Phase 6 Part F: Core API integration (wiring Core API resume upload to call AI-ML service).
 
+---
+
+### 2026-10-03 — Phase 6 Part F: Core API Integration & Full Phase 6 Completion
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part F (Connecting Core API candidate resume uploads to AI-ML service with internal authentication, failure isolation, and parsed resume retrieval)
+- **Architectural & Deployment Decisions**:
+  - **Shared Internal Authentication**: Enforced via `X-Internal-Key` (`AI_ML_SERVICE_INTERNAL_KEY`) between Core API and AI/ML Service. Unauthenticated requests to `/api/resume/*` are rejected with HTTP 401 Unauthorized, while `/health` remains public for container probes.
+  - **Synchronous Execution with Failure Isolation**: Core API awaits AI parsing during `POST /api/candidates/me/resume` (~2s). If the AI service is down or parsing fails, the error is logged and the user-facing resume upload request **still succeeds** (mirroring the email notification failure isolation pattern).
+  - **Ownership & Access Control**:
+    - Candidates access their own parsed data via `GET /api/candidates/me/resume/parsed`.
+    - Recruiters access a candidate's parsed data via `GET /api/candidates/:id/resume/parsed`, strictly guarded by the Phase 3 application link ownership rule (HTTP 403 if no application link exists).
+  - **Production Hosting Decision**: Confirmed to deploy `hiregenius-ai-ml-service` to the same EC2 instance as the 3rd container alongside Core API and Auth Service (cost-conscious free-tier approach).
+- **Built & Integrated**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/config.py` & `.env.example`: Added `AI_ML_SERVICE_INTERNAL_KEY` with fatal-in-production validation.
+    - `app/api/auth.py`: Created `verify_internal_key` FastAPI dependency.
+    - `app/api/resume.py`: Attached `verify_internal_key` dependency to `/api/resume` router.
+    - `test/test_auth.py`: 6 automated tests validating missing, invalid, valid, unconfigured keys and public `/health`. Total 38 tests passing.
+  - `hiregenius-core-api/`:
+    - `src/config/env.js` & `.env.example`: Added `AI_ML_SERVICE_URL` (default `http://localhost:8000`) and `AI_ML_SERVICE_INTERNAL_KEY` (fatal in production).
+    - `src/modules/candidates/aiMlClient.service.js`: Created client utilizing Node.js native `fetch`, `FormData`, and `Blob` with timeout guards to call `POST /api/resume/parse` and `GET /api/resume/:candidate_id`.
+    - `src/modules/candidates/candidates.service.js`: Wired `aiMlClient.parseResume` into `uploadResume` with `try/catch` failure isolation. Added `getParsedResume(userId)` and `getParsedResumeForRecruiter(candidateId, recruiterId)`.
+    - `src/modules/candidates/candidates.controller.js` & `candidates.routes.js`: Registered `GET /me/resume/parsed` (for candidates) and `GET /:id/resume/parsed` (for recruiters).
+    - `test/modules/candidates/candidates.test.js`: Added 10 tests covering successful parsing, failure isolation, candidate access, recruiter ownership guards, and 404/403 edge cases.
+- **Live Verification**:
+  1. Internal authentication verified live: direct request to AI service without header rejected with `HTTP 401 Unauthorized`; with header accepted.
+  2. Live resume upload through Core API `POST /api/candidates/me/resume`: Succeeded (`HTTP 200 OK`) and triggered real AI parsing + MongoDB persistence.
+  3. Live parsed retrieval through Core API `GET /api/candidates/me/resume/parsed`: Succeeded (`HTTP 200 OK`) returning structured JSON with all skills, experience, and MongoDB ID.
+  4. Failure isolation verified live: Stopped AI service process on port 8000. Re-uploaded resume via Core API -> Resume upload **still succeeded** (`HTTP 200 OK`) with `AI resume parsing failed: fetch failed` isolated cleanly to server logs.
+- **Verification**:
+  - `hiregenius-ai-ml-service`: 38 unit and integration tests passing (`OK`).
+  - `hiregenius-core-api`: 190 automated tests across all 16 test suites passing (`PASS`).
+- **Phase 6 Summary**:
+  - Full end-to-end resume parsing pipeline complete: PDF/DOCX text extraction -> OCR quality gate (<50 chars) -> LangChain + Google Gemini structured output -> MongoDB Atlas persistence with upsert duplicate prevention -> Core API proxying with shared-secret internal auth & failure isolation.
+
+
 
 
 

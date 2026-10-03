@@ -37,6 +37,11 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
+    # Internal Service-to-Service Authentication
+    AI_ML_SERVICE_INTERNAL_KEY: str = os.getenv(
+        "AI_ML_SERVICE_INTERNAL_KEY", "hg_internal_dev_secret_key_2026"
+    )
+
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment."""
         if self.ENV == "production":
@@ -47,10 +52,13 @@ class Settings:
                 missing.append("MONGODB_DB_NAME")
             if not self.GEMINI_API_KEY:
                 missing.append("GEMINI_API_KEY")
+            if not self.AI_ML_SERVICE_INTERNAL_KEY:
+                missing.append("AI_ML_SERVICE_INTERNAL_KEY")
             if missing:
                 raise RuntimeError(
                     f"FATAL: Missing required environment variables in production: {', '.join(missing)}"
                 )
+
         else:
             if not self.MONGODB_URI:
                 logger.warning(

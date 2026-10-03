@@ -1,6 +1,8 @@
+const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const candidatesRepository = require('./candidates.repository');
+const aiMlClient = require('./aiMlClient.service');
 const emailService = require('../email/email.service');
 const {
   resumeUpdatedTemplate,
@@ -9,6 +11,7 @@ const {
 const db = require('../../config/db');
 const env = require('../../config/env');
 const ApiError = require('../../utils/ApiError');
+
 
 class CandidatesService {
   /**
@@ -103,8 +106,28 @@ class CandidatesService {
       result = { candidate: created, isNew: true };
     }
 
+    // Synchronous AI resume parsing with failure isolation
+    let aiParsedData = null;
+    try {
+      const fileBuffer = file.buffer || (file.path ? await fs.promises.readFile(file.path) : null);
+      if (fileBuffer) {
+        aiParsedData = await aiMlClient.parseResume(
+          result.candidate.id,
+          fileBuffer,
+          file.originalname,
+          file.mimetype
+        );
+      }
+    } catch (aiErr) {
+      console.error(
+        `[CandidatesService] AI resume parsing failed for candidate ${result.candidate.id}:`,
+        aiErr.message
+      );
+    }
+
     // Non-blocking security/welcome notification email dispatch
     const dispatchPromise = (async () => {
+
       try {
         let user;
         try {
@@ -220,6 +243,50 @@ class CandidatesService {
       job_alerts_opt_in: Boolean(updated.job_alerts_opt_in),
     };
   }
+
+  /**
+   * Get parsed structured resume data for authenticated candidate
+   * @param {number|string} userId
+   * @returns {Promise<object>}
+   */
+  async getParsedResume(userId) {
+    const candidate = await candidatesRepository.findByUserId(userId);
+    if (!candidate || !candidate.resume_path) {
+      throw ApiError.notFound('Candidate profile not found. Please upload your resume first.');
+    }
+
+    const parsedData = await aiMlClient.getParsedResume(candidate.id);
+    if (!parsedData) {
+      throw ApiError.notFound('No parsed resume data found for this candidate.');
+    }
+    return parsedData;
+  }
+
+  /**
+   * Get candidate parsed structured resume data for recruiter
+   * Enforces ownership guard: recruiter must own a job applied to by this candidate
+   * @param {number|string} candidateId
+   * @param {number|string} recruiterId
+   * @returns {Promise<object>}
+   */
+  async getParsedResumeForRecruiter(candidateId, recruiterId) {
+    const candidate = await candidatesRepository.findById(candidateId);
+    if (!candidate) {
+      throw ApiError.notFound('Candidate not found');
+    }
+
+    const hasLink = await candidatesRepository.hasApplicationToRecruiter(candidateId, recruiterId);
+    if (!hasLink) {
+      throw ApiError.forbidden('Forbidden: You do not have permission to view this candidate profile');
+    }
+
+    const parsedData = await aiMlClient.getParsedResume(candidate.id);
+    if (!parsedData) {
+      throw ApiError.notFound('No parsed resume data found for this candidate.');
+    }
+    return parsedData;
+  }
 }
 
 module.exports = new CandidatesService();
+

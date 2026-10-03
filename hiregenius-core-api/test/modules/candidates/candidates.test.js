@@ -305,5 +305,186 @@ describe('Candidates Module - Resume Upload & Access Enforcement', () => {
       expect(res.status).toBe(403);
     });
   });
+
+  describe('AI Parsing Integration & Failure Isolation during Upload', () => {
+    const aiMlClient = require('../../../src/modules/candidates/aiMlClient.service');
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('should invoke aiMlClient.parseResume and still return 201 when parsing succeeds', async () => {
+      const mockParsedData = {
+        id: 'mock_mongo_id_1',
+        candidate_id: '1',
+        parsed_data: { full_name: 'David Kumar', skills: ['Node.js', 'FastAPI'] },
+      };
+      jest.spyOn(aiMlClient, 'parseResume').mockResolvedValue(mockParsedData);
+
+      const res = await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 test resume'), 'david_cv.pdf');
+
+      expect(res.status).toBe(201);
+      expect(aiMlClient.parseResume).toHaveBeenCalledTimes(1);
+    });
+
+    test('should still return 201 when AI parsing fails (Failure Isolation)', async () => {
+      jest.spyOn(aiMlClient, 'parseResume').mockRejectedValue(new Error('AI ML Service Connection Refused (ECONNREFUSED)'));
+
+      const res = await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 test resume'), 'david_cv.pdf');
+
+      // The candidate upload must succeed regardless of downstream AI service failure
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe(201);
+      expect(res.body.data.resume_original_name).toBe('david_cv.pdf');
+    });
+  });
+
+  describe('GET /api/candidates/me/resume/parsed', () => {
+    const aiMlClient = require('../../../src/modules/candidates/aiMlClient.service');
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('should reject request when unauthenticated (401)', async () => {
+      const res = await request(app).get('/api/candidates/me/resume/parsed');
+      expect(res.status).toBe(401);
+    });
+
+    test('should reject request when role is not CANDIDATE (403)', async () => {
+      const res = await request(app)
+        .get('/api/candidates/me/resume/parsed')
+        .set('Authorization', `Bearer ${recruiter1Token}`);
+      expect(res.status).toBe(403);
+    });
+
+    test('should return 404 when candidate has not uploaded a resume', async () => {
+      const res = await request(app)
+        .get('/api/candidates/me/resume/parsed')
+        .set('Authorization', `Bearer ${candidateWithoutResumeToken}`);
+      expect(res.status).toBe(404);
+      expect(res.body.message).toMatch(/Candidate profile not found/i);
+    });
+
+    test('should return 404 when AI service has no parsed data for candidate', async () => {
+      await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 sample'), 'cv.pdf');
+
+      jest.spyOn(aiMlClient, 'getParsedResume').mockResolvedValue(null);
+
+      const res = await request(app)
+        .get('/api/candidates/me/resume/parsed')
+        .set('Authorization', `Bearer ${candidateToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.message).toMatch(/No parsed resume data found/i);
+    });
+
+    test('should return 200 with structured data when AI service has parsed data', async () => {
+      await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 sample'), 'cv.pdf');
+
+      const mockParsed = {
+        id: '6ac09ca8e0ddafc19265a7d1',
+        candidate_id: '1',
+        parsed_data: {
+          full_name: 'David Kumar',
+          skills: ['Python', 'FastAPI'],
+        },
+      };
+      jest.spyOn(aiMlClient, 'getParsedResume').mockResolvedValue(mockParsed);
+
+      const res = await request(app)
+        .get('/api/candidates/me/resume/parsed')
+        .set('Authorization', `Bearer ${candidateToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe('6ac09ca8e0ddafc19265a7d1');
+      expect(res.body.data.parsed_data.full_name).toBe('David Kumar');
+    });
+  });
+
+  describe('GET /api/candidates/:id/resume/parsed (Recruiter Guard)', () => {
+    const aiMlClient = require('../../../src/modules/candidates/aiMlClient.service');
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('should return 403 when recruiter has NO application link to candidate', async () => {
+      const uploadRes = await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 content'), 'cv.pdf');
+      const candId = uploadRes.body.data.id;
+
+      const res = await request(app)
+        .get(`/api/candidates/${candId}/resume/parsed`)
+        .set('Authorization', `Bearer ${recruiter1Token}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    test('should return 200 when recruiter has application link to candidate', async () => {
+      const uploadRes = await request(app)
+        .post('/api/candidates/me/resume')
+        .set('Authorization', `Bearer ${candidateToken}`)
+        .attach('resume', Buffer.from('%PDF-1.4 content'), 'cv.pdf');
+      const candId = uploadRes.body.data.id;
+
+      // Link candidate to recruiter1 via job + application
+      const [jobId] = await db('jobs').insert({
+        recruiter_id: 101,
+        title: 'Lead AI Engineer',
+        company: 'AI Corp',
+        skills: JSON.stringify(['Node.js']),
+        description: 'Great job',
+        status: 'OPEN',
+        is_deleted: false,
+      });
+
+
+      await db('applications').insert({
+        candidate_id: candId,
+        job_id: jobId,
+        status: 'APPLIED',
+      });
+
+
+      const mockParsed = {
+        id: '6ac09ca8e0ddafc19265a7d1',
+        candidate_id: String(candId),
+        parsed_data: { full_name: 'David Kumar', skills: ['Python', 'FastAPI'] },
+      };
+      jest.spyOn(aiMlClient, 'getParsedResume').mockResolvedValue(mockParsed);
+
+      const res = await request(app)
+        .get(`/api/candidates/${candId}/resume/parsed`)
+        .set('Authorization', `Bearer ${recruiter1Token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.parsed_data.full_name).toBe('David Kumar');
+    });
+
+    test('should return 404 when candidate does not exist', async () => {
+      const res = await request(app)
+        .get('/api/candidates/99999/resume/parsed')
+        .set('Authorization', `Bearer ${recruiter1Token}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.message).toMatch(/Candidate not found/i);
+    });
+  });
 });
+
 

@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 import logging
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
+from app.api.auth import verify_internal_key
 from app.config import settings
 from app.models.resume import (
     ParsedResume,
@@ -30,7 +31,12 @@ from app.services.text_extraction import (
 
 logger = logging.getLogger("hiregenius.ai_ml_service.api.resume")
 
-router = APIRouter(prefix="/api/resume", tags=["Resume Processing"])
+router = APIRouter(
+    prefix="/api/resume",
+    tags=["Resume Processing"],
+    dependencies=[Depends(verify_internal_key)],
+)
+
 
 # 5MB file size limit (matching Core API resume upload standard from Phase 3)
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
