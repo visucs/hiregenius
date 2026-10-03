@@ -54,6 +54,10 @@ jobs:
               print('CI Smoke Test: Mocked MongoDB DOWN 503 health check passed')
           "
 
+      - name: Run unit and integration tests
+        run: |
+          python -m unittest discover -s test -v
+
       - name: Test Docker build
         run: |
           docker build -t hiregenius-ai-ml-service:ci-test .

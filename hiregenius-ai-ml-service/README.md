@@ -8,10 +8,11 @@ Microservice responsible for Generative AI agents, resume parsing, candidate sco
 
 - **Framework**: FastAPI (Python 3.11+)
 - **Server**: Uvicorn ASGI
+- **Document Extractors**: `pypdf` (PDF text extraction), `python-docx` (Word DOCX extraction), `python-multipart`
 - **Database Driver**: `motor` (async MongoDB driver) & `pymongo`
 - **Validation & Settings**: Pydantic v2, Python-dotenv
 - **Containerization**: Docker (multi-stage, non-root user `appuser`)
-- **Future Additions (Parts C–D)**:
+- **Future Additions (Part D)**:
   - LangChain / LangGraph for multi-agent orchestration
   - Google Gemini API (`google-generativeai`) for LLM parsing & evaluation
 
@@ -26,15 +27,21 @@ hiregenius-ai-ml-service/
 │   ├── main.py                  # FastAPI app entrypoint with async lifespan & /health
 │   ├── config.py                # Centralized env var loading & validation (mirrors Core API's env.js)
 │   ├── api/
-│   │   └── __init__.py          # API route modules (for subsequent parts)
+│   │   ├── __init__.py          # API route modules
+│   │   └── resume.py            # POST /api/resume/extract-text endpoint
 │   ├── db/
 │   │   ├── __init__.py          # Database package marker
 │   │   └── mongodb.py           # Async Motor client, lifespan hooks & resumes collection
 │   ├── services/
-│   │   └── __init__.py          # Business logic services (for subsequent parts)
+│   │   ├── __init__.py          # Business logic services
+│   │   └── text_extraction.py   # PDF and DOCX parsing & extraction dispatcher
 │   └── models/
-│       └── __init__.py          # Pydantic schemas (for subsequent parts)
-├── requirements.txt             # fastapi, uvicorn, python-dotenv, pydantic, pymongo, motor
+│       └── __init__.py          # Pydantic schemas
+├── test/
+│   ├── __init__.py              # Test suite package
+│   ├── test_text_extraction.py  # 14 unit and endpoint integration tests
+│   └── fixtures/                # Sample resumes (.pdf, .docx, corrupted, etc.)
+├── requirements.txt             # fastapi, uvicorn, python-dotenv, pydantic, pymongo, motor, pypdf, python-docx, python-multipart
 ├── .env.example                 # Example environment variables (PORT, MONGODB_URI, MONGODB_DB_NAME)
 ├── .gitignore                   # Ignores venvs, cache, and secrets
 ├── Dockerfile                   # Multi-stage production container
@@ -81,8 +88,6 @@ python -m venv venv
   source venv/bin/activate
   ```
 
-*(To deactivate the environment when finished, simply run `deactivate`)*
-
 ### 3.3. Install Dependencies
 
 With the virtual environment activated:
@@ -103,13 +108,13 @@ cp .env.example .env
 Set your configuration values:
 ```env
 PORT=8000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.p0wadbv.mongodb.net
 MONGODB_DB_NAME=hiregenius_ai
 ```
 
 ---
 
-## 4. Running the Service
+## 4. Running the Service & Testing
 
 ### 4.1. Local Uvicorn Server
 
@@ -117,11 +122,6 @@ Start the development server with live reload:
 
 ```bash
 uvicorn app.main:app --reload --port 8000
-```
-
-Or run directly using python:
-```bash
-python -m app.main
 ```
 
 ### 4.2. Verify Health Check
@@ -132,7 +132,7 @@ Query the database-aware health endpoint:
 curl http://localhost:8000/health
 ```
 
-- **When MongoDB is connected (HTTP 200 OK)**:
+Expected response (when MongoDB is connected):
 ```json
 {
   "service": "ai-ml-service",
@@ -141,18 +141,37 @@ curl http://localhost:8000/health
 }
 ```
 
-- **When MongoDB is unreachable / disconnected (HTTP 503 Service Unavailable)**:
+### 4.3. Resume Text Extraction (`POST /api/resume/extract-text`)
+
+Upload a PDF or DOCX file (up to 5MB):
+
+```bash
+curl -X POST "http://localhost:8000/api/resume/extract-text" \
+  -F "file=@/path/to/resume.pdf"
+```
+
+Expected response (HTTP 200 OK):
 ```json
 {
-  "service": "ai-ml-service",
-  "status": "DOWN",
-  "mongodb": "DISCONNECTED"
+  "filename": "resume.pdf",
+  "extracted_text": "Candidate text content...",
+  "character_count": 1245
 }
 ```
 
-Interactive OpenAPI documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+Validation & Error Handling:
+- Unsupported extensions (e.g. `.txt`): Returns **HTTP 400 Bad Request**.
+- Empty files (0 bytes): Returns **HTTP 400 Bad Request**.
+- Oversized files (> 5MB): Returns **HTTP 400 Bad Request**.
+- Corrupted/unreadable files: Returns **HTTP 422 Unprocessable Content**.
+
+### 4.4. Running Automated Tests
+
+Run the test suite via `unittest`:
+
+```bash
+python -m unittest discover -s test -v
+```
 
 ---
 
@@ -175,18 +194,11 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
   hiregenius-ai-ml-service:latest
 ```
 
-Check health status:
-```bash
-docker ps
-# Status will indicate "(healthy)" once the HEALTHCHECK passes against /health
-```
-
 ---
 
 ## 6. Phase Status & Roadmap
 
 - [x] **Phase 6 Part A**: Project setup & skeleton (`FastAPI`, `PORT=8000`, `GET /health`, multi-stage Dockerfile, CI workflow).
-- [x] **Phase 6 Part B (Current)**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, DB-aware `/health` with 503 fallback).
-- [ ] **Phase 6 Part C (Pending)**: Resume text extraction (PDF / DOCX processing).
-- [ ] **Phase 6 Part D (Pending)**: Resume Parsing Agent (Google Gemini structured extraction).
-- [ ] **Future / Tentative**: Core API integration & scoring workflows.
+- [x] **Phase 6 Part B**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, live Atlas connectivity).
+- [x] **Phase 6 Part C (Current)**: Resume text extraction (PDF / DOCX processing via `pypdf` & `python-docx`, 5MB limit, 400/422 validation, automated test suite).
+- [ ] **Phase 6 Part D (Next)**: Resume Parsing Agent (Google Gemini structured extraction).

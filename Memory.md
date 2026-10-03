@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 6 Part B complete (MongoDB Connection & Resume Repository) | Core API deployed | Auth Service deployed | Frontend live
+- **Active Phase:** Phase 6 Part C complete (Resume Text Extraction PDF/DOCX) | Core API deployed | Auth Service deployed | Frontend live
 - **Last Updated:** 2026-10-03
 
 ## Repo / Service Locations
 - Frontend: hiregenius-frontend/ (live on Vercel)
 - Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
 - Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A & B complete)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A, B & C complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -1870,6 +1870,36 @@ pm run build completed successfully with 0 errors.
   - Verified zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
 - **Next**:
   - Phase 6 Part C: Resume text extraction (PDF / DOCX processing).
+
+---
+
+### 2026-10-03 — Phase 6 Part C: Resume Text Extraction (PDF / DOCX)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part C (Resume Text Extraction ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `pypdf>=4.0.0,<7.0.0`, `python-docx>=1.1.0,<2.0.0`, and `python-multipart>=0.0.9,<1.0.0` (required for FastAPI `UploadFile` form parsing).
+    - `app/services/text_extraction.py`: Service module implementing `extract_text_from_pdf` (page extraction & decryption check via `pypdf`), `extract_text_from_docx` (paragraph & table extraction via `python-docx`), and `extract_text` extension-based dispatcher with custom exceptions (`UnsupportedFileTypeError`, `EmptyFileError`, `CorruptedFileError`, `EncryptedFileError`).
+    - `app/api/resume.py`: Registered `POST /api/resume/extract-text` endpoint handling multipart file uploads, validating extension (`.pdf`, `.docx`), enforcing max 5MB size limit (matching Core API Phase 3 standard), checking for empty 0-byte files, and returning `{ "filename", "extracted_text", "character_count" }` with graceful HTTP 400 and HTTP 422 error responses.
+    - `app/main.py`: Included `resume_router` into FastAPI application.
+    - `test/test_text_extraction.py` & `test/fixtures/`: 14 automated unit and integration tests covering successful PDF/DOCX extraction, dispatcher logic, unsupported extensions (.txt), empty file rejection, 5MB limit enforcement, and corrupted file handling.
+    - `README.md`: Documented new text extraction endpoint, test suite execution, error codes, and updated roadmap.
+  - `.github/workflows/ai-ml-service-ci.yml`: Added automated test suite execution step (`python -m unittest discover -s test -v`).
+- **Verification**:
+  - Connected live to real MongoDB Atlas cluster using credentials provided in `.env`: `GET /health` returned `HTTP 200 {"service": "ai-ml-service", "status": "UP", "mongodb": "CONNECTED"}`.
+  - All 14 unit and endpoint tests passed in 0.150s (`OK`).
+  - Tested `POST /api/resume/extract-text` manually against local server with real multi-section sample PDF (`real_resume_david_kumar.pdf`, 615 chars) and DOCX (`real_resume_alex_smith.docx`, 1389 chars) — text extraction was clean, accurate, and structured.
+  - Tested manual error paths:
+    - Unsupported `.txt` file: returns `HTTP 400 Bad Request` (`"Invalid file type..."`).
+    - Empty 0-byte file: returns `HTTP 400 Bad Request` (`"Uploaded file is empty (0 bytes)..."`).
+    - Oversized file (>5MB): returns `HTTP 400 Bad Request` (`"File exceeds the maximum allowed size of 5MB..."`).
+    - Corrupted file: returns `HTTP 422 Unprocessable Content` (`"Cannot extract text from 'corrupted.pdf'..."`).
+  - Verified `.env` containing sensitive Atlas credentials is gitignored and untracked.
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part D: Resume Parsing Agent (Google Gemini structured extraction).
+
 
 
 
