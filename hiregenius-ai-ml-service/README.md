@@ -271,6 +271,8 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
 - [x] **Phase 6 Part B**: MongoDB connection & repository setup (`motor` async driver, lifespan startup/shutdown, `resumes` collection reference, live Atlas connectivity).
 - [x] **Phase 6 Part C**: Resume text extraction (PDF / DOCX processing via `pypdf` & `python-docx`, 5MB limit, 400/422 validation, automated test suite).
 - [x] **Phase 6 Part D**: Resume Parsing Agent (LangChain + Google Gemini structured output, anti-hallucination prompt, OCR quality gate, mocked test suite).
-- [x] **Phase 6 Part E (Current)**: Save Parsed Resume to MongoDB (`save_parsed_resume`, `get_parsed_resume_by_candidate_id`, upsert-by-candidate_id, 32 automated tests).
-- [ ] **Phase 6 Part F (Next)**: Core API integration (wiring Core API resume upload to call AI-ML service).
+- [x] **Phase 6 Part E**: Save Parsed Resume to MongoDB (`save_parsed_resume`, `get_parsed_resume_by_candidate_id`, upsert-by-candidate_id).
+- [x] **Phase 6 Part F**: Core API integration & Frontend rewiring (candidate dashboard, applicant detail modal, resume score display).
+- [ ] **Phase 7 (Next)**: Skill Matching & Scoring Service.
+- [ ] **Phase 8**: Interview Question Generator Agent.
 

@@ -1991,6 +1991,119 @@ pm run build completed successfully with 0 errors.
 - **Phase 6 Summary**:
   - Full end-to-end resume parsing pipeline complete: PDF/DOCX text extraction -> OCR quality gate (<50 chars) -> LangChain + Google Gemini structured output -> MongoDB Atlas persistence with upsert duplicate prevention -> Core API proxying with shared-secret internal auth & failure isolation.
 
+---
+
+### 2026-10-03 — Phase 6: Frontend Rewiring (Real AI Parsed Resume Integration)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Frontend rewiring to live Core API / AI-ML endpoints (`GET /api/candidates/me/resume/parsed` and `GET /api/candidates/:id/resume/parsed`).
+- **Clarification & Verification on `model_version`**:
+  - Confirmed via live inspection of MongoDB Atlas and Gemini API: `model_version` is stored as `"gemini-3.8-flash"`. As verified directly from `genai.list_models()`, `models/gemini-3.8-flash` is a supported, active model returned by Google Gemini in this environment and is the exact model that parsed the live resumes.
+- **Built & Wired**:
+  - `hiregenius-frontend/src/services/candidatesService.js`: Added `getParsedResume()` and `getCandidateParsedResume(candidateId)` methods utilizing the existing authenticated Axios instance.
+  - `hiregenius-frontend/src/components/Resume/ParsedResumeCard.jsx`: New reusable component displaying structured AI resume insights (skills tags, work experience timeline, education history, certifications, projects, metadata badge, and on-demand refresh).
+    - Gracefully handles 4 states: Loading spinner, Empty/Pending (HTTP 404 treated as friendly "Resume analysis will appear once processing completes" rather than error), Real API Error (HTTP 401/403/500 with retry button), and Populated state.
+  - `hiregenius-frontend/src/pages/Dashboard/CandidateDashboard.jsx`:
+    - Replaced the Category C Phase 4 placeholder with live AI extraction status and scroll link.
+    - Integrated `ParsedResumeCard` as an independent, non-blocking section above the resume upload panel.
+    - Wired `resumeVersion` state so that upon successful resume upload (`POST /api/candidates/me/resume`), the parsed resume card refreshes automatically.
+  - `hiregenius-frontend/src/pages/candidate/ResumeScorePage.jsx`: Replaced the legacy pending placeholder with the live `ParsedResumeCard` and an honest notice that future Phase 4 semantic match scoring (0-100%) against job postings remains upcoming.
+  - `hiregenius-frontend/src/pages/candidate/CandidateSettingsPage.jsx`: Added real skills extracted summary chip (e.g., "16 Skills Extracted (AI)") and "View Full AI Analysis →" link; updated notification row to reflect live Phase 6 parsing alerts.
+  - `hiregenius-frontend/src/pages/recruiter/RecruiterCandidatesPage.jsx`: Integrated `ParsedResumeCard` in the applicant detail modal (with `isRecruiter={true}` and candidateId).
+- **Verification**:
+  1. Live Candidate Upload: Real PDF upload (`real_resume_david_kumar.pdf`) completed via Core API (`HTTP 200 OK`), and immediate retrieval via `GET /api/candidates/me/resume/parsed` returned 16 accurately parsed skills and lead engineer experience.
+  2. Failure Isolation / Pending State: For candidates without a resume (or pending parse), `GET /api/candidates/me/resume/parsed` returns `HTTP 404`, which `ParsedResumeCard` renders as a friendly pending card with a "Check Status" button.
+  3. Recruiter Ownership Check: Recruiter owning an applied job (`sarah.recruiter@hiregenius.ai`) accesses applicant parsed resume (`HTTP 200 OK`). Unlinked recruiter access correctly triggers server-enforced `HTTP 403 Forbidden`, rendered gracefully in the UI.
+  4. Build & Lint: `npm run build` passed with zero errors (2953 modules transformed in 1.12s). Old Category C placeholders verified completely removed.
+- **Changed Files**:
+  - `hiregenius-frontend/src/services/candidatesService.js`
+  - `hiregenius-frontend/src/components/Resume/ParsedResumeCard.jsx`
+  - `hiregenius-frontend/src/pages/Dashboard/CandidateDashboard.jsx`
+  - `hiregenius-frontend/src/pages/candidate/ResumeScorePage.jsx`
+  - `hiregenius-frontend/src/pages/candidate/CandidateSettingsPage.jsx`
+  - `hiregenius-frontend/src/pages/recruiter/RecruiterCandidatesPage.jsx`
+---
+
+### 2026-10-14 — Phase 7: Skill Matching & Scoring Service (FastAPI)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 7 (Hybrid Explainable Skill Matching, Semantic Similarity & Experience Fit within `hiregenius-ai-ml-service`).
+- **Core Design Decision**:
+  - There is no reliable public labeled dataset of `(resume, job description, match score)`. Avoided inventing a fake supervised model or fabricating ground-truth labels.
+  - Implemented an **explainable hybrid approach**:
+    1. **Skill Extraction & Normalization**: 3-layer skills catalog with token-boundary regex matching and canonical alias resolution.
+    2. **Semantic Similarity**: Pretrained Sentence-Transformer (`all-MiniLM-L6-v2`) with cosine similarity, loaded as a singleton once at startup.
+    3. **Weighted Scoring Formula**: `skills_match` (0.5) + `semantic_score` (0.3) + `experience_fit` (0.2) producing a 0–100 score + recommendation labels.
+- **Datasets & Licensing**:
+  - `data/resumes.csv`: 2,484 resumes across 24 categories (Kaggle Snehan Kekre, CC BY-SA 4.0).
+  - `data/job_postings.csv`: 123,849 LinkedIn job postings, ~517 MB (Kaggle, Open Data Community License).
+  - `app/resources/seed_skills.csv`: 345 hand-curated modern tech & soft skills with aliases across 20 categories (authored in-house, labeled *"curated seed — needs human review"*).
+  - `data/postings_mined_skills.csv`: Auditable mined technical terms discovered in a 20,000-postings sample with frequency $\ge 25$.
+  - `data/skill_candidates.csv`: 2,000 candidate terms extracted from sample.
+  - `data/skills_taxonomy/`: Omitted (ESCO & O*NET not available); `SkillMatcher` includes optional dynamic loader if `.csv` files are added later.
+  - `data/labeled_pairs.csv`: Not present; skipped supervised weight tuning rather than inventing fake labels. Weights marked as **UNTUNED** (`0.5 / 0.3 / 0.2`).
+  - `data/indian_resumes/` & `data/indian_jds/`: Not present; implemented explainable rule-based India-aware layers.
+- **India-Aware Normalization & Bias Neutrality**:
+  - **Degrees**: B.Tech, B.E., BCA, M.Tech, MCA, Diploma, Polytechnic mapped to standard degree tiers (`Bachelor's`, `Master's`, `Diploma`, `Doctorate`).
+  - **Titles**: GET, Software Engineer Trainee, Associate Software Engineer mapped to `Entry`; SDE/SDE-1 to `Mid`; Senior/SDE-2 to `Senior`; Tech Lead to `Lead/Management`.
+  - **Experience**: "Fresher" (0.0 yrs), "6 months" (0.5), "1.5 yrs", "0-2 years" (1.0), "3-5 yrs" (4.0) parsed into numeric floats.
+  - **Bias / Privacy Invariance**: Strips personal fields (`dob`, `address`, `marital_status`, `father_name`, `gender`, `photo`) from resume text before scoring. Verified via unit test that two resumes identical in content but differing in personal attributes receive identical scores.
+- **Service Modules Built**:
+  - `app/models/matching.py`: Pydantic models `JobRequirement`, `MatchRequest`, `MatchResponse` (`matchScore`, `skillsMatchPercent`, `matchedSkills`, `missingSkills`, `semanticScore`, `experienceFit`, `recommendation`).
+  - `app/services/skill_matcher.py`: Multi-layer catalog loader, token-boundary skill extractor, alias resolver, degree/title/experience normalizers, privacy sanitizer.
+  - `app/services/scorer.py`: Singleton `SentenceTransformer('all-MiniLM-L6-v2')` loader, skill match percentage calculator, experience fit calculator, semantic similarity scaler, weighted formula evaluator.
+  - `app/api/matching.py`: `POST /api/match` endpoint with HTTP 400 rejection for empty resume structures and HTTP 422 for malformed schemas.
+  - `app/config.py`: Added `MATCH_WEIGHT_SKILLS` (0.5), `MATCH_WEIGHT_SEMANTIC` (0.3), `MATCH_WEIGHT_EXPERIENCE` (0.2), `MATCH_THRESHOLD_HIGH` (75.0), `MATCH_THRESHOLD_CONSIDER` (50.0).
+  - `app/main.py`: Preloads `SentenceTransformer` during FastAPI `lifespan` startup to prevent per-request model loading latency; registered `matching_router`.
+- **Validation & Real Numbers**:
+  - **Notebook**: `notebooks/skill_matching.ipynb` executed top-to-bottom with 0 errors via `jupyter nbconvert`.
+  - **Coverage Metric**: On 300 sampled postings with non-empty `skills_desc`: 71/300 (23.7% detection rate across all job sectors; average 0.49 skills/posting). Non-tech postings lack technical keywords.
+  - **Semantic Sanity Check**: IT resume vs Software JD cosine similarity = 0.4026 (semantic score: 40.3) > Agriculture resume vs Software JD = 0.2937 (semantic score: 29.4).
+  - **Live `POST /api/match` Verification (3 Realistic Cases)**:
+    - Case 1 (Strong): `matchScore: 92.9` -> `Highly Recommended` (Skills: 100%, Semantic: 76.3, Exp: 100%)
+    - Case 2 (Medium): `matchScore: 48.1` -> `Not a Fit` (Skills: 40%, Semantic: 60.3, Exp: 50%)
+    - Case 3 (Weak): `matchScore: 28.7` -> `Not a Fit` (Skills: 0%, Semantic: 28.9, Exp: 100%)
+    - Verified strict score ordering: `Strong (92.9) > Medium (48.1) > Weak (28.7)`.
+  - **Automated Tests**:
+    - `test/test_matching.py`: 11 tests covering aliases/case normalization, token boundary extraction, degree/title/experience parsing, demographic bias invariance, scorer range 0-100 & ranking, recommendation thresholds, HTTP 400 empty resume rejection, and HTTP 422 schema validation.
+    - Full suite: **49 passed in 37.17s (100% passing)**.
+- **Git & Boundaries Confirmation**:
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+  - No datasets committed (`data/` ignored in `.gitignore`).
+  - Core API integration deferred to Phase 10 as specified.
+
+### 2026-10-19 - Phase 7 Removal from AI/ML Service
+- **Scope & Context**: Cleanly removed Phase 7 (Skill Matching & Scoring) from `hiregenius-ai-ml-service/` while preserving all Phase 6 work, the `data/` directory, and other services.
+- **Safety Pre-Check**:
+  - Created safety backup branch `backup/phase7-wip` and tag `backup/phase7-before-removal`.
+  - Confirmed `docs/` and `.archify/` are design artifacts and left untouched.
+  - Confirmed uncommitted frontend changes belong to Phase 6 Rewiring (calling Core API resume endpoints) with zero dependency on Phase 7.
+- **Files Removed (List A)**:
+  - `app/api/matching.py`
+  - `app/models/matching.py`
+  - `app/services/scorer.py`
+  - `app/services/skill_matcher.py`
+  - `app/resources/seed_skills.csv` & `app/resources/`
+  - `notebooks/skill_matching.ipynb` & `notebooks/`
+  - `requirements-notebook.txt`
+  - `test/test_matching.py`
+- **Surgical Edits (List B)**:
+  - `app/main.py`: Removed `matching_router` import, `scorer_service` import, lifespan model pre-loading, and route registration.
+  - `app/config.py`: Removed Phase 7 settings (`EMBEDDING_MODEL_NAME`, `MATCH_WEIGHT_*`, `MATCH_THRESHOLD_*`).
+  - `requirements.txt`: Removed `sentence-transformers` and `scikit-learn`.
+  - `README.md`: Removed Section 4.7 (`POST /api/match`) and Section 5 (Phase 7 Datasets & Taxonomy); updated Roadmap.
+- **Preserved Components**:
+  - All Phase 6 resume parsing endpoints (`POST /api/resume/extract-text`, `POST /api/resume/parse`, `GET /api/resume/parsed/{candidate_id}`), MongoDB persistence, Pydantic schemas, and PyPDF/docx text extractors.
+  - `data/` directory and all its dataset contents (`resumes.csv`, `job_postings.csv`, etc.) remain fully intact.
+  - `.gitignore` continues to ignore `data/`.
+  - Frontend uncommitted files from Phase 6 rewiring (`ParsedResumeCard.jsx`, dashboard updates) preserved.
+- **Verification**:
+  - Zero Phase 7 remnants in `hiregenius-ai-ml-service/`.
+  - Full Phase 6 test suite passing (38/38 tests).
+  - FastAPI server startup verified; `/health` returns HTTP 200.
+
+
+
 
 
 
