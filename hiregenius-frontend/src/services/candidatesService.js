@@ -59,6 +59,27 @@ export const candidatesService = {
     const res = await api.patch('/candidates/me/preferences', payload);
     return res.data;
   },
+
+  /**
+   * Get authenticated candidate's own parsed resume data (Phase 6)
+   * GET /api/candidates/me/resume/parsed
+   * Note: Returns 404 if parsing is still pending or no resume exists.
+   */
+  getParsedResume: async () => {
+    const res = await api.get('/candidates/me/resume/parsed');
+    return res.data;
+  },
+
+  /**
+   * Get candidate's parsed resume data for a recruiter (Phase 6, Recruiter only)
+   * GET /api/candidates/:id/resume/parsed
+   * Enforces application ownership check: returns 403 if candidate has not applied to caller's jobs.
+   * @param {string|number} candidateId - Candidate ID
+   */
+  getCandidateParsedResume: async (candidateId) => {
+    const res = await api.get(`/candidates/${candidateId}/resume/parsed`);
+    return res.data;
+  },
 };
 
 export default candidatesService;
