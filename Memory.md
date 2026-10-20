@@ -2114,3 +2114,25 @@ pm run build completed successfully with 0 errors.
 
 
 
+
+
+### 2026-10-21 - Bugfix: Forgot-Password "Network Error" Diagnosis & Resolution
+- **Symptom**: Frontend `http://localhost:5173/forgot-password` showed "Network Error" (axios failed to receive response, DevTools showed provisional headers).
+- **Diagnosis (Step 0)**:
+  1. Service Port: `netstat -ano | findstr :8080` showed no process listening. `hiregenius-auth-service` was stopped / not running.
+  2. Direct Endpoint Test: Once `auth-service` was started, `curl -i -X POST http://localhost:8080/api/auth/forgot-password` returned `HTTP 200` in 420ms (and 9ms on warm hit) with generic message `{"success":true,"message":"If an account exists with this email, password reset instructions have been sent."}`.
+  3. CORS Preflight: Tested `OPTIONS` with `Origin: http://localhost:5173`. Returned `HTTP 200` with `Access-Control-Allow-Origin: http://localhost:5173`, `Access-Control-Allow-Credentials: true`. SecurityConfig correctly permits OPTIONS and `/api/auth/forgot-password` publicly.
+  4. SMTP Dispatch: `@Async("mailTaskExecutor")` in `EmailServiceImpl` executes in background. The HTTP request returns immediately in <50ms without waiting for SMTP.
+  5. Frontend Base URL: `VITE_API_BASE_URL` in `hiregenius-frontend/.env` is correctly set to `http://localhost:8080/api`, with 30s timeout configured in `api.js`.
+- **Root Cause**: `hiregenius-auth-service` was not running locally on port 8080.
+- **Fix & Verification (Step 1)**:
+  - Started `hiregenius-auth-service` as an active background service listening on port 8080.
+  - Verified `GET /health` returns HTTP 200 `{"status":"UP","service":"auth-service"}`.
+  - Verified candidate password reset for real email `krvisuji92+candtest@gmail.com` dispatches email asynchronously and returns HTTP 200 in 9ms.
+  - Ran full test suite (`mvn test`): 51 tests passed, 0 failures, 0 errors.
+- **Admin Account Specific Check (Step 2 - Pending Decision)**:
+  - `admin@hiregenius.ai` is a fictional system domain with no real mailbox; reset emails sent there cannot be received.
+  - Three proposed options pending user confirmation:
+    (a) Make seeded admin email configurable via `ADMIN_EMAIL` to a real inbox controlled by the user.
+    (b) Add a safe CLI/script-based admin password reset tool reading password from environment variable.
+    (c) Keep admin on authenticated `change-password` only and disable self-service forgot-password for admin.
