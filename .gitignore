@@ -9,6 +9,8 @@ dist-ssr/
 **/dist-ssr/
 target/
 **/target/
+bin/
+**/bin/
 *.class
 
 # Environment files (important secrets, never commit)
@@ -56,3 +58,4 @@ Thumbs.db
 
 # Scratch and temporary scripts
 scratch/
+

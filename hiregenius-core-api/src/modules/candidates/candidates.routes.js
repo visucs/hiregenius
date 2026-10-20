@@ -31,6 +31,14 @@ router.post(
   (req, res, next) => candidatesController.uploadResume(req, res, next),
 );
 
+// GET /api/candidates/me/resume/parsed - Get candidate's own parsed structured resume data
+router.get(
+  '/me/resume/parsed',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  (req, res, next) => candidatesController.getParsedResume(req, res, next),
+);
+
 // GET /api/candidates/me - Get candidate's own profile and resume info
 router.get(
   '/me',
@@ -59,6 +67,15 @@ router.patch(
  * Recruiter Protected Routes
  */
 
+// GET /api/candidates/:id/resume/parsed - Get candidate parsed resume for recruiter (with application link)
+router.get(
+  '/:id/resume/parsed',
+  verifyJwt,
+  requireRole('RECRUITER'),
+  validate(candidateIdParamSchema, 'params'),
+  (req, res, next) => candidatesController.getParsedResumeForRecruiter(req, res, next),
+);
+
 // GET /api/candidates/:id - Get candidate detail (Recruiter must own a job applied to by this candidate)
 router.get(
   '/:id',
@@ -69,3 +86,4 @@ router.get(
 );
 
 module.exports = router;
+

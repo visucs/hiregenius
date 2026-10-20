@@ -24,10 +24,16 @@ const env = {
   FRONTEND_BASE_URL: process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app',
   CORE_API_URL: process.env.CORE_API_URL || 'http://localhost:4000',
   CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://localhost:3000',
+  AI_ML_SERVICE_URL: process.env.AI_ML_SERVICE_URL || 'http://localhost:8000',
+  AI_ML_SERVICE_INTERNAL_KEY: process.env.AI_ML_SERVICE_INTERNAL_KEY || 'hg_internal_dev_secret_key_2026',
 };
 
 if (!env.JWT_SIGNING_KEY) {
   throw new Error('FATAL: JWT_SIGNING_KEY environment variable is missing.');
+}
+
+if (env.NODE_ENV === 'production' && !process.env.AI_ML_SERVICE_INTERNAL_KEY) {
+  throw new Error('FATAL: AI_ML_SERVICE_INTERNAL_KEY environment variable is required in production.');
 }
 
 if (env.NODE_ENV === 'production') {
@@ -51,3 +57,4 @@ if (env.NODE_ENV === 'production' && (!env.MAIL_USERNAME || !env.MAIL_PASSWORD))
 }
 
 module.exports = env;
+

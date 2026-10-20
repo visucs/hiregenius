@@ -13,6 +13,7 @@ import useResumeFileValidation from '../../hooks/useResumeFileValidation';
 import jobsService from '../../services/jobsService';
 import candidatesService from '../../services/candidatesService';
 import applicationsService from '../../services/applicationsService';
+import ParsedResumeCard from '../../components/Resume/ParsedResumeCard';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 const greet = () => {
@@ -99,6 +100,7 @@ const CandidateDashboard = () => {
 
   const [applyingJobId, setApplyingJobId]       = useState(null);
   const [uploadingResume, setUploadingResume]   = useState(false);
+  const [resumeVersion, setResumeVersion]       = useState(0);
 
   // Resume drag & drop hook
   const {
@@ -207,6 +209,7 @@ const CandidateDashboard = () => {
       toast.success(res?.message || 'Resume uploaded successfully!');
       clearFile();
       fetchProfile();
+      setResumeVersion(v => v + 1);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to upload resume';
       toast.error(msg);
@@ -456,16 +459,24 @@ const CandidateDashboard = () => {
               </div>
 
               <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>
-                <Clock size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle', color: 'var(--primary)' }} />
-                <span>AI Resume Scoring & Match reports will activate here in Phase 4.</span>
+                <Sparkles size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle', color: 'var(--primary)' }} />
+                <span>AI entity extraction and skills parsing are live. See structured analysis below.</span>
               </div>
 
-              <button
-                onClick={() => document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' })}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 700, color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.15s' }}
-              >
-                {candidateProfile?.resume_path ? 'Replace Resume Below' : 'Upload Resume Below'} <ArrowRight size={13} />
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={() => document.getElementById('ai-resume-insights-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', borderRadius: 12, background: 'rgba(107,138,58,0.14)', border: '1px solid rgba(107,138,58,0.28)', fontSize: 12, fontWeight: 700, color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.15s' }}
+                >
+                  <Sparkles size={13} /> View AI Analysis Below
+                </button>
+                <button
+                  onClick={() => document.getElementById('resume-upload-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', borderRadius: 12, background: 'var(--card-row-bg)', border: '1px solid var(--border)', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s' }}
+                >
+                  {candidateProfile?.resume_path ? 'Replace Resume File' : 'Upload Resume File'} <ArrowRight size={12} />
+                </button>
+              </div>
             </div>
           </Card>
 
@@ -725,7 +736,12 @@ const CandidateDashboard = () => {
           </Card>
         </div>
 
-        {/* ── Row C: Resume Upload Panel (Core API Phase 3) ─── */}
+        {/* ── Row C: AI Parsed Resume Insights (Phase 6 Live) ── */}
+        <div id="ai-resume-insights-panel" style={{ marginBottom: 18 }}>
+          <ParsedResumeCard key={resumeVersion} />
+        </div>
+
+        {/* ── Row D: Resume Upload Panel (Core API Phase 3 + Phase 6 AI) ─── */}
         <Card delay={0.34} style={{ overflow: 'visible' }}>
           <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635, #6B8A3A)', borderRadius: '20px 20px 0 0' }} />
           <div style={{ padding: '22px 28px 28px' }}>
@@ -785,7 +801,7 @@ const CandidateDashboard = () => {
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>or click to browse — PDF or DOCX accepted (Max 5MB)</p>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--pill-badge-bg)', padding: '5px 14px', borderRadius: 999, border: '1px solid var(--pill-badge-border)' }}>
-                    <Sparkles size={11} /> Core API Phase 3 Storage
+                    <Sparkles size={11} /> Core API + Phase 6 AI Entity Parsing
                   </span>
                 </>
               )}
