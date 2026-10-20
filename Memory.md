@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 2 complete âœ“ | Recruiter Dashboard âœ“ | Admin Dashboard âœ“ | Candidate Dashboard color-matched âœ“
-- **Last Updated:** 2026-09-07
+- **Active Phase:** Phase 6 Part D complete (Resume Parsing Agent with LangChain + Google Gemini) | Core API deployed | Auth Service deployed | Frontend live
+- **Last Updated:** 2026-10-03
 
 ## Repo / Service Locations
-- Frontend: `hiregenius-frontend/` â† active
-- Backend: `hiregenius-backend/` â† not started yet
-- AI Service: `hiregenius-ai-service/` â† not started yet
-- ML Service: `hiregenius-ml-service/` â† not started yet
+- Frontend: hiregenius-frontend/ (live on Vercel)
+- Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
+- Core API: hiregenius-core-api/ (live on EC2 / 4000)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A, B, C & D complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -403,7 +403,8 @@ pm run lint inside hiregenius-frontend/ (Passed with 0 errors).
 pm run build inside hiregenius-frontend/ (Passed, 2935 modules transformed).
 - Updated hiregenius-frontend/Dockerfile base image from 
 ode:20.11.1-alpine to 
-ode:20-alpine (Node >= 20.19.0) to support ite v8.2.1 / olldown (util.styleText).
+ode:20-alpine (Node >= 20.19.0) to support ite v8.2.1 / 
+olldown (util.styleText).
 - Tested docker build -t hiregenius-frontend:test . (Passed).
 - Tested docker run on exposed port 8080 and verified HTTP GET returned 200 OK.
 
@@ -477,7 +478,8 @@ pm run build build command, and dist output directory for monorepo configuration
   - Removed import.meta.env.DEV restriction so Demo 1-Click logins are available in production deployments (Vercel, GitHub Pages).
   - Configured realistic demo personas:
     - **Candidate**: Alex Morgan (candidate@hiregenius.ai) -> /candidate/dashboard
-    - **Recruiter**: Sarah Chen (ecruiter@hiregenius.ai) -> /recruiter/dashboard
+    - **Recruiter**: Sarah Chen (
+ecruiter@hiregenius.ai) -> /recruiter/dashboard
     - **Admin**: Marcus Vance (dmin@hiregenius.ai) -> /admin/dashboard
   - Added responsive $\ge 44 touch-target 1-click login cards with role-specific accent colors and persona badges.
   - Implemented graceful offline fallback in onSubmit: If backend API is unreachable/offline and a user enters any demo email, they are seamlessly authenticated to the corresponding demo dashboard.
@@ -620,12 +622,16 @@ pm run build (0 errors in 1.22s).
 - **Note for other services**: hiregenius-core-api (or any other service sharing the users schema) should ensure enum fields mapped to VARCHAR columns explicitly use string/VARCHAR JDBC typing to avoid similar schema validation failures.
 - **Verification**: mvn clean verify passed with 0 errors, 14/14 tests passing.
 
-### 2026-09-16 â€” Align All User Entity Enum Fields (ole, uth_provider) with VARCHAR Schema
-- **Issue**: Render deployment failed during Hibernate schema validation for the ole column:
+### 2026-09-16 â€” Align All User Entity Enum Fields (
+ole, uth_provider) with VARCHAR Schema
+- **Issue**: Render deployment failed during Hibernate schema validation for the 
+ole column:
   Schema-validation: wrong column type encountered in column [role] in table [users]; found [varchar (Types#VARCHAR)], but expecting [enum ('recruiter','candidate','admin') (Types#ENUM)]
-- **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both ole VARCHAR(50) and uth_provider VARCHAR(50).
+- **Root Cause**: Hibernate 6 on MySQLDialect defaults all @Enumerated fields to MySQL native ENUM unless explicitly instructed otherwise. Flyway migration V1__init_auth_schema.sql created both 
+ole VARCHAR(50) and uth_provider VARCHAR(50).
 - **Fields Updated in User.java**:
-  1. ole:
+  1. 
+ole:
      `java
      @Enumerated(EnumType.STRING)
      @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -648,7 +654,8 @@ pm run build (0 errors in 1.22s).
   1. hiregenius-frontend/src/services/authService.js:
      - Updated googleLogin(payload) to send a real HTTP POST request to /auth/google-login via Axios with { ...data, data } normalized return.
      - Preserved mockGoogleLoginApiCall(payload) in the file as an unreferenced fallback for offline development.
-     - Verified login, egister, and orgotPassword were already wired to real backend endpoints.
+     - Verified login, 
+egister, and orgotPassword were already wired to real backend endpoints.
   2. hiregenius-frontend/src/pages/Login/LoginPage.jsx:
      - Removed demo info banner and the "Demo Portals (1-Click)" section containing Candidate, Recruiter, and Admin bypass buttons.
      - Removed DEMO_ACCOUNTS map and devLogin handler.
@@ -1807,6 +1814,325 @@ pm run build completed successfully with 0 errors.
   - `GET /api/auth/validate` -> 401 (Auth Service, `Full authentication is required`).
   - `POST /api/auth/login` -> 401 (Auth Service, `Invalid email or password`).
 
+---
+
+### 2026-10-03 — Phase 6 Part A: AI/ML Service Setup & Project Skeleton
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part A (Project Setup and Skeleton ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/__init__.py`: Package init for the service.
+    - `app/main.py`: Minimal FastAPI application exposing `GET /health` returning `{"service": "ai-ml-service", "status": "UP"}`.
+    - `app/config.py`: Centralized environment variable loader using `python-dotenv`, defining `PORT` (default 8000) and `ENV` (default "development"), mirroring Core API's disciplined `env.js` pattern.
+    - `app/api/__init__.py`, `app/services/__init__.py`, `app/models/__init__.py`: Scaffolded subpackages for route handlers, business logic, and Pydantic schemas.
+    - `requirements.txt`: Restricted strictly to `fastapi`, `uvicorn`, `python-dotenv`, `pydantic`.
+    - `.env.example`: Configured with `PORT=8000`.
+    - `.gitignore`: Comprehensive rules for Python virtual environments (`venv/`, `.venv/`), bytecode cache (`__pycache__/`), and environment secrets (`.env`).
+    - `Dockerfile`: Multi-stage production container based on `python:3.11-slim`, non-root user `appuser` (UID 1000), internal Python-based `HEALTHCHECK` probing `GET /health`, exposing port 8000.
+    - `README.md`: Full documentation covering virtual environment convention (`python -m venv venv`), activation on Windows & Linux, dependency installation, local execution, Docker usage, and Phase 6 roadmap.
+  - `.github/workflows/ai-ml-service-ci.yml`:
+    - GitHub Actions CI workflow triggered only on changes to `hiregenius-ai-ml-service/**` and the workflow file itself across `main`, `dev`, and `feature/**`.
+    - Installs dependencies from `requirements.txt` on Python 3.11 and executes smoke checks ensuring `app.main` imports cleanly and FastAPI config initializes properly.
+    - Tests Docker container build.
+    - Contains GHCR container build-and-push step for pushes to `main`.
+- **Verification**:
+  - Verified local Python 3.13 venv setup and package installation.
+  - Verified local server running on port 8000; `GET http://localhost:8000/health` returned `{"service": "ai-ml-service", "status": "UP"}`.
+  - Verified zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Pending (Subsequent Phase 6 Parts)**:
+  - Part B: MongoDB connection & document repository (`resume_json` collection).
+  - Part C: Resume text extraction pipeline (PDF/DOCX handling).
+  - Part D: Resume Parsing Agent with Google Gemini structured output.
+
+---
+
+### 2026-10-03 — Phase 6 Part B: MongoDB Connection & Resume Repository Setup
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part B (MongoDB Connectivity & Resume Collection ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `pymongo>=4.6.0,<5.0.0` and `motor>=3.3.0,<4.0.0` for asynchronous MongoDB support.
+    - `app/config.py`: Extended configuration to read `MONGODB_URI` and `MONGODB_DB_NAME` (default: `"hiregenius_ai"`). Added fatal-if-missing validation in production (`RuntimeError`) while logging clear warnings in local/development environments. Added dual fallback loading checking both service-level `.env` and root `.env`.
+    - `.env.example`: Updated with `MONGODB_URI` placeholder and `MONGODB_DB_NAME=hiregenius_ai`.
+    - `app/db/__init__.py`: Package init for database layer.
+    - `app/db/mongodb.py`: Async connection manager (`MongoDBManager`) utilizing `AsyncIOMotorClient`, exposing `get_database()`, `get_resumes_collection()` (`resumes` collection reference for parsed resume JSON), and a lightweight `ping()` health command.
+    - `app/main.py`: Modern FastAPI `lifespan` context manager ensuring graceful connection establishment on startup and clean connection pool closure on shutdown. Updated `GET /health` to perform a database ping: returns HTTP 200 `{"service": "ai-ml-service", "status": "UP", "mongodb": "CONNECTED"}` when healthy, or HTTP 503 `{"service": "ai-ml-service", "status": "DOWN", "mongodb": "DISCONNECTED"}` when unreachable.
+    - `README.md`: Documented MongoDB configuration, async Motor client lifecycle, collection access, and database-aware health check response codes.
+  - `.github/workflows/ai-ml-service-ci.yml`:
+    - Updated smoke test suite with unit mock tests verifying both HTTP 200 CONNECTED and HTTP 503 DISCONNECTED paths without requiring an external MongoDB connection in CI.
+- **Verification**:
+  - Verified local venv package installation of `pymongo` and `motor`.
+  - Verified startup and shutdown lifecycle hooks execute cleanly.
+  - Verified `GET /health` properly returns HTTP 503 DISCONNECTED when unconfigured, and HTTP 200 CONNECTED when ping succeeds.
+  - Verified fatal error is thrown in production when `MONGODB_URI` is missing.
+  - Verified zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part C: Resume text extraction (PDF / DOCX processing).
+
+---
+
+### 2026-10-03 — Phase 6 Part C: Resume Text Extraction (PDF / DOCX)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part C (Resume Text Extraction ONLY)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `pypdf>=4.0.0,<7.0.0`, `python-docx>=1.1.0,<2.0.0`, and `python-multipart>=0.0.9,<1.0.0` (required for FastAPI `UploadFile` form parsing).
+    - `app/services/text_extraction.py`: Service module implementing `extract_text_from_pdf` (page extraction & decryption check via `pypdf`), `extract_text_from_docx` (paragraph & table extraction via `python-docx`), and `extract_text` extension-based dispatcher with custom exceptions (`UnsupportedFileTypeError`, `EmptyFileError`, `CorruptedFileError`, `EncryptedFileError`).
+    - `app/api/resume.py`: Registered `POST /api/resume/extract-text` endpoint handling multipart file uploads, validating extension (`.pdf`, `.docx`), enforcing max 5MB size limit (matching Core API Phase 3 standard), checking for empty 0-byte files, and returning `{ "filename", "extracted_text", "character_count" }` with graceful HTTP 400 and HTTP 422 error responses.
+    - `app/main.py`: Included `resume_router` into FastAPI application.
+    - `test/test_text_extraction.py` & `test/fixtures/`: 14 automated unit and integration tests covering successful PDF/DOCX extraction, dispatcher logic, unsupported extensions (.txt), empty file rejection, 5MB limit enforcement, and corrupted file handling.
+    - `README.md`: Documented new text extraction endpoint, test suite execution, error codes, and updated roadmap.
+  - `.github/workflows/ai-ml-service-ci.yml`: Added automated test suite execution step (`python -m unittest discover -s test -v`).
+- **Verification**:
+  - Connected live to real MongoDB Atlas cluster using credentials provided in `.env`: `GET /health` returned `HTTP 200 {"service": "ai-ml-service", "status": "UP", "mongodb": "CONNECTED"}`.
+  - All 14 unit and endpoint tests passed in 0.150s (`OK`).
+  - Tested `POST /api/resume/extract-text` manually against local server with real multi-section sample PDF (`real_resume_david_kumar.pdf`, 615 chars) and DOCX (`real_resume_alex_smith.docx`, 1389 chars) — text extraction was clean, accurate, and structured.
+  - Tested manual error paths:
+    - Unsupported `.txt` file: returns `HTTP 400 Bad Request` (`"Invalid file type..."`).
+    - Empty 0-byte file: returns `HTTP 400 Bad Request` (`"Uploaded file is empty (0 bytes)..."`).
+    - Oversized file (>5MB): returns `HTTP 400 Bad Request` (`"File exceeds the maximum allowed size of 5MB..."`).
+    - Corrupted file: returns `HTTP 422 Unprocessable Content` (`"Cannot extract text from 'corrupted.pdf'..."`).
+  - Verified `.env` containing sensitive Atlas credentials is gitignored and untracked.
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part D: Resume Parsing Agent (Google Gemini structured extraction).
+
+---
+
+### 2026-10-03 — Phase 6 Part D: Resume Parsing Agent (LangChain + Google Gemini)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part D (Resume Parsing Agent with LangChain + Google Gemini Structured Output)
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `requirements.txt`: Added `langchain>=0.3.0,<0.4.0`, `langchain-google-genai>=2.0.0,<3.0.0`, and `google-generativeai>=0.8.0,<1.0.0` with verified version compatibility.
+    - `app/config.py`: Extended configuration to read `GEMINI_API_KEY` and `GEMINI_MODEL` (default `"gemini-1.5-flash"`). Enforces fatal-in-production check while logging warning in development.
+    - `app/models/resume.py`: Pydantic v2 structured contract `ParsedResume` with sub-models (`EducationItem`, `ExperienceItem`, `ProjectItem`). Fields (`full_name`, `email`, `phone`, `skills`, `education`, `experience`, `certifications`, `projects`) are nullable / optional to accommodate incomplete resumes gracefully.
+    - `app/services/resume_agent.py`: LangChain-powered resume parser implementing `with_structured_output(ParsedResume)`. Configured with rigorous anti-hallucination prompt instructing model never to invent or extrapolate unstated skills/facts. Wraps all LLM exceptions in custom `ResumeParsingError` / `ResumeParsingConfigError` to prevent raw stack trace leakage.
+    - `app/api/resume.py`: Registered `POST /api/resume/parse` endpoint. Reuses text extraction from Part C, enforces a quality gate rejecting resumes with <50 characters as requiring OCR (HTTP 422), invokes the parsing agent, and returns structured `ParsedResume` JSON.
+    - `test/test_resume_agent.py`: 9 comprehensive unit and integration tests with mocked Gemini calls, validating output schema mapping, empty input rejection, unconfigured API key handling (503), LLM exception wrapping (422), and the <50 character OCR quality gate.
+    - `README.md`: Documented `/parse` endpoint, schema, and local execution instructions.
+- **Live Verification**:
+  - Live execution of `POST /api/resume/parse` against Google Gemini API using `gemini-3.8-flash`:
+    - `real_resume_david_kumar.pdf`: Successfully parsed in ~2s. Extracted 100% accurate skills (`Python`, `Go`, `Java`, `TypeScript`, `SQL`, `FastAPI`, `Spring Boot`, `Celery`, `Docker`, `Kubernetes`, `Nginx`, `MongoDB Atlas`, `MySQL`, `Redis`, `PostgreSQL`) and lead engineer experience at `TechCorp AI`. Zero hallucination in empty fields (`education`, `certifications`, `projects` correctly returned `[]`).
+    - OCR-gate: Verified live with short text PDF (<50 characters), returning HTTP 422 Unprocessable Content with explicit message indicating document requires OCR.
+- **Verification**:
+  - Full automated test suite (23 tests: 14 from Part C + 9 from Part D) passed in `0.314s` (`OK`).
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part E: MongoDB persistence for parsed resumes (`resumes` collection storage).
+
+---
+
+### 2026-10-03 — Phase 6 Part E: Save Parsed Resume to MongoDB
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part E (Persist parsed resume data into MongoDB Atlas `resumes` collection with upsert semantics)
+- **Design Decision**:
+  - Implemented **Upsert (Replace)**: Overwrites any existing parsed resume for `candidate_id` with the new parse, matching Core API Phase 3's one-resume-per-candidate architecture. Guaranteed at database level with a unique index on `candidate_id`.
+- **Built**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/models/resume.py`: Added `ResumeDocument`, `ParsedResumeResponse`, and `SavedResumeResponse` with computed `_id` field ensuring compatibility with callers expecting either `id` or `_id`.
+    - `app/db/mongodb.py`: Documented document schema and added automatic unique index creation on `candidate_id` upon startup.
+    - `app/services/resume_repository.py`: Created repository layer with `save_parsed_resume(candidate_id, filename, raw_text, parsed_data)` and `get_parsed_resume_by_candidate_id(candidate_id)`. Includes atomic upsert logic via `update_one` and graceful custom exception handling (`DatabaseNotConnectedError`, `ResumeRepositoryError`).
+    - `app/api/resume.py`: Updated `POST /api/resume/parse` to accept required form field `candidate_id: str = Form(...)`, extract & parse, persist to MongoDB, and return `ParsedResumeResponse` with document `id` and `_id`. Added `GET /api/resume/{candidate_id}` returning `SavedResumeResponse` (HTTP 404 if not found).
+    - `test/test_resume_repository.py`: 9 unit and integration tests using an in-memory async Motor collection simulation (testing save & retrieve parity, upsert duplicate prevention, nonexistent candidate 404, disconnected DB 503, and invalid candidate_id 400).
+    - `test/test_resume_agent.py`: Updated existing endpoint tests to supply `candidate_id` and test `ParsedResumeResponse`.
+    - `README.md`: Documented updated `/parse` form contract, new `GET /{candidate_id}` endpoint, and 32 unit tests.
+- **Live Verification**:
+  - Live execution against real Google Gemini (`gemini-3.8-flash`) and real MongoDB Atlas cluster:
+    1. `GET /api/resume/test_cand_david_phase6` returned `HTTP 404 Not Found` before save.
+    2. `POST /api/resume/parse` with `candidate_id=test_cand_david_phase6` and `real_resume_david_kumar.pdf` succeeded (`HTTP 200 OK`, `_id: 6ac09ca8e0ddafc19265a7d1`).
+    3. `GET /api/resume/test_cand_david_phase6` returned the saved document with full raw text, parsed JSON, timestamp, and model version.
+    4. Second parse with same `candidate_id=test_cand_david_phase6` using `real_resume_alex_smith.docx` succeeded (`HTTP 200 OK`) and preserved the same document `_id` (`6ac09ca8e0ddafc19265a7d1`), fully replacing previous data with Alex Smith's details.
+    5. Atlas verification confirmed exact document count for candidate remained 1 (no duplicates). Cleaned up test document afterwards.
+- **Verification**:
+  - Full automated test suite (32 tests across 3 modules) passed in `0.423s` (`OK`).
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+- **Next**:
+  - Phase 6 Part F: Core API integration (wiring Core API resume upload to call AI-ML service).
+
+---
+
+### 2026-10-03 — Phase 6 Part F: Core API Integration & Full Phase 6 Completion
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 6 Part F (Connecting Core API candidate resume uploads to AI-ML service with internal authentication, failure isolation, and parsed resume retrieval)
+- **Architectural & Deployment Decisions**:
+  - **Shared Internal Authentication**: Enforced via `X-Internal-Key` (`AI_ML_SERVICE_INTERNAL_KEY`) between Core API and AI/ML Service. Unauthenticated requests to `/api/resume/*` are rejected with HTTP 401 Unauthorized, while `/health` remains public for container probes.
+  - **Synchronous Execution with Failure Isolation**: Core API awaits AI parsing during `POST /api/candidates/me/resume` (~2s). If the AI service is down or parsing fails, the error is logged and the user-facing resume upload request **still succeeds** (mirroring the email notification failure isolation pattern).
+  - **Ownership & Access Control**:
+    - Candidates access their own parsed data via `GET /api/candidates/me/resume/parsed`.
+    - Recruiters access a candidate's parsed data via `GET /api/candidates/:id/resume/parsed`, strictly guarded by the Phase 3 application link ownership rule (HTTP 403 if no application link exists).
+  - **Production Hosting Decision**: Confirmed to deploy `hiregenius-ai-ml-service` to the same EC2 instance as the 3rd container alongside Core API and Auth Service (cost-conscious free-tier approach).
+- **Built & Integrated**:
+  - `hiregenius-ai-ml-service/`:
+    - `app/config.py` & `.env.example`: Added `AI_ML_SERVICE_INTERNAL_KEY` with fatal-in-production validation.
+    - `app/api/auth.py`: Created `verify_internal_key` FastAPI dependency.
+    - `app/api/resume.py`: Attached `verify_internal_key` dependency to `/api/resume` router.
+    - `test/test_auth.py`: 6 automated tests validating missing, invalid, valid, unconfigured keys and public `/health`. Total 38 tests passing.
+  - `hiregenius-core-api/`:
+    - `src/config/env.js` & `.env.example`: Added `AI_ML_SERVICE_URL` (default `http://localhost:8000`) and `AI_ML_SERVICE_INTERNAL_KEY` (fatal in production).
+    - `src/modules/candidates/aiMlClient.service.js`: Created client utilizing Node.js native `fetch`, `FormData`, and `Blob` with timeout guards to call `POST /api/resume/parse` and `GET /api/resume/:candidate_id`.
+    - `src/modules/candidates/candidates.service.js`: Wired `aiMlClient.parseResume` into `uploadResume` with `try/catch` failure isolation. Added `getParsedResume(userId)` and `getParsedResumeForRecruiter(candidateId, recruiterId)`.
+    - `src/modules/candidates/candidates.controller.js` & `candidates.routes.js`: Registered `GET /me/resume/parsed` (for candidates) and `GET /:id/resume/parsed` (for recruiters).
+    - `test/modules/candidates/candidates.test.js`: Added 10 tests covering successful parsing, failure isolation, candidate access, recruiter ownership guards, and 404/403 edge cases.
+- **Live Verification**:
+  1. Internal authentication verified live: direct request to AI service without header rejected with `HTTP 401 Unauthorized`; with header accepted.
+  2. Live resume upload through Core API `POST /api/candidates/me/resume`: Succeeded (`HTTP 200 OK`) and triggered real AI parsing + MongoDB persistence.
+  3. Live parsed retrieval through Core API `GET /api/candidates/me/resume/parsed`: Succeeded (`HTTP 200 OK`) returning structured JSON with all skills, experience, and MongoDB ID.
+  4. Failure isolation verified live: Stopped AI service process on port 8000. Re-uploaded resume via Core API -> Resume upload **still succeeded** (`HTTP 200 OK`) with `AI resume parsing failed: fetch failed` isolated cleanly to server logs.
+- **Verification**:
+  - `hiregenius-ai-ml-service`: 38 unit and integration tests passing (`OK`).
+  - `hiregenius-core-api`: 190 automated tests across all 16 test suites passing (`PASS`).
+- **Phase 6 Summary**:
+  - Full end-to-end resume parsing pipeline complete: PDF/DOCX text extraction -> OCR quality gate (<50 chars) -> LangChain + Google Gemini structured output -> MongoDB Atlas persistence with upsert duplicate prevention -> Core API proxying with shared-secret internal auth & failure isolation.
+
+---
+
+### 2026-10-03 — Phase 6: Frontend Rewiring (Real AI Parsed Resume Integration)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Frontend rewiring to live Core API / AI-ML endpoints (`GET /api/candidates/me/resume/parsed` and `GET /api/candidates/:id/resume/parsed`).
+- **Clarification & Verification on `model_version`**:
+  - Confirmed via live inspection of MongoDB Atlas and Gemini API: `model_version` is stored as `"gemini-3.8-flash"`. As verified directly from `genai.list_models()`, `models/gemini-3.8-flash` is a supported, active model returned by Google Gemini in this environment and is the exact model that parsed the live resumes.
+- **Built & Wired**:
+  - `hiregenius-frontend/src/services/candidatesService.js`: Added `getParsedResume()` and `getCandidateParsedResume(candidateId)` methods utilizing the existing authenticated Axios instance.
+  - `hiregenius-frontend/src/components/Resume/ParsedResumeCard.jsx`: New reusable component displaying structured AI resume insights (skills tags, work experience timeline, education history, certifications, projects, metadata badge, and on-demand refresh).
+    - Gracefully handles 4 states: Loading spinner, Empty/Pending (HTTP 404 treated as friendly "Resume analysis will appear once processing completes" rather than error), Real API Error (HTTP 401/403/500 with retry button), and Populated state.
+  - `hiregenius-frontend/src/pages/Dashboard/CandidateDashboard.jsx`:
+    - Replaced the Category C Phase 4 placeholder with live AI extraction status and scroll link.
+    - Integrated `ParsedResumeCard` as an independent, non-blocking section above the resume upload panel.
+    - Wired `resumeVersion` state so that upon successful resume upload (`POST /api/candidates/me/resume`), the parsed resume card refreshes automatically.
+  - `hiregenius-frontend/src/pages/candidate/ResumeScorePage.jsx`: Replaced the legacy pending placeholder with the live `ParsedResumeCard` and an honest notice that future Phase 4 semantic match scoring (0-100%) against job postings remains upcoming.
+  - `hiregenius-frontend/src/pages/candidate/CandidateSettingsPage.jsx`: Added real skills extracted summary chip (e.g., "16 Skills Extracted (AI)") and "View Full AI Analysis →" link; updated notification row to reflect live Phase 6 parsing alerts.
+  - `hiregenius-frontend/src/pages/recruiter/RecruiterCandidatesPage.jsx`: Integrated `ParsedResumeCard` in the applicant detail modal (with `isRecruiter={true}` and candidateId).
+- **Verification**:
+  1. Live Candidate Upload: Real PDF upload (`real_resume_david_kumar.pdf`) completed via Core API (`HTTP 200 OK`), and immediate retrieval via `GET /api/candidates/me/resume/parsed` returned 16 accurately parsed skills and lead engineer experience.
+  2. Failure Isolation / Pending State: For candidates without a resume (or pending parse), `GET /api/candidates/me/resume/parsed` returns `HTTP 404`, which `ParsedResumeCard` renders as a friendly pending card with a "Check Status" button.
+  3. Recruiter Ownership Check: Recruiter owning an applied job (`sarah.recruiter@hiregenius.ai`) accesses applicant parsed resume (`HTTP 200 OK`). Unlinked recruiter access correctly triggers server-enforced `HTTP 403 Forbidden`, rendered gracefully in the UI.
+  4. Build & Lint: `npm run build` passed with zero errors (2953 modules transformed in 1.12s). Old Category C placeholders verified completely removed.
+- **Changed Files**:
+  - `hiregenius-frontend/src/services/candidatesService.js`
+  - `hiregenius-frontend/src/components/Resume/ParsedResumeCard.jsx`
+  - `hiregenius-frontend/src/pages/Dashboard/CandidateDashboard.jsx`
+  - `hiregenius-frontend/src/pages/candidate/ResumeScorePage.jsx`
+  - `hiregenius-frontend/src/pages/candidate/CandidateSettingsPage.jsx`
+  - `hiregenius-frontend/src/pages/recruiter/RecruiterCandidatesPage.jsx`
+---
+
+### 2026-10-14 — Phase 7: Skill Matching & Scoring Service (FastAPI)
+
+- **Branch**: `feature/ai-ml-service-phase6-resume-parsing`
+- **Scope**: Phase 7 (Hybrid Explainable Skill Matching, Semantic Similarity & Experience Fit within `hiregenius-ai-ml-service`).
+- **Core Design Decision**:
+  - There is no reliable public labeled dataset of `(resume, job description, match score)`. Avoided inventing a fake supervised model or fabricating ground-truth labels.
+  - Implemented an **explainable hybrid approach**:
+    1. **Skill Extraction & Normalization**: 3-layer skills catalog with token-boundary regex matching and canonical alias resolution.
+    2. **Semantic Similarity**: Pretrained Sentence-Transformer (`all-MiniLM-L6-v2`) with cosine similarity, loaded as a singleton once at startup.
+    3. **Weighted Scoring Formula**: `skills_match` (0.5) + `semantic_score` (0.3) + `experience_fit` (0.2) producing a 0–100 score + recommendation labels.
+- **Datasets & Licensing**:
+  - `data/resumes.csv`: 2,484 resumes across 24 categories (Kaggle Snehan Kekre, CC BY-SA 4.0).
+  - `data/job_postings.csv`: 123,849 LinkedIn job postings, ~517 MB (Kaggle, Open Data Community License).
+  - `app/resources/seed_skills.csv`: 345 hand-curated modern tech & soft skills with aliases across 20 categories (authored in-house, labeled *"curated seed — needs human review"*).
+  - `data/postings_mined_skills.csv`: Auditable mined technical terms discovered in a 20,000-postings sample with frequency $\ge 25$.
+  - `data/skill_candidates.csv`: 2,000 candidate terms extracted from sample.
+  - `data/skills_taxonomy/`: Omitted (ESCO & O*NET not available); `SkillMatcher` includes optional dynamic loader if `.csv` files are added later.
+  - `data/labeled_pairs.csv`: Not present; skipped supervised weight tuning rather than inventing fake labels. Weights marked as **UNTUNED** (`0.5 / 0.3 / 0.2`).
+  - `data/indian_resumes/` & `data/indian_jds/`: Not present; implemented explainable rule-based India-aware layers.
+- **India-Aware Normalization & Bias Neutrality**:
+  - **Degrees**: B.Tech, B.E., BCA, M.Tech, MCA, Diploma, Polytechnic mapped to standard degree tiers (`Bachelor's`, `Master's`, `Diploma`, `Doctorate`).
+  - **Titles**: GET, Software Engineer Trainee, Associate Software Engineer mapped to `Entry`; SDE/SDE-1 to `Mid`; Senior/SDE-2 to `Senior`; Tech Lead to `Lead/Management`.
+  - **Experience**: "Fresher" (0.0 yrs), "6 months" (0.5), "1.5 yrs", "0-2 years" (1.0), "3-5 yrs" (4.0) parsed into numeric floats.
+  - **Bias / Privacy Invariance**: Strips personal fields (`dob`, `address`, `marital_status`, `father_name`, `gender`, `photo`) from resume text before scoring. Verified via unit test that two resumes identical in content but differing in personal attributes receive identical scores.
+- **Service Modules Built**:
+  - `app/models/matching.py`: Pydantic models `JobRequirement`, `MatchRequest`, `MatchResponse` (`matchScore`, `skillsMatchPercent`, `matchedSkills`, `missingSkills`, `semanticScore`, `experienceFit`, `recommendation`).
+  - `app/services/skill_matcher.py`: Multi-layer catalog loader, token-boundary skill extractor, alias resolver, degree/title/experience normalizers, privacy sanitizer.
+  - `app/services/scorer.py`: Singleton `SentenceTransformer('all-MiniLM-L6-v2')` loader, skill match percentage calculator, experience fit calculator, semantic similarity scaler, weighted formula evaluator.
+  - `app/api/matching.py`: `POST /api/match` endpoint with HTTP 400 rejection for empty resume structures and HTTP 422 for malformed schemas.
+  - `app/config.py`: Added `MATCH_WEIGHT_SKILLS` (0.5), `MATCH_WEIGHT_SEMANTIC` (0.3), `MATCH_WEIGHT_EXPERIENCE` (0.2), `MATCH_THRESHOLD_HIGH` (75.0), `MATCH_THRESHOLD_CONSIDER` (50.0).
+  - `app/main.py`: Preloads `SentenceTransformer` during FastAPI `lifespan` startup to prevent per-request model loading latency; registered `matching_router`.
+- **Validation & Real Numbers**:
+  - **Notebook**: `notebooks/skill_matching.ipynb` executed top-to-bottom with 0 errors via `jupyter nbconvert`.
+  - **Coverage Metric**: On 300 sampled postings with non-empty `skills_desc`: 71/300 (23.7% detection rate across all job sectors; average 0.49 skills/posting). Non-tech postings lack technical keywords.
+  - **Semantic Sanity Check**: IT resume vs Software JD cosine similarity = 0.4026 (semantic score: 40.3) > Agriculture resume vs Software JD = 0.2937 (semantic score: 29.4).
+  - **Live `POST /api/match` Verification (3 Realistic Cases)**:
+    - Case 1 (Strong): `matchScore: 92.9` -> `Highly Recommended` (Skills: 100%, Semantic: 76.3, Exp: 100%)
+    - Case 2 (Medium): `matchScore: 48.1` -> `Not a Fit` (Skills: 40%, Semantic: 60.3, Exp: 50%)
+    - Case 3 (Weak): `matchScore: 28.7` -> `Not a Fit` (Skills: 0%, Semantic: 28.9, Exp: 100%)
+    - Verified strict score ordering: `Strong (92.9) > Medium (48.1) > Weak (28.7)`.
+  - **Automated Tests**:
+    - `test/test_matching.py`: 11 tests covering aliases/case normalization, token boundary extraction, degree/title/experience parsing, demographic bias invariance, scorer range 0-100 & ranking, recommendation thresholds, HTTP 400 empty resume rejection, and HTTP 422 schema validation.
+    - Full suite: **49 passed in 37.17s (100% passing)**.
+- **Git & Boundaries Confirmation**:
+  - Zero files modified in `hiregenius-frontend/`, `hiregenius-auth-service/`, or `hiregenius-core-api/`.
+  - No datasets committed (`data/` ignored in `.gitignore`).
+  - Core API integration deferred to Phase 10 as specified.
+
+### 2026-10-19 - Phase 7 Removal from AI/ML Service
+- **Scope & Context**: Cleanly removed Phase 7 (Skill Matching & Scoring) from `hiregenius-ai-ml-service/` while preserving all Phase 6 work, the `data/` directory, and other services.
+- **Safety Pre-Check**:
+  - Created safety backup branch `backup/phase7-wip` and tag `backup/phase7-before-removal`.
+  - Confirmed `docs/` and `.archify/` are design artifacts and left untouched.
+  - Confirmed uncommitted frontend changes belong to Phase 6 Rewiring (calling Core API resume endpoints) with zero dependency on Phase 7.
+- **Files Removed (List A)**:
+  - `app/api/matching.py`
+  - `app/models/matching.py`
+  - `app/services/scorer.py`
+  - `app/services/skill_matcher.py`
+  - `app/resources/seed_skills.csv` & `app/resources/`
+  - `notebooks/skill_matching.ipynb` & `notebooks/`
+  - `requirements-notebook.txt`
+  - `test/test_matching.py`
+- **Surgical Edits (List B)**:
+  - `app/main.py`: Removed `matching_router` import, `scorer_service` import, lifespan model pre-loading, and route registration.
+  - `app/config.py`: Removed Phase 7 settings (`EMBEDDING_MODEL_NAME`, `MATCH_WEIGHT_*`, `MATCH_THRESHOLD_*`).
+  - `requirements.txt`: Removed `sentence-transformers` and `scikit-learn`.
+  - `README.md`: Removed Section 4.7 (`POST /api/match`) and Section 5 (Phase 7 Datasets & Taxonomy); updated Roadmap.
+- **Preserved Components**:
+  - All Phase 6 resume parsing endpoints (`POST /api/resume/extract-text`, `POST /api/resume/parse`, `GET /api/resume/parsed/{candidate_id}`), MongoDB persistence, Pydantic schemas, and PyPDF/docx text extractors.
+  - `data/` directory and all its dataset contents (`resumes.csv`, `job_postings.csv`, etc.) remain fully intact.
+  - `.gitignore` continues to ignore `data/`.
+  - Frontend uncommitted files from Phase 6 rewiring (`ParsedResumeCard.jsx`, dashboard updates) preserved.
+- **Verification**:
+  - Zero Phase 7 remnants in `hiregenius-ai-ml-service/`.
+  - Full Phase 6 test suite passing (38/38 tests).
+  - FastAPI server startup verified; `/health` returns HTTP 200.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+### 2026-10-21 - Bugfix: Forgot-Password "Network Error" Diagnosis & Resolution
+- **Symptom**: Frontend `http://localhost:5173/forgot-password` showed "Network Error" (axios failed to receive response, DevTools showed provisional headers).
+- **Diagnosis (Step 0)**:
+  1. Service Port: `netstat -ano | findstr :8080` showed no process listening. `hiregenius-auth-service` was stopped / not running.
+  2. Direct Endpoint Test: Once `auth-service` was started, `curl -i -X POST http://localhost:8080/api/auth/forgot-password` returned `HTTP 200` in 420ms (and 9ms on warm hit) with generic message `{"success":true,"message":"If an account exists with this email, password reset instructions have been sent."}`.
+  3. CORS Preflight: Tested `OPTIONS` with `Origin: http://localhost:5173`. Returned `HTTP 200` with `Access-Control-Allow-Origin: http://localhost:5173`, `Access-Control-Allow-Credentials: true`. SecurityConfig correctly permits OPTIONS and `/api/auth/forgot-password` publicly.
+  4. SMTP Dispatch: `@Async("mailTaskExecutor")` in `EmailServiceImpl` executes in background. The HTTP request returns immediately in <50ms without waiting for SMTP.
+  5. Frontend Base URL: `VITE_API_BASE_URL` in `hiregenius-frontend/.env` is correctly set to `http://localhost:8080/api`, with 30s timeout configured in `api.js`.
+- **Root Cause**: `hiregenius-auth-service` was not running locally on port 8080.
+- **Fix & Verification (Step 1)**:
+  - Started `hiregenius-auth-service` as an active background service listening on port 8080.
+  - Verified `GET /health` returns HTTP 200 `{"status":"UP","service":"auth-service"}`.
+  - Verified candidate password reset for real email `krvisuji92+candtest@gmail.com` dispatches email asynchronously and returns HTTP 200 in 9ms.
+  - Ran full test suite (`mvn test`): 51 tests passed, 0 failures, 0 errors.
+- **Admin Account Specific Check (Step 2 - Pending Decision)**:
+  - `admin@hiregenius.ai` is a fictional system domain with no real mailbox; reset emails sent there cannot be received.
+  - Three proposed options pending user confirmation:
+    (a) Make seeded admin email configurable via `ADMIN_EMAIL` to a real inbox controlled by the user.
+    (b) Add a safe CLI/script-based admin password reset tool reading password from environment variable.
+    (c) Keep admin on authenticated `change-password` only and disable self-service forgot-password for admin.

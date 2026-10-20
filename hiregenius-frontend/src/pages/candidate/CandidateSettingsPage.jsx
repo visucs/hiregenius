@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -130,6 +130,7 @@ const CandidateSettingsPage = () => {
   const [candidateProfile, setCandidateProfile] = useState(null);
   const [loadingCandidate, setLoadingCandidate] = useState(true);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [parsedResume, setParsedResume] = useState(null);
   const resumeFileRef = useRef(null);
 
   // Real Notification Preferences (Core API job_alerts_opt_in)
@@ -161,7 +162,18 @@ const CandidateSettingsPage = () => {
     }
   }, []);
 
-  // 2. Fetch real candidate notification preferences (GET /api/candidates/me/preferences)
+  // 2. Fetch real candidate parsed resume data (GET /api/candidates/me/resume/parsed)
+  const fetchParsedResume = useCallback(async () => {
+    try {
+      const res = await candidatesService.getParsedResume();
+      setParsedResume(res?.data ?? null);
+    } catch (err) {
+      // 404 is normal when not yet uploaded or pending
+      setParsedResume(null);
+    }
+  }, []);
+
+  // 3. Fetch real candidate notification preferences (GET /api/candidates/me/preferences)
   const fetchPreferences = useCallback(async () => {
     setLoadingPrefs(true);
     try {
@@ -176,8 +188,9 @@ const CandidateSettingsPage = () => {
 
   useEffect(() => {
     fetchCandidateProfile();
+    fetchParsedResume();
     fetchPreferences();
-  }, [fetchCandidateProfile, fetchPreferences]);
+  }, [fetchCandidateProfile, fetchParsedResume, fetchPreferences]);
 
   // Handle Resume Upload
   const handleResumeUpload = async (e) => {
@@ -202,6 +215,7 @@ const CandidateSettingsPage = () => {
       const res = await candidatesService.uploadResume(formData);
       toast.success(res?.message || 'Resume uploaded successfully!');
       fetchCandidateProfile();
+      fetchParsedResume();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to upload resume';
       toast.error(msg);
@@ -441,15 +455,30 @@ const CandidateSettingsPage = () => {
                     <FileText size={20} style={{ color: '#34d399' }} />
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>{candidateProfile.resume_original_name || 'Resume Document'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{candidateProfile.resume_original_name || 'Resume Document'}</p>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.12)', padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.25)' }}>
                         Active on File
                       </span>
+                      {parsedResume?.parsed_data?.skills && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'var(--pill-badge-bg)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--pill-badge-border)' }}>
+                          <Sparkles size={10} /> {parsedResume.parsed_data.skills.length} Skills Extracted (AI)
+                        </span>
+                      )}
                     </div>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                      Uploaded: {candidateProfile.updated_at ? new Date(candidateProfile.updated_at).toLocaleDateString() : 'Active'} · PDF/DOCX
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+                        Uploaded: {candidateProfile.updated_at ? new Date(candidateProfile.updated_at).toLocaleDateString() : 'Active'} · PDF/DOCX
+                      </p>
+                      {parsedResume?.parsed_data && (
+                        <>
+                          <span style={{ color: 'var(--border)' }}>·</span>
+                          <Link to="/candidate/resume-score" style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>
+                            View Full AI Analysis →
+                          </Link>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -649,28 +678,28 @@ const CandidateSettingsPage = () => {
               <CheckCircle2 size={18} style={{ color: '#60a5fa', flexShrink: 0 }} />
             </div>
 
-            {/* 4. Phase 6 Placeholder: AI Resume Tips */}
+            {/* 4. AI Resume Extraction Notifications (Phase 6 Live) */}
             <div
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-                padding: '14px 16px', borderRadius: 14, background: 'rgba(245,158,11,0.03)',
-                border: '1px solid rgba(245,158,11,0.18)', opacity: 0.85,
+                padding: '14px 16px', borderRadius: 14, background: 'rgba(52,211,153,0.04)',
+                border: '1px solid rgba(52,211,153,0.22)',
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                   <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
-                    AI Resume Optimization Recommendations
+                    AI Resume Parsing & Extraction Alerts
                   </p>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.10)', padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(245,158,11,0.22)' }}>
-                    Phase 6 · Coming Soon
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.12)', padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(52,211,153,0.25)' }}>
+                    Phase 6 Live
                   </span>
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                  AI recommendations to improve ATS compatibility and role match scores will be available when Phase 6 AI service launches.
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                  Real-time notification confirmations when your uploaded resume is parsed into structured entity records by Google Gemini.
                 </p>
               </div>
-              <Sparkles size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <CheckCircle2 size={18} style={{ color: '#34d399', flexShrink: 0 }} />
             </div>
 
           </div>

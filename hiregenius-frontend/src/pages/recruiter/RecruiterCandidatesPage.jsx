@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import jobsService from '../../services/jobsService';
 import applicationsService from '../../services/applicationsService';
 import candidatesService from '../../services/candidatesService';
+import ParsedResumeCard from '../../components/Resume/ParsedResumeCard';
 
 /* ─── Status configuration ────────────────────────────────── */
 const STATUS_CFG = {
@@ -493,10 +494,10 @@ const RecruiterCandidatesPage = () => {
               transition={{ type: 'spring', stiffness: 280, damping: 28 }}
               style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 20px)', pointerEvents: 'none' }}
             >
-              <div style={{ width: '100%', maxWidth: 540, borderRadius: 24, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 32px 96px rgba(0,0,0,0.30)', pointerEvents: 'auto', overflow: 'hidden' }}>
+              <div style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', borderRadius: 24, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: '0 32px 96px rgba(0,0,0,0.30)', pointerEvents: 'auto', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #3D5016, #6B8A3A, #a3e635)', borderRadius: '24px 24px 0 0' }} />
 
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(107,138,58,0.14)', border: '1px solid rgba(107,138,58,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <User size={18} style={{ color: 'var(--primary)' }} />
@@ -513,7 +514,7 @@ const RecruiterCandidatesPage = () => {
                   </button>
                 </div>
 
-                <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1 }}>
                   {loadingCandidateDetail ? (
                     <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>
                       Loading verified profile…
@@ -574,10 +575,16 @@ const RecruiterCandidatesPage = () => {
                         </span>
                       </div>
 
+                      {/* Live AI Parsed Resume Analysis (Phase 6) */}
+                      <ParsedResumeCard
+                        candidateId={selectedCandidate.candidate_id}
+                        isRecruiter={true}
+                      />
+
                       {/* Phase 4/5 roadmap notice */}
                       <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(107,138,58,0.08)', border: '1px solid rgba(107,138,58,0.20)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
                         <Clock size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                        <span>AI Resume Screening scores and AI Interview transcripts will be displayed here in Phase 4/5.</span>
+                        <span>AI Match scoring against this job role and AI Interview transcripts will appear in Phase 4/5.</span>
                       </div>
                     </>
                   )}

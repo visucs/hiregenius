@@ -94,6 +94,28 @@ class CandidatesController {
       return next(err);
     }
   }
+
+  async getParsedResume(req, res, next) {
+    try {
+      const parsed = await candidatesService.getParsedResume(req.user.userId);
+      return ApiResponse.success(res, parsed, 'Parsed resume data retrieved successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async getParsedResumeForRecruiter(req, res, next) {
+    try {
+      const parsed = await candidatesService.getParsedResumeForRecruiter(
+        req.params.id,
+        req.user.userId,
+      );
+      return ApiResponse.success(res, parsed, 'Candidate parsed resume retrieved successfully');
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new CandidatesController();
+
