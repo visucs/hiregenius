@@ -8,6 +8,8 @@ Provides endpoints for:
 - GET /api/ats/categories (list of 24 supported job categories)
 
 All endpoints require the internal API key (X-Internal-API-Key).
+All error responses return a unified shape:
+{"detail": {"error_type": str, "message": str, "parsability": Optional[dict]}}
 """
 
 from datetime import datetime, timezone
@@ -60,6 +62,23 @@ MIN_JD_CHARS = 30
 MAX_JD_CHARS = 10000
 
 
+def _raise_ats_error(
+    status_code: int,
+    error_type: str,
+    message: str,
+    parsability: Optional[dict] = None,
+) -> None:
+    """Raise HTTPException with unified error shape: {"detail": {"error_type", "message", "parsability"}}."""
+    raise HTTPException(
+        status_code=status_code,
+        detail={
+            "error_type": error_type,
+            "message": message,
+            "parsability": parsability,
+        },
+    )
+
+
 async def _read_and_validate_file(file: UploadFile) -> tuple[bytes, str]:
     """Validate uploaded file format and size, returning (bytes, filename)."""
     filename = (file.filename or "unknown").strip()
@@ -67,32 +86,36 @@ async def _read_and_validate_file(file: UploadFile) -> tuple[bytes, str]:
 
     has_valid_extension = any(lower_filename.endswith(ext) for ext in ALLOWED_EXTENSIONS)
     if not has_valid_extension:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type for '{filename}'. Only PDF (.pdf) and Word (.docx) resumes are supported.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "UnsupportedFileTypeError",
+            f"Invalid file type for '{filename}'. Only PDF (.pdf) and Word (.docx) resumes are supported.",
         )
 
     try:
         content = await file.read()
     except Exception as e:
         logger.error(f"Failed to read file '{filename}': {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to read uploaded file. Please verify the file and try again.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "FileReadError",
+            "Failed to read uploaded file. Please verify the file and try again.",
         )
 
     if len(content) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Uploaded file '{filename}' is empty (0 bytes). Please upload a valid resume.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "EmptyFileError",
+            f"Uploaded file '{filename}' is empty (0 bytes). Please upload a valid resume.",
         )
 
     if len(content) > MAX_FILE_SIZE_BYTES:
         max_mb = MAX_FILE_SIZE_BYTES // (1024 * 1024)
         actual_mb = round(len(content) / (1024 * 1024), 2)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File '{filename}' ({actual_mb}MB) exceeds the maximum allowed size of {max_mb}MB.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "FileSizeLimitExceededError",
+            f"File '{filename}' ({actual_mb}MB) exceeds the maximum allowed size of {max_mb}MB.",
         )
 
     return content, filename
@@ -103,46 +126,38 @@ def _extract_text_safe(content: bytes, filename: str) -> str:
     try:
         return extract_text(content, filename)
     except UnsupportedFileTypeError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        _raise_ats_error(status.HTTP_400_BAD_REQUEST, "UnsupportedFileTypeError", str(e))
     except EmptyFileError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        _raise_ats_error(status.HTTP_400_BAD_REQUEST, "EmptyFileError", str(e))
     except ScannedDocumentError as e:
         logger.warning(f"Scanned / no-text-layer document '{filename}': {e}")
         parsability_data = inspect_parsability(content, filename, 0)
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_type": "ScannedDocumentError",
-                "message": f"Cannot extract text from '{filename}': {str(e)}",
-                "parsability": parsability_data,
-            },
+        _raise_ats_error(
+            422,
+            "ScannedDocumentError",
+            f"Cannot extract text from '{filename}': {str(e)}",
+            parsability=parsability_data,
         )
     except EncryptedFileError as e:
         logger.warning(f"Encrypted document '{filename}': {e}")
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_type": "EncryptedFileError",
-                "message": f"Cannot extract text from '{filename}': {str(e)}",
-            },
+        _raise_ats_error(
+            422,
+            "EncryptedFileError",
+            f"Cannot extract text from '{filename}': {str(e)}",
         )
     except CorruptedFileError as e:
         logger.warning(f"Unprocessable document '{filename}': {e}")
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_type": "CorruptedFileError",
-                "message": f"Cannot extract text from '{filename}': {str(e)}",
-            },
+        _raise_ats_error(
+            422,
+            "CorruptedFileError",
+            f"Cannot extract text from '{filename}': {str(e)}",
         )
     except Exception as e:
         logger.error(f"Extraction error on '{filename}': {e}", exc_info=True)
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_type": "DocumentProcessingError",
-                "message": f"Failed to extract text from '{filename}': Document processing error.",
-            },
+        _raise_ats_error(
+            422,
+            "DocumentProcessingError",
+            f"Failed to extract text from '{filename}': Document processing error.",
         )
 
 
@@ -158,9 +173,10 @@ async def check_general_ats(
 ):
     clean_candidate_id = candidate_id.strip()
     if not clean_candidate_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="candidate_id cannot be empty.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            "candidate_id cannot be empty.",
         )
 
     content, filename = await _read_and_validate_file(file)
@@ -168,16 +184,14 @@ async def check_general_ats(
 
     if len(extracted_text.strip()) < MIN_RESUME_TEXT_CHARS:
         parsability_data = inspect_parsability(content, filename, len(extracted_text.strip()))
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error_type": "ScannedDocumentError",
-                "message": (
-                    f"Extracted text from '{filename}' is too short ({len(extracted_text.strip())} chars). "
-                    "The document appears to be a scanned or image-based resume with no extractable text layer."
-                ),
-                "parsability": parsability_data,
-            },
+        _raise_ats_error(
+            422,
+            "ScannedDocumentError",
+            (
+                f"Extracted text from '{filename}' is too short ({len(extracted_text.strip())} chars). "
+                "The document appears to be a scanned or image-based resume with no extractable text layer."
+            ),
+            parsability=parsability_data,
         )
 
     # Check if a structured ParsedResume already exists in DB to assist section detection
@@ -223,15 +237,17 @@ async def check_general_ats(
         )
     except DatabaseNotConnectedError as e:
         logger.error(f"Cannot save ATS check for '{clean_candidate_id}': MongoDB not connected: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database service unavailable. ATS result could not be persisted.",
+        _raise_ats_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "DatabaseNotConnectedError",
+            "Database service unavailable. ATS result could not be persisted.",
         )
     except AtsRepositoryError as e:
         logger.error(f"Failed to persist ATS check for '{clean_candidate_id}': {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to persist ATS result to database.",
+        _raise_ats_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "DatabaseError",
+            "Failed to persist ATS result to database.",
         )
 
     return ATSCheckResponse(
@@ -275,21 +291,24 @@ async def check_ats_for_job(
 ):
     clean_candidate_id = candidate_id.strip()
     if not clean_candidate_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="candidate_id cannot be empty.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            "candidate_id cannot be empty.",
         )
 
     clean_jd = (job_description or "").strip()
     if len(clean_jd) < MIN_JD_CHARS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"job_description is too short ({len(clean_jd)} chars). Minimum {MIN_JD_CHARS} characters required.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            f"job_description is too short ({len(clean_jd)} chars). Minimum {MIN_JD_CHARS} characters required.",
         )
     if len(clean_jd) > MAX_JD_CHARS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"job_description exceeds maximum limit of {MAX_JD_CHARS} characters ({len(clean_jd)} chars).",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            f"job_description exceeds maximum limit of {MAX_JD_CHARS} characters ({len(clean_jd)} chars).",
         )
 
     clean_job_id = job_id.strip() if job_id and job_id.strip() else None
@@ -306,16 +325,14 @@ async def check_ats_for_job(
 
         if len(extracted_text.strip()) < MIN_RESUME_TEXT_CHARS:
             parsability_data = inspect_parsability(content, filename, len(extracted_text.strip()))
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "error_type": "ScannedDocumentError",
-                    "message": (
-                        f"Extracted text from '{filename}' is too short ({len(extracted_text.strip())} chars). "
-                        "The document appears to be a scanned or image-based resume with no extractable text layer."
-                    ),
-                    "parsability": parsability_data,
-                },
+            _raise_ats_error(
+                422,
+                "ScannedDocumentError",
+                (
+                    f"Extracted text from '{filename}' is too short ({len(extracted_text.strip())} chars). "
+                    "The document appears to be a scanned or image-based resume with no extractable text layer."
+                ),
+                parsability=parsability_data,
             )
 
         parsability_data = inspect_parsability(content, filename, len(extracted_text))
@@ -334,21 +351,24 @@ async def check_ats_for_job(
             existing_doc = await get_parsed_resume_by_candidate_id(clean_candidate_id)
         except DatabaseNotConnectedError as e:
             logger.error(f"Cannot fetch saved resume for '{clean_candidate_id}': MongoDB not connected: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database service unavailable. Cannot retrieve stored resume.",
+            _raise_ats_error(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "DatabaseNotConnectedError",
+                "Database service unavailable. Cannot retrieve stored resume.",
             )
         except Exception as e:
             logger.error(f"Error querying resume for '{clean_candidate_id}': {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database error while retrieving stored resume.",
+            _raise_ats_error(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "DatabaseError",
+                "Database error while retrieving stored resume.",
             )
 
         if not existing_doc or not existing_doc.get("raw_text"):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No saved resume found for candidate_id '{clean_candidate_id}'. Please upload a resume file or parse the resume first.",
+            _raise_ats_error(
+                status.HTTP_404_NOT_FOUND,
+                "ResumeNotFoundError",
+                f"No saved resume found for candidate_id '{clean_candidate_id}'. Please upload a resume file or parse the resume first.",
             )
 
         extracted_text = existing_doc["raw_text"]
@@ -365,7 +385,7 @@ async def check_ats_for_job(
 
     now_utc = datetime.now(timezone.utc)
 
-    # Persist ATS result to MongoDB
+    # Persist ATS result to MongoDB with composite key (candidate_id, job_id)
     doc_id: Optional[str] = None
     try:
         doc_id = await save_ats_result(
@@ -386,16 +406,18 @@ async def check_ats_for_job(
             },
         )
     except DatabaseNotConnectedError as e:
-        logger.error(f"Cannot save ATS check for '{clean_candidate_id}': MongoDB not connected: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database service unavailable. ATS result could not be persisted.",
+        logger.error(f"Cannot save job-specific ATS check for '{clean_candidate_id}': MongoDB not connected: {e}")
+        _raise_ats_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "DatabaseNotConnectedError",
+            "Database service unavailable. ATS result could not be persisted.",
         )
     except AtsRepositoryError as e:
-        logger.error(f"Failed to persist ATS check for '{clean_candidate_id}': {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to persist ATS result to database.",
+        logger.error(f"Failed to persist job-specific ATS check for '{clean_candidate_id}': {e}", exc_info=True)
+        _raise_ats_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "DatabaseError",
+            "Failed to persist ATS result to database.",
         )
 
     return ATSCheckResponse(
@@ -447,9 +469,10 @@ async def get_candidate_ats_result(
 ):
     clean_candidate_id = candidate_id.strip()
     if not clean_candidate_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="candidate_id cannot be empty.",
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            "candidate_id cannot be empty.",
         )
 
     clean_job_id = job_id.strip() if isinstance(job_id, str) and job_id.strip() else None
@@ -458,22 +481,25 @@ async def get_candidate_ats_result(
         doc = await get_ats_result(clean_candidate_id, job_id=clean_job_id)
     except DatabaseNotConnectedError as e:
         logger.error(f"Cannot fetch ATS result for '{clean_candidate_id}': MongoDB not connected: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database service unavailable. Cannot retrieve ATS result.",
+        _raise_ats_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "DatabaseNotConnectedError",
+            "Database service unavailable. Cannot retrieve ATS result.",
         )
     except AtsRepositoryError as e:
         logger.error(f"Error querying ATS result for '{clean_candidate_id}': {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error while retrieving ATS result.",
+        _raise_ats_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "DatabaseError",
+            "Database error while retrieving ATS result.",
         )
 
     if not doc:
         filter_desc = f" for job_id '{job_id}'" if job_id else ""
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No ATS evaluation found for candidate_id '{clean_candidate_id}'{filter_desc}.",
+        _raise_ats_error(
+            status.HTTP_404_NOT_FOUND,
+            "AtsResultNotFoundError",
+            f"No ATS evaluation found for candidate_id '{clean_candidate_id}'{filter_desc}.",
         )
 
     return ATSCheckResponse(
@@ -499,5 +525,5 @@ async def get_candidate_ats_result(
         word_count=doc["word_count"],
         suggestions=doc.get("suggestions", []),
         parsability=ParsabilityAdvisory(**doc["parsability"]) if doc.get("parsability") else None,
-        checked_at=doc["checked_at"],
+        checked_at=doc.get("created_at") or doc.get("updated_at") or datetime.now(timezone.utc),
     )

@@ -231,21 +231,20 @@ class TestAtsScorer(unittest.TestCase):
         if not low_conf:
             self.assertEqual(cat, "Python Developer")
 
-    def test_category_predictor_alex_smith_automation_testing(self):
-        """Verify Alex Smith QA resume reliably identifies Automation Testing."""
-        alex_text = """
-        Alex Smith - Senior QA Automation Engineer
-        Email: alex.smith@example.com | San Jose, CA
-        PROFESSIONAL SUMMARY
-        SDET with 6+ years specializing in Selenium, Cypress, Pytest, and CI/CD pipelines.
-        SKILLS
-        Selenium, Cypress, Pytest, JUnit, Cucumber, Postman, Jenkins, Git, Test Automation
-        """
-        cat, strength, low_conf, top_3 = predict_category(alex_text)
+    def test_category_predictor_real_resume_alex_smith(self):
+        """Verify real Alex Smith fixture (Full Stack Engineer with Python/FastAPI) classifies as Python Developer."""
+        from pathlib import Path
+        from app.services.text_extraction import extract_text
 
-        self.assertEqual(cat, "Automation Testing")
+        docx_path = Path(__file__).resolve().parent / "fixtures" / "real_resume_alex_smith.docx"
+        text = extract_text(docx_path.read_bytes(), "real_resume_alex_smith.docx")
+
+        cat, strength, low_conf, top_3 = predict_category(text)
+
+        self.assertEqual(cat, "Python Developer")
         self.assertFalse(low_conf)
-        self.assertNotEqual(cat, "Unknown")
+        self.assertGreater(strength, 20.0)
+        self.assertEqual(top_3[0]["category"], "Python Developer")
 
     def test_generic_skill_category_demoted_below_role(self):
         """Verify generic database tools do not outrank a developer role when role keywords exist."""
@@ -314,6 +313,27 @@ class TestAtsScorer(unittest.TestCase):
         self.assertTrue(sections["Skills"])
         self.assertTrue(sections["Projects"])
         self.assertTrue(sections["Certifications"])
+
+    def test_section_heading_projects_variants_positive(self):
+        """Verify section detection accepts standard variations of Projects headings."""
+        positive_headings = ["PROJECTS", "Projects:", "Key Projects", "Academic Projects"]
+        for heading in positive_headings:
+            sample_text = f"Candidate Name\n\n{heading}\n- Built an e-commerce platform using Django."
+            sections = detect_sections(sample_text)
+            self.assertTrue(sections["Projects"], f"Failed to detect Projects section for heading: '{heading}'")
+
+    def test_section_heading_projects_variants_negative(self):
+        """Verify prose containing 'portfolio' or 'built' does NOT trigger Projects section."""
+        negative_snippets = [
+            "I built a portfolio website using React.",
+            "Worked on multiple client deliverables and built a portfolio.",
+            "Developed high-throughput APIs for financial clients.",
+            "Portfolio Profile",
+        ]
+        for snippet in negative_snippets:
+            sample_text = f"Candidate Name\n\nEXPERIENCE\n{snippet}\n\nEDUCATION\nB.S. CS"
+            sections = detect_sections(sample_text)
+            self.assertFalse(sections["Projects"], f"False positive: '{snippet}' falsely triggered Projects section")
 
     def test_format_signals_detection(self):
         """Test detection of bullets, dates, metrics, and action verbs."""

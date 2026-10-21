@@ -173,10 +173,13 @@ class TestAtsApi(unittest.IsolatedAsyncioTestCase):
                     file=None,
                 )
             self.assertEqual(ctx.exception.status_code, 404)
-            self.assertIn("No saved resume found for candidate_id '999'", ctx.exception.detail)
+            detail = ctx.exception.detail
+            self.assertEqual(detail["error_type"], "ResumeNotFoundError")
+            self.assertIn("No saved resume found for candidate_id '999'", detail["message"])
+            self.assertIsNone(detail["parsability"])
 
     async def test_job_description_length_validation(self):
-        """Verify 400 on JD < 30 chars or > 10,000 chars."""
+        """Verify 400 on JD < 30 chars or > 10,000 chars with unified error shape."""
         with self.assertRaises(HTTPException) as ctx_too_short:
             await check_ats_for_job(
                 candidate_id="101",
@@ -184,7 +187,8 @@ class TestAtsApi(unittest.IsolatedAsyncioTestCase):
                 file=None,
             )
         self.assertEqual(ctx_too_short.exception.status_code, 400)
-        self.assertIn("too short", ctx_too_short.exception.detail)
+        self.assertEqual(ctx_too_short.exception.detail["error_type"], "ValidationError")
+        self.assertIn("too short", ctx_too_short.exception.detail["message"])
 
         with self.assertRaises(HTTPException) as ctx_too_long:
             await check_ats_for_job(
@@ -193,7 +197,8 @@ class TestAtsApi(unittest.IsolatedAsyncioTestCase):
                 file=None,
             )
         self.assertEqual(ctx_too_long.exception.status_code, 400)
-        self.assertIn("exceeds maximum limit", ctx_too_long.exception.detail)
+        self.assertEqual(ctx_too_long.exception.detail["error_type"], "ValidationError")
+        self.assertIn("exceeds maximum limit", ctx_too_long.exception.detail["message"])
 
     async def test_scanned_ocr_guard_rejection(self):
         """Verify 422 error on image-only / short extracted text (<50 chars) using real scanned image PDF."""
@@ -206,16 +211,30 @@ class TestAtsApi(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(ctx.exception.status_code, 422)
         detail = ctx.exception.detail
-        if isinstance(detail, dict):
-            self.assertEqual(detail.get("error_type"), "ScannedDocumentError")
-            self.assertIsNotNone(detail.get("parsability"))
-            self.assertTrue(
-                "scanned" in detail.get("message", "").lower() or "ocr" in detail.get("message", "").lower()
-            )
-        else:
-            self.assertTrue(
-                "scanned" in str(detail).lower() or "ocr" in str(detail).lower()
-            )
+        self.assertEqual(detail["error_type"], "ScannedDocumentError")
+        self.assertIsNotNone(detail["parsability"])
+        self.assertTrue(
+            "scanned" in detail["message"].lower() or "ocr" in detail["message"].lower()
+        )
+
+    async def test_error_response_consistent_shape(self):
+        """Verify that all error responses conform to {'detail': {'error_type', 'message', 'parsability'}}."""
+        # 1. Invalid candidate_id (400)
+        with self.assertRaises(HTTPException) as ctx_cand:
+            upload = UploadFile(filename="resume.pdf", file=io.BytesIO(b"dummy"))
+            await check_general_ats(candidate_id="   ", file=upload)
+        self.assertEqual(ctx_cand.exception.status_code, 400)
+        self.assertEqual(ctx_cand.exception.detail["error_type"], "ValidationError")
+        self.assertIn("candidate_id cannot be empty", ctx_cand.exception.detail["message"])
+        self.assertIsNone(ctx_cand.exception.detail["parsability"])
+
+        # 2. Unsupported file type (400)
+        with self.assertRaises(HTTPException) as ctx_file:
+            bad_upload = UploadFile(filename="resume.txt", file=io.BytesIO(b"dummy text"))
+            await check_general_ats(candidate_id="101", file=bad_upload)
+        self.assertEqual(ctx_file.exception.status_code, 400)
+        self.assertEqual(ctx_file.exception.detail["error_type"], "UnsupportedFileTypeError")
+        self.assertIn("Only PDF", ctx_file.exception.detail["message"])
 
     async def test_table_layout_docx_parsability_warnings(self):
         """Verify table-based DOCX returns layout parsability warnings without score crashing."""
@@ -266,3 +285,5 @@ class TestAtsApi(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(HTTPException) as ctx_not_found:
                 await get_candidate_ats_result(candidate_id="999")
             self.assertEqual(ctx_not_found.exception.status_code, 404)
+            self.assertEqual(ctx_not_found.exception.detail["error_type"], "AtsResultNotFoundError")
+            self.assertIn("No ATS evaluation found", ctx_not_found.exception.detail["message"])

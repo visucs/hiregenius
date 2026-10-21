@@ -2185,24 +2185,33 @@ pm run build completed successfully with 0 errors.
     - AI/ML Service container consumes ~162 MB peak.
     - Total host memory consumption: ~772 MB (75.4%), leaving ~252 MB available headroom.
 - **Testing & Verification**:
-  - Full test suite: **65/65 tests passing** (100% green).
+  - Full test suite: **68/68 tests passing** (100% green).
   - Category Predictor & Margin Rule Refinements:
     - Relative margin rule: top category must be >= 1.25x #2 OR absolute gap >= 5.0 points; otherwise returns "Unknown" with `low_confidence=True` and empty `top_3_matches`.
-    - Headline / initial lines / ParsedResume experience titles used as strong role signals (e.g. Backend Engineer with Python/FastAPI boosts Python Developer).
+    - Headline / initial lines / ParsedResume experience titles used as strong role signals (e.g. Full Stack Engineer / Backend Engineer with Python/FastAPI boosts Python Developer).
     - Generic "skill-type" categories (`Database`, `Testing`) demoted below qualifying primary language/role categories (`Python Developer`, `Java Developer`, etc.) unless candidate is an explicit DBA.
     - Role-specific domain-skill suggestions emitted ONLY in General Mode when `low_confidence=False`. In Job-Specific Mode, suggestions come strictly from the target JD (`missing_jd_keywords`), never leaking category suggestions.
-  - Image-only / No-Text-Layer Error:
-    - Introduced distinct `ScannedDocumentError` (alias `NoTextLayerError`) in `text_extraction.py`.
-    - API returns HTTP 422 with structured diagnostic: `{"error_type": "ScannedDocumentError", "message": "...", "parsability": {...}}`.
-  - Section Heading False Positive Fix:
-    - Fixed `FALLBACK_PATTERNS["Projects"]` by removing loose words ("portfolio", "built", "developed") that falsely matched document titles like "Portfolio Profile". In `table_layout_bad_resume.docx`, "Projects" is now correctly `false`.
+    - Candidate role classifications verified:
+      - David Kumar (`real_resume_david_kumar.pdf`): Classified as **Python Developer** (30.7% vs Java 21.9% vs Database 15.0%, low_confidence=False).
+      - Alex Smith (`real_resume_alex_smith.docx`, Full Stack Engineer): Classified as **Python Developer** (25.8% vs Java 13.1% vs Database 9.8%, ratio: 1.97x, low_confidence=False) in both General and Job-Specific modes.
+      - Bob (zero keywords): Returns **Unknown** (`low_confidence=True`, empty `top_3_matches`).
+  - Unified Error Response Shape:
+    - All `/api/ats/*` error responses unified into the exact shape: `{"detail": {"error_type": str, "message": str, "parsability": Optional[dict]}}`.
+    - Includes `ScannedDocumentError` (alias `NoTextLayerError`), `ValidationError`, `UnsupportedFileTypeError`, `EmptyFileError`, `ResumeNotFoundError`, and `AtsResultNotFoundError`.
+  - Section Heading Boundary Verification:
+    - Added positive heading tests for `"PROJECTS"`, `"Projects:"`, `"Key Projects"`, and `"Academic Projects"`.
+    - Added negative tests verifying that prose containing words like `"portfolio"` or `"built"` (e.g. `"I built a portfolio website using React."`, `"Worked on multiple client deliverables and built a portfolio."`, `"Portfolio Profile"`) strictly does NOT trigger the Projects section.
   - Manual verification with 3 real resumes:
     - (a) Real PDF Resume (`real_resume_david_kumar.pdf`): 1 page, 615 chars, text density 615 chars/page, 0 images. Predicted category: "Python Developer" (30.7%, low_confidence=False, top-3: Python Developer 30.7, Java Developer 21.9, Database 15.0). General ATS Score 54.8 (Sections 57.1 / Length 30.0 / Format 75.0, exactly deriving 54.8).
     - (b) Real Image-Only PDF (`scanned_image_resume.pdf`): 1 page, 1 embedded image, 0 text characters. Rejected with HTTP 422 Unprocessable Entity (`ScannedDocumentError`: "No extractable text layer found in PDF. The document appears to be an image-only scan without OCR") with full parsability diagnostic included.
     - (c) Real Badly Formatted Resume (`table_layout_bad_resume.docx`): 2 layout tables. Advisory warning: "Document contains 2 table(s)...". Predicted category: "Unknown" (`low_confidence=True`, empty `top_3`). All sections `false` (`Projects: false`), ATS Score 7.5.
-- **Resource Footprint & Host Feasibility Note**:
-  - Python process memory: Baseline 17.41 MB; Base Stack 55.88 MB; ATS import 56.56 MB (+0.68 MB / 700 KB); Peak during 20 consecutive ATS checks: 57.08 MB (+0.52 MB).
-  - Note on host memory estimation: Host calculation uses estimates for Java Auth Service (~300 MB) and Node Core API (~140 MB), not measured values. Total estimated host memory is ~772 MB / 1024 MB on AWS `t3.micro`.
+- **Resource Footprint & Memory Benchmark Clarification**:
+  - Two distinct memory figures explained:
+    - **155.50 MB Baseline / 162.32 MB Peak**: Full FastAPI application process (`app.main`) with MongoDB client connection pools (`motor.motor_asyncio` / `pymongo`), Google Gemini LangChain SDK / gRPC runtimes (`google.generativeai`), Uvicorn server, and all API routers loaded.
+    - **55.88 MB Baseline / 57.08 MB Peak**: Minimal isolated script loading only ATS scoring dependencies (FastAPI/Pydantic models, PyPDF, python-docx, and `app.services.ats`) without MongoDB connection pools, Google Gemini gRPC runtimes, or Uvicorn server.
+    - In both setups, the incremental memory footprint of the pure ATS scoring engine under load is **< 1 MB** (+0.52 MB delta during 20 consecutive checks).
+  - Docker Status: Docker daemon (`com.docker.service`) was stopped on the local Windows machine and requires local admin permissions to start; Docker Desktop was unavailable, so container numbers were not fabricated.
+  - Host feasibility note: Host memory headroom uses estimates for Java Auth Service (~300 MB) and Node Core API (~140 MB), not measured production values. Total estimated host memory is ~772 MB / 1024 MB on AWS `t3.micro`.
 - **What Remains**:
   - Core API integration (calling `/api/ats/check` and `/api/ats/check-for-job`).
   - Frontend display (ATS score dials, sub-score breakdown, missing keywords, and suggestions).

@@ -82,6 +82,15 @@ def _get_headline_boosts(headline_lower: str, text_lower: str) -> Dict[str, floa
     """Calculate role score boosts based on candidate headline and title signals."""
     boosts: Dict[str, float] = {cat: 0.0 for cat in JOB_CATEGORIES}
 
+    # Full Stack Engineer signals -> maps to candidate's primary backend language/stack
+    if any(term in headline_lower for term in ["full stack", "fullstack", "full-stack"]):
+        if "python" in text_lower or "fastapi" in text_lower or "django" in text_lower or "flask" in text_lower:
+            boosts["Python Developer"] += 0.40
+        elif "java" in text_lower or "spring" in text_lower:
+            boosts["Java Developer"] += 0.40
+        elif "dotnet" in text_lower or ".net" in text_lower or "c#" in text_lower:
+            boosts["DotNet Developer"] += 0.40
+
     # Python Developer signals
     if any(term in headline_lower for term in ["python developer", "python engineer", "python", "fastapi", "django", "flask"]):
         boosts["Python Developer"] += 0.45
@@ -110,8 +119,8 @@ def _get_headline_boosts(headline_lower: str, text_lower: str) -> Dict[str, floa
     if any(term in headline_lower for term in ["automation engineer", "qa engineer", "sdet", "test automation", "qa lead"]):
         boosts["Automation Testing"] += 0.45
 
-    # Web Designing / Frontend signals
-    if any(term in headline_lower for term in ["frontend", "ui/ux", "web designer", "web developer"]):
+    # Web Designing / Frontend signals (must be specific role titles, NOT loose 'frontend' in prose)
+    if any(term in headline_lower for term in ["frontend developer", "frontend engineer", "ui/ux designer", "ui designer", "ux designer", "web designer", "web developer"]):
         boosts["Web Designing"] += 0.45
 
     # Database specialist signals (only boost Database if explicitly a DBA/DB engineer)
