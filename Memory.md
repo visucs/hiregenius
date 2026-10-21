@@ -2216,3 +2216,53 @@ pm run build completed successfully with 0 errors.
   - Core API integration (calling `/api/ats/check` and `/api/ats/check-for-job`).
   - Frontend display (ATS score dials, sub-score breakdown, missing keywords, and suggestions).
   - Production deployment to EC2.
+
+
+---
+
+### 2026-10-22 — ATS Resume Checker Service Core API Integration
+
+- **Branch**: `feature/core-api-ats-integration` (branched from updated `dev`)
+- **Scope**: Integration of `hiregenius-ai-ml-service` (PR #43 merged into dev) into `hiregenius-core-api`.
+- **Architectural & Security Decisions**:
+  - **Shared Secret Service-to-Service Auth**: Reused existing `AI_ML_SERVICE_URL` and `AI_ML_SERVICE_INTERNAL_KEY` (`X-Internal-Key` header) from Phase 6 Part F. Zero new environment variables introduced.
+  - **Zero Trust on Client Identifiers**: Candidate and job identifiers in request bodies are never trusted. `candidate_id` is strictly derived from JWT user authentication and resolved against the `candidates` table. `recruiter_id` is strictly derived from JWT user authentication and verified against `job.recruiter_id`.
+  - **General ATS Check File Handling**: In `POST /api/candidates/me/ats-check`, uploading a resume forwards the file buffer directly to the AI service without overwriting or replacing the candidate's stored profile resume (`candidate.resume_path`). When no file is uploaded, Core API reads the candidate's stored resume from disk; if none exists, returns HTTP 400 `"Upload your resume first"`.
+  - **Job-Specific ATS Check**: In `POST /api/jobs/:jobId/ats-check`, validates that the job exists and status is `OPEN`. Constructs the job description text deterministically from `title`, `skills`, `experience`, and `description` (clamped between 30 and 10,000 characters). Accepts optional file upload; if omitted, AI service evaluates stored resume text from MongoDB.
+  - **Recruiter Applicant ATS Evaluation**: In `GET /api/jobs/:jobId/applications/:applicationId/ats`, enforces strict ownership validation (`application.job_id == jobId` and `application.recruiter_id == authenticated recruiterId`; returns HTTP 403 on mismatch). Evaluates applicant resume against job description via `checkJobAts`.
+  - **Candidate ATS Retrieval**: In `GET /api/candidates/me/ats?jobId=`, proxies `GET /api/ats/{candidate_id}?job_id=` for candidate's own records only. Isolated per authenticated JWT user (returns HTTP 404 if no evaluation exists).
+  - **Rate Limiting**: Implemented in-memory sliding window rate limiter (`src/middleware/rateLimiter.js`) configured for 10 checks per minute per authenticated user (keyed by `user_${req.user.userId}`). Returns HTTP 429 Too Many Requests with standard `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and `Retry-After` headers.
+  - **Error Pass-Through & Envelope Mapping**:
+    - AI Service 5xx, network failure, or timeout (15s `AbortSignal.timeout(15000)`) maps to HTTP 503 `"Resume analysis service is temporarily unavailable"`.
+    - AI Service 4xx/422 responses (`ScannedDocumentError`, `EncryptedFileError`, `ResumeNotFoundError`) cleanly pass through their `error_type`, `message`, and `parsability` advisory in Core API's standard `{ status, message, timestamp, path, details }` envelope.
+- **Built & Integrated in `hiregenius-core-api/`**:
+  - `src/middleware/rateLimiter.js`: Sliding window rate limiter with periodic cleanup and `.reset()` capability.
+  - `src/modules/candidates/aiMlClient.service.js`: Added `checkGeneralAts()`, `checkJobAts()`, `getCandidateAts()`, and `_handleAtsError()`.
+  - `src/modules/candidates/candidates.validation.js`: Added `optionalResumeUploadMiddleware` and `getAtsQuerySchema`.
+  - `src/modules/candidates/candidates.service.js`: Added `runGeneralAtsCheck()` and `getCandidateAts()`.
+  - `src/modules/candidates/candidates.controller.js` & `candidates.routes.js`: Registered `POST /api/candidates/me/ats-check` and `GET /api/candidates/me/ats`.
+  - `src/modules/candidates/candidates.openapi.js`: Registered OpenAPI documentation for general check and ATS retrieval with `atsResultSchema`.
+  - `src/modules/jobs/jobs.validation.js`: Added `jobIdRouteParamSchema`.
+  - `src/modules/jobs/jobs.service.js`: Added `runJobAtsCheck()` with job status validation and JD composition.
+  - `src/modules/jobs/jobs.controller.js` & `jobs.routes.js`: Registered `POST /api/jobs/:jobId/ats-check`.
+  - `src/modules/jobs/jobs.openapi.js`: Registered OpenAPI documentation for job-specific ATS check.
+  - `src/modules/applications/applications.validation.js`: Added `jobApplicationParamsSchema`.
+  - `src/modules/applications/applications.service.js`: Added `getApplicationAtsForRecruiter()` with recruiter ownership check.
+  - `src/modules/applications/applications.controller.js` & `applications.routes.js`: Registered `GET /api/jobs/:jobId/applications/:applicationId/ats` on `jobsApplicationsRouter`.
+  - `src/modules/applications/applications.openapi.js`: Registered OpenAPI documentation for recruiter applicant ATS check.
+  - `test/modules/ats/ats_integration.test.js`: 26 comprehensive unit and integration tests.
+- **Verification**:
+  - **ESLint**: 0 errors (`npm run lint --prefix hiregenius-core-api`).
+  - **Jest Test Suite**: **216 tests passing across 17 test suites** (`npm test --prefix hiregenius-core-api`).
+  - **Live Verification against Real Running AI Service (`http://127.0.0.1:8000`) & Core API (`http://127.0.0.1:4001`)**:
+    1. `POST /api/candidates/me/ats-check` (stored resume): HTTP 200 OK, general ATS score 54.8, predicted category "Python Developer".
+    2. `POST /api/candidates/me/ats-check` (file upload `real_resume_alex_smith.docx`): HTTP 200 OK, general ATS score 75.7, profile resume preserved.
+    3. `POST /api/jobs/10/ats-check` (file upload `real_resume_david_kumar.pdf`): HTTP 200 OK, job-specific score 69.9 (keywords: 80, sections: 57.1, format: 75), matched keywords: `['python', 'fastapi', 'docker', 'postgresql']`, missing JD keywords: `['rest api']`.
+    4. `GET /api/candidates/me/ats?jobId=10`: HTTP 200 OK, returns stored ATS check for Candidate 1; returns HTTP 404 for Candidate 2 (isolation verified).
+    5. `GET /api/jobs/10/applications/1/ats`: Recruiter 1 (owner of Job 10) receives HTTP 200 OK with applicant ATS evaluation.
+    6. Recruiter Ownership 403: Recruiter 2 calling `GET /api/jobs/10/applications/1/ats` rejected with `HTTP 403 Forbidden` (`"Forbidden: You do not have permission to view this application"`).
+    7. Image-Only PDF Rejection: Uploading `scanned_image_resume.pdf` to `POST /api/candidates/me/ats-check` returns `HTTP 422 Unprocessable Entity` with `error_type: "ScannedDocumentError"` and full parsability advisory.
+    8. Service Unavailable 503: Calling ATS check when AI service is stopped returns `HTTP 503 Service Unavailable` (`"Resume analysis service is temporarily unavailable"`).
+- **Scope Boundaries Preserved**:
+  - Touched **ONLY** `hiregenius-core-api/` and `Memory.md`.
+  - Uncommitted files on `fix/prod-register-reset-timeout`, `hiregenius-auth-service/`, and `hiregenius-frontend/` were left completely untouched.

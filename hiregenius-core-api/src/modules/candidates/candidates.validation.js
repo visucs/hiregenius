@@ -45,7 +45,7 @@ const upload = multer({
 });
 
 /**
- * Middleware handling resume multipart upload with 5MB and PDF/DOCX checks
+ * Middleware handling resume multipart upload with 5MB and PDF/DOCX checks (required file)
  */
 function resumeUploadMiddleware(req, res, next) {
   // Support both 'resume' and 'file' field names
@@ -67,8 +67,30 @@ function resumeUploadMiddleware(req, res, next) {
   });
 }
 
+/**
+ * Middleware handling optional resume multipart upload (leaves req.file null if not uploaded)
+ */
+function optionalResumeUploadMiddleware(req, res, next) {
+  upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+  ])(req, res, (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    const uploadedFile = req.files?.resume?.[0] || req.files?.file?.[0] || null;
+    req.file = uploadedFile;
+    return next();
+  });
+}
+
 const candidateIdParamSchema = z.object({
   id: z.coerce.number().int().positive('Candidate ID must be a positive integer'),
+});
+
+const getAtsQuerySchema = z.object({
+  jobId: z.string().optional(),
 });
 
 /**
@@ -94,6 +116,8 @@ const updateCandidatePreferencesSchema = z.object({
 
 module.exports = {
   candidateIdParamSchema,
+  getAtsQuerySchema,
+  optionalResumeUploadMiddleware,
   resumeUploadMiddleware,
   updateCandidatePreferencesSchema,
   validate,

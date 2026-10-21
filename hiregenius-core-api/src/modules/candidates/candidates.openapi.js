@@ -1,6 +1,48 @@
 const { z } = require('zod');
 const { apiErrorSchema, apiSuccessEnvelopeSchema } = require('../jobs/jobs.validation');
 
+
+const atsResultSchema = z
+  .object({
+    candidate_id: z.string().nullable().openapi({ example: '102' }),
+    job_id: z.string().nullable().openapi({ example: '5' }),
+    overall_score: z.number().openapi({ example: 85.5 }),
+    match_strength: z.string().openapi({ example: 'Good Match' }),
+    mode: z.enum(['general', 'job_specific']).openapi({ example: 'general' }),
+    score_breakdown: z.record(z.any()).openapi({
+      example: { sections: 45.0, length: 22.5, format: 20.0 },
+    }),
+    detected_sections: z.record(z.boolean()).openapi({
+      example: { Experience: true, Education: true, Skills: true, Projects: true },
+    }),
+    format_signals: z.record(z.any()).openapi({
+      example: { has_bullets: true, has_dates: true, quantified_impact: true, action_verbs: true },
+    }),
+    keyword_analysis: z.any().nullable().openapi({
+      example: {
+        match_percentage: 80.0,
+        matched_keywords: ['Python', 'FastAPI'],
+        missing_keywords: ['Docker'],
+        extracted_jd_keywords: ['Python', 'FastAPI', 'Docker'],
+      },
+    }),
+    category_prediction: z.any().nullable().openapi({
+      example: {
+        predicted_category: 'Python Developer',
+        match_strength: 'High',
+        low_confidence: false,
+      },
+    }),
+    suggestions: z.array(z.string()).openapi({
+      example: ['Add quantified impact metrics to your experience section.'],
+    }),
+    parsability: z.any().nullable().openapi({
+      example: { page_count: 1, text_density: 450.5, has_text_layer: true },
+    }),
+    created_at: z.string().openapi({ example: '2026-10-22T00:00:00.000Z' }),
+  })
+  .openapi('ATSCheckResult');
+
 const candidateEntitySchema = z
   .object({
     id: z.number().int().positive().openapi({ example: 1 }),
@@ -130,9 +172,80 @@ function registerCandidatesOpenApi(registry) {
       },
     },
   });
+
+  // POST /api/candidates/me/ats-check
+  registry.registerPath({
+    method: 'post',
+    path: '/api/candidates/me/ats-check',
+    summary: 'Evaluate candidate resume structure & ATS readability (general check)',
+    description: 'Evaluates resume formatting, section detection, and readability. Supports optional multipart file; if omitted, evaluates candidate stored resume.\n\n**Required Role:** CANDIDATE',
+    tags: ['Candidates', 'ATS'],
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: {
+        description: 'Optional multipart form-data containing the resume file',
+        required: false,
+        content: {
+          'multipart/form-data': {
+            schema: z.object({
+              resume: z.string().optional().openapi({ type: 'string', format: 'binary', description: 'Optional resume file (PDF or DOCX)' }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'ATS evaluation completed successfully',
+        content: {
+          'application/json': {
+            schema: apiSuccessEnvelopeSchema(atsResultSchema, 'ATS evaluation completed successfully'),
+          },
+        },
+      },
+      400: { description: 'Missing stored resume or invalid input', content: { 'application/json': { schema: apiErrorSchema } } },
+      401: { description: 'Unauthorized', content: { 'application/json': { schema: apiErrorSchema } } },
+      403: { description: 'Forbidden', content: { 'application/json': { schema: apiErrorSchema } } },
+      422: { description: 'Unprocessable document (scanned/corrupted)', content: { 'application/json': { schema: apiErrorSchema } } },
+      429: { description: 'Rate limit exceeded (10 checks/min)', content: { 'application/json': { schema: apiErrorSchema } } },
+      503: { description: 'AI service unavailable', content: { 'application/json': { schema: apiErrorSchema } } },
+    },
+  });
+
+  // GET /api/candidates/me/ats
+  registry.registerPath({
+    method: 'get',
+    path: '/api/candidates/me/ats',
+    summary: 'Get candidate ATS evaluation history',
+    description: 'Retrieves candidate own ATS result (optional ?jobId= query).\n\n**Required Role:** CANDIDATE',
+    tags: ['Candidates', 'ATS'],
+    security: [{ bearerAuth: [] }],
+    request: {
+      query: z.object({
+        jobId: z.coerce.number().optional().openapi({ description: 'Optional Job ID filter', example: 1 }),
+      }),
+    },
+    responses: {
+      200: {
+        description: 'ATS evaluation retrieved successfully',
+        content: {
+          'application/json': {
+            schema: apiSuccessEnvelopeSchema(atsResultSchema, 'ATS evaluation retrieved successfully'),
+          },
+        },
+      },
+      401: { description: 'Unauthorized', content: { 'application/json': { schema: apiErrorSchema } } },
+      403: { description: 'Forbidden', content: { 'application/json': { schema: apiErrorSchema } } },
+      404: { description: 'No ATS evaluation found', content: { 'application/json': { schema: apiErrorSchema } } },
+      429: { description: 'Rate limit exceeded', content: { 'application/json': { schema: apiErrorSchema } } },
+      503: { description: 'AI service unavailable', content: { 'application/json': { schema: apiErrorSchema } } },
+    },
+  });
+
 }
 
 module.exports = {
   candidateEntitySchema,
+  atsResultSchema,
   registerCandidatesOpenApi,
 };

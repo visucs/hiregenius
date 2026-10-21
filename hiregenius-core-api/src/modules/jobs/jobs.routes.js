@@ -8,8 +8,11 @@ const {
   updateJobSchema,
   updateStatusSchema,
   jobIdParamSchema,
+  jobIdRouteParamSchema,
   listJobsQuerySchema,
 } = require('./jobs.validation');
+const { atsRateLimiter } = require('../../middleware/rateLimiter');
+const { optionalResumeUploadMiddleware } = require('../candidates/candidates.validation');
 
 const router = express.Router();
 
@@ -75,6 +78,18 @@ router.delete(
   requireRole('RECRUITER'),
   validate(jobIdParamSchema, 'params'),
   (req, res, next) => jobsController.deleteJob(req, res, next),
+);
+
+
+// POST /api/jobs/:jobId/ats-check - Run job-specific ATS check for open job (Candidate only)
+router.post(
+  '/:jobId/ats-check',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  atsRateLimiter,
+  optionalResumeUploadMiddleware,
+  validate(jobIdRouteParamSchema, 'params'),
+  (req, res, next) => jobsController.checkJobAts(req, res, next),
 );
 
 module.exports = router;
