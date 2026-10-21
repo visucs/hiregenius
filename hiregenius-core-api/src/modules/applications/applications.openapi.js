@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { apiErrorSchema, apiSuccessEnvelopeSchema } = require('../jobs/jobs.validation');
+const { atsResultSchema } = require('../candidates/candidates.openapi');
 const { allowedStatuses } = require('./applications.validation');
 
 const applicationEntitySchema = z
@@ -197,6 +198,39 @@ function registerApplicationsOpenApi(registry) {
       },
     },
   });
+
+  // GET /api/jobs/{jobId}/applications/{applicationId}/ats
+  registry.registerPath({
+    method: 'get',
+    path: '/api/jobs/{jobId}/applications/{applicationId}/ats',
+    summary: 'Recruiter evaluates applicant resume against job requirements',
+    description: 'Runs ATS check for an applicant on a job owned by the authenticated recruiter. Returns 403 on ownership mismatch.\n\n**Required Role:** RECRUITER',
+    tags: ['Applications', 'ATS'],
+    security: [{ bearerAuth: [] }],
+    request: {
+      params: z.object({
+        jobId: z.coerce.number().int().positive().openapi({ example: 1 }),
+        applicationId: z.coerce.number().int().positive().openapi({ example: 10 }),
+      }),
+    },
+    responses: {
+      200: {
+        description: 'Applicant ATS evaluation retrieved successfully',
+        content: {
+          'application/json': {
+            schema: apiSuccessEnvelopeSchema(atsResultSchema, 'Applicant ATS evaluation retrieved successfully'),
+          },
+        },
+      },
+      401: { description: 'Unauthorized', content: { 'application/json': { schema: apiErrorSchema } } },
+      403: { description: 'Forbidden: Recruiter does not own this job/application', content: { 'application/json': { schema: apiErrorSchema } } },
+      404: { description: 'Job or Application not found', content: { 'application/json': { schema: apiErrorSchema } } },
+      422: { description: 'Unprocessable document', content: { 'application/json': { schema: apiErrorSchema } } },
+      429: { description: 'Rate limit exceeded (10 checks/min)', content: { 'application/json': { schema: apiErrorSchema } } },
+      503: { description: 'AI service unavailable', content: { 'application/json': { schema: apiErrorSchema } } },
+    },
+  });
+
 }
 
 module.exports = {

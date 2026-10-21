@@ -115,6 +115,24 @@ class CandidatesController {
       return next(err);
     }
   }
+
+  async checkGeneralAts(req, res, next) {
+    try {
+      const result = await candidatesService.runGeneralAtsCheck(req.user.userId, req.file);
+      return ApiResponse.success(res, result, 'ATS evaluation completed successfully', 200);
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async getMyAts(req, res, next) {
+    try {
+      const result = await candidatesService.getCandidateAts(req.user.userId, req.query?.jobId || null);
+      return ApiResponse.success(res, result, 'ATS evaluation retrieved successfully', 200);
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new CandidatesController();

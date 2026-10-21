@@ -7,8 +7,10 @@ const {
   updateStatusSchema,
   applicationIdParamSchema,
   jobIdParamSchema,
+  jobApplicationParamsSchema,
   validate,
 } = require('./applications.validation');
+const { atsRateLimiter } = require('../../middleware/rateLimiter');
 
 const router = express.Router();
 const jobsApplicationsRouter = express.Router();
@@ -70,6 +72,19 @@ jobsApplicationsRouter.get(
 );
 
 // Attach jobsApplicationsRouter to main router for flexible mounting
+
+/**
+ * GET /api/jobs/:jobId/applications/:applicationId/ats - Recruiter evaluates ATS match for an applicant
+ */
+jobsApplicationsRouter.get(
+  '/:jobId/applications/:applicationId/ats',
+  verifyJwt,
+  requireRole('RECRUITER'),
+  atsRateLimiter,
+  validate(jobApplicationParamsSchema, 'params'),
+  (req, res, next) => applicationsController.getApplicationAts(req, res, next),
+);
+
 router.jobsApplicationsRouter = jobsApplicationsRouter;
 
 module.exports = router;
