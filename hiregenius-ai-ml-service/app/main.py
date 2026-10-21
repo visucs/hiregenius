@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.db.mongodb import mongo_manager
 from app.api.resume import router as resume_router
+from app.api.ats import router as ats_router
 
 
 @asynccontextmanager
@@ -24,7 +25,7 @@ app = FastAPI(
 
 # Register route modules
 app.include_router(resume_router)
-
+app.include_router(ats_router)
 
 
 @app.get("/health")

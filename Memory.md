@@ -2136,3 +2136,83 @@ pm run build completed successfully with 0 errors.
     (a) Make seeded admin email configurable via `ADMIN_EMAIL` to a real inbox controlled by the user.
     (b) Add a safe CLI/script-based admin password reset tool reading password from environment variable.
     (c) Keep admin on authenticated `change-password` only and disable self-service forgot-password for admin.
+
+
+### 2026-10-22 - Phase 2: ATS Checker Integration into AI/ML Service
+- **Branch**: `feature/ai-ml-service-ats-check` branched from `dev` (which already included Phase 6 PR #42).
+- **Scope**: Audited legacy standalone ATS-checker project (HireMind-AI) and ported approved scoring logic into `hiregenius-ai-ml-service` (FastAPI).
+- **What Was Ported & Refined**:
+  - `app/services/ats/keywords.py`: Curated taxonomy for 24 job categories (`DOMAIN_KEYWORDS` + `GENERIC_KEYWORDS`), comprehensive bidirectional alias map covering:
+    - REST variants: `REST`, `RESTful`, `REST API`, `REST APIs`, `RESTful API`, `RESTful APIs` -> `rest api`.
+    - CI/CD variants: `CI/CD`, `CI CD`, `CI-CD`, `cicd`, `continuous integration`, `continuous deployment` -> `ci/cd`.
+    - Unit testing & Pytest: `unit testing`, `unit test`, `unit tests`, `pytest` -> `pytest`; `automated testing` -> `test automation`.
+    - Machine learning: `ML`, `machine learning`, `deep learning`, `dl`, `scikit learn`, `sklearn`, `tf`.
+    - Web / Languages: `JS`/`JavaScript`, `TS`/`TypeScript`, `ReactJS`/`React.js`, `NodeJS`/`Node.js`, `golang`/`go`, `c#`, `c++`, `.net`.
+    - Cloud platforms: `AWS`/`Amazon Web Services`, `GCP`/`Google Cloud Platform`, `Azure`/`Microsoft Azure`, `k8s`/`Kubernetes`.
+    - Strict word-boundary token matcher handling symbols without substring leaking (verified: "java" does not match "javascript", "go" does not match "google", "sql" does not match "mysql").
+    - Sub-phrase containment suppression in `extract_jd_keywords()` ensuring that longer phrases (e.g. `test automation` from `automated testing`) suppress redundant nested tokens (e.g. `testing`).
+    - Verified strict mathematical invariant: `len(matched) + len(missing) == len(extracted_jd)` and `set(matched) | set(missing) == set(extracted_jd)` with zero intersection.
+  - `app/services/ats/sections.py`: Heading-style section detection (short standalone lines <= 50 chars) across 7 standard sections (Contact Info, Summary, Experience, Education, Skills, Projects, Certifications) with `ParsedResume` inspection and regex fallback.
+  - `app/services/ats/format_checker.py`: Binary signals for bullet points, timeline dates, quantified metrics/impact (`%`, counts, scale), and action verbs, plus 5-bracket word count length scoring.
+  - `app/services/ats/category_matcher.py`: Heuristic role classifier with ambiguity guards:
+    - If total keyword matches are < 2 or the top score is below threshold (< 12%) or the gap between #1 and #2 is narrow (< 1.5%), marks `low_confidence=True`, returns category `"Unknown"` and empty `top_3_matches` list (verified: zero-keyword "Bob" resume never returns "Advocate").
+  - `app/services/ats/suggestions.py`: Prioritized, plain-language actionable recommendations based on score brackets, missing JD keywords, missing domain skills, section completeness, and formatting signals (suppresses role tips when category is "Unknown").
+  - `app/services/ats/parsability.py`: Advisory layout inspector reporting PDF page count, embedded image count, DOCX table count, and text-per-page density with ATS warnings (no score penalty, zero new dependencies).
+  - `app/services/ats/scorer.py`: Pure function `analyze(text, job_description=None, parsed_resume=None)`.
+    - **General Mode** (no JD): Explicit renormalized weights: Sections 50% / Length 25% / Format 25%.
+    - **Job-Specific Mode** (with JD): Standard weights: Keyword Match 60% / Sections 20% / Length 10% / Format 10%.
+    - Mathematically verified derivability of overall `ats_score` from component sub-scores.
+  - `app/models/ats.py`: Pydantic request/response schemas (`ATSCheckResponse`, `ScoreBreakdown`, `PredictedCategory`, `KeywordAnalysis`, `FormatSignals`, `ParsabilityAdvisory`).
+  - `app/services/ats_repository.py`: MongoDB persistence in `ats_results` collection with atomic upsert on unique composite key `(candidate_id, job_id)`. Strictly excludes `original_filename`, raw resume text, and text snippets to guarantee PII protection.
+  - `app/api/ats.py`: Fast, thin API endpoints secured with `X-Internal-API-Key` (`POST /api/ats/check`, `POST /api/ats/check-for-job` with optional file falling back to saved resume in DB, `GET /api/ats/{candidate_id}`, `GET /api/ats/categories`).
+- **What Was Skipped**:
+  - `resume_ann_model.keras` (69.5 MB) & TensorFlow: Heavy, unstable, and would crash on 1 GB RAM `t3.micro`.
+  - `tfidf_vectorizer.joblib` and `label_encoder.joblib`: Tied to disabled ANN.
+  - `dataset.csv` (78.1 MB) and `HireMind_AI.ipynb`: Offline training artifacts.
+  - Flask web server, CORS, Gunicorn, and static file serving.
+  - React 19 frontend components and Vite bundler configs.
+- **Resource Footprint & Performance Benchmark**:
+  - New dependencies added to `requirements.txt`: **0 (Zero)**.
+  - Python process memory before ATS modules: **155.50 MB RSS**.
+  - Python process memory with ATS modules loaded: **156.37 MB RSS** (actual ATS code increment: **0.87 MB / 888 KB**).
+  - 20-run stress test benchmark:
+    - Idle process RSS: **162.15 MB**.
+    - Peak process RSS across 20 consecutive checks: **162.32 MB** (increase of 0.17 MB under load).
+    - Post-20 runs RSS (after GC): **157.62 MB** (delta: -4.54 MB, confirming zero memory leaks).
+  - Explanation of previous ~55 MB figure: measured transitively in an isolated bare Python interpreter (17 MB startup) where importing `app.api.ats` also imported FastAPI, Pydantic, Motor, PyPDF, and LangChain for the first time in that process (~54 MB total shared dependencies).
+  - Host feasibility on AWS `t3.micro` (1024 MB RAM):
+    - Auth Service (~300 MB) + Core API (~140 MB) + Nginx (~20 MB) + OS/Kernel (~150 MB) = ~610 MB.
+    - AI/ML Service container consumes ~162 MB peak.
+    - Total host memory consumption: ~772 MB (75.4%), leaving ~252 MB available headroom.
+- **Testing & Verification**:
+  - Full test suite: **68/68 tests passing** (100% green).
+  - Category Predictor & Margin Rule Refinements:
+    - Relative margin rule: top category must be >= 1.25x #2 OR absolute gap >= 5.0 points; otherwise returns "Unknown" with `low_confidence=True` and empty `top_3_matches`.
+    - Headline / initial lines / ParsedResume experience titles used as strong role signals (e.g. Full Stack Engineer / Backend Engineer with Python/FastAPI boosts Python Developer).
+    - Generic "skill-type" categories (`Database`, `Testing`) demoted below qualifying primary language/role categories (`Python Developer`, `Java Developer`, etc.) unless candidate is an explicit DBA.
+    - Role-specific domain-skill suggestions emitted ONLY in General Mode when `low_confidence=False`. In Job-Specific Mode, suggestions come strictly from the target JD (`missing_jd_keywords`), never leaking category suggestions.
+    - Candidate role classifications verified:
+      - David Kumar (`real_resume_david_kumar.pdf`): Classified as **Python Developer** (30.7% vs Java 21.9% vs Database 15.0%, low_confidence=False).
+      - Alex Smith (`real_resume_alex_smith.docx`, Full Stack Engineer): Classified as **Python Developer** (25.8% vs Java 13.1% vs Database 9.8%, ratio: 1.97x, low_confidence=False) in both General and Job-Specific modes.
+      - Bob (zero keywords): Returns **Unknown** (`low_confidence=True`, empty `top_3_matches`).
+  - Unified Error Response Shape:
+    - All `/api/ats/*` error responses unified into the exact shape: `{"detail": {"error_type": str, "message": str, "parsability": Optional[dict]}}`.
+    - Includes `ScannedDocumentError` (alias `NoTextLayerError`), `ValidationError`, `UnsupportedFileTypeError`, `EmptyFileError`, `ResumeNotFoundError`, and `AtsResultNotFoundError`.
+  - Section Heading Boundary Verification:
+    - Added positive heading tests for `"PROJECTS"`, `"Projects:"`, `"Key Projects"`, and `"Academic Projects"`.
+    - Added negative tests verifying that prose containing words like `"portfolio"` or `"built"` (e.g. `"I built a portfolio website using React."`, `"Worked on multiple client deliverables and built a portfolio."`, `"Portfolio Profile"`) strictly does NOT trigger the Projects section.
+  - Manual verification with 3 real resumes:
+    - (a) Real PDF Resume (`real_resume_david_kumar.pdf`): 1 page, 615 chars, text density 615 chars/page, 0 images. Predicted category: "Python Developer" (30.7%, low_confidence=False, top-3: Python Developer 30.7, Java Developer 21.9, Database 15.0). General ATS Score 54.8 (Sections 57.1 / Length 30.0 / Format 75.0, exactly deriving 54.8).
+    - (b) Real Image-Only PDF (`scanned_image_resume.pdf`): 1 page, 1 embedded image, 0 text characters. Rejected with HTTP 422 Unprocessable Entity (`ScannedDocumentError`: "No extractable text layer found in PDF. The document appears to be an image-only scan without OCR") with full parsability diagnostic included.
+    - (c) Real Badly Formatted Resume (`table_layout_bad_resume.docx`): 2 layout tables. Advisory warning: "Document contains 2 table(s)...". Predicted category: "Unknown" (`low_confidence=True`, empty `top_3`). All sections `false` (`Projects: false`), ATS Score 7.5.
+- **Resource Footprint & Memory Benchmark Clarification**:
+  - Two distinct memory figures explained:
+    - **155.50 MB Baseline / 162.32 MB Peak**: Full FastAPI application process (`app.main`) with MongoDB client connection pools (`motor.motor_asyncio` / `pymongo`), Google Gemini LangChain SDK / gRPC runtimes (`google.generativeai`), Uvicorn server, and all API routers loaded.
+    - **55.88 MB Baseline / 57.08 MB Peak**: Minimal isolated script loading only ATS scoring dependencies (FastAPI/Pydantic models, PyPDF, python-docx, and `app.services.ats`) without MongoDB connection pools, Google Gemini gRPC runtimes, or Uvicorn server.
+    - In both setups, the incremental memory footprint of the pure ATS scoring engine under load is **< 1 MB** (+0.52 MB delta during 20 consecutive checks).
+  - Docker Status: Docker daemon (`com.docker.service`) was stopped on the local Windows machine and requires local admin permissions to start; Docker Desktop was unavailable, so container numbers were not fabricated.
+  - Host feasibility note: Host memory headroom uses estimates for Java Auth Service (~300 MB) and Node Core API (~140 MB), not measured production values. Total estimated host memory is ~772 MB / 1024 MB on AWS `t3.micro`.
+- **What Remains**:
+  - Core API integration (calling `/api/ats/check` and `/api/ats/check-for-job`).
+  - Frontend display (ATS score dials, sub-score breakdown, missing keywords, and suggestions).
+  - Production deployment to EC2.

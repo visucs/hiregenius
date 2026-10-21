@@ -37,6 +37,16 @@ class EncryptedFileError(TextExtractionException):
     pass
 
 
+class ScannedDocumentError(TextExtractionException):
+    """Raised when document contains no extractable text layer (e.g. image-only or scanned PDF)."""
+
+    pass
+
+
+# Backward compatibility alias
+NoTextLayerError = ScannedDocumentError
+
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract raw text from a PDF file in bytes using pypdf."""
     if not file_bytes:
@@ -64,13 +74,13 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 
         extracted_text = "\n\n".join(text_pages).strip()
         if not extracted_text:
-            raise CorruptedFileError(
-                "No extractable text found in PDF (file may be empty or contain non-OCR scanned images)."
+            raise ScannedDocumentError(
+                "No extractable text layer found in PDF. The document appears to be an image-only scan without OCR."
             )
 
         return extracted_text
 
-    except (EmptyFileError, EncryptedFileError):
+    except (EmptyFileError, EncryptedFileError, ScannedDocumentError):
         raise
     except pypdf.errors.PdfReadError as e:
         logger.warning(f"pypdf ReadError: {e}")
@@ -106,13 +116,13 @@ def extract_text_from_docx(file_bytes: bytes) -> str:
 
         extracted_text = "\n\n".join(extracted_sections).strip()
         if not extracted_text:
-            raise CorruptedFileError(
+            raise ScannedDocumentError(
                 "No extractable text found in DOCX file."
             )
 
         return extracted_text
 
-    except EmptyFileError:
+    except (EmptyFileError, ScannedDocumentError):
         raise
     except Exception as e:
         logger.warning(f"DOCX extraction error: {e}")
