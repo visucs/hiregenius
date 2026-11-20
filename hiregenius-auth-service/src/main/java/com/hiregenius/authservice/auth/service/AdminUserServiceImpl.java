@@ -112,6 +112,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
 
         targetUser.setAdminApproved(true);
+        targetUser.setEmailVerified(true);
+        targetUser.setCanPostJobs(true);
         User savedUser = userRepository.save(targetUser);
 
         log.info("Admin [id={}] approved recruiter [id={}, email={}]",
@@ -119,6 +121,22 @@ public class AdminUserServiceImpl implements AdminUserService {
                 savedUser.getId(), savedUser.getEmail());
 
         emailService.sendRecruiterApprovalEmail(savedUser.getEmail(), savedUser.getName());
+
+        return AdminUserResponse.fromEntity(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse verifyUserEmail(Long targetUserId, SecurityUser currentAdmin) {
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + targetUserId));
+
+        targetUser.setEmailVerified(true);
+        User savedUser = userRepository.save(targetUser);
+
+        log.info("Admin [id={}] verified email for user [id={}, email={}]",
+                currentAdmin != null ? currentAdmin.getId() : "system",
+                savedUser.getId(), savedUser.getEmail());
 
         return AdminUserResponse.fromEntity(savedUser);
     }

@@ -13,5 +13,7 @@ public interface AdminUserService {
 
     AdminUserResponse approveRecruiter(Long targetUserId, SecurityUser currentAdmin);
 
+    AdminUserResponse verifyUserEmail(Long targetUserId, SecurityUser currentAdmin);
+
     AdminUserResponse updateUserPrivileges(Long targetUserId, Boolean canPostJobs, Boolean canApplyToJobs, SecurityUser currentAdmin);
 }

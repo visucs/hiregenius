@@ -72,5 +72,18 @@ public class DataInitializer implements CommandLineRunner {
                     log.info("System admin account seeded successfully: email={}", email);
                 }
         );
+
+        // Ensure any existing admin-approved recruiters also have email_verified = true
+        try {
+            userRepository.findAll().forEach(u -> {
+                if (u.getRole() == Role.RECRUITER && u.isAdminApproved() && !u.isEmailVerified()) {
+                    u.setEmailVerified(true);
+                    userRepository.save(u);
+                    log.info("DataInitializer: Auto-synchronized email_verified=true for admin-approved recruiter: {}", u.getEmail());
+                }
+            });
+        } catch (Exception ex) {
+            log.warn("DataInitializer: Could not synchronize approved recruiters: {}", ex.getMessage());
+        }
     }
 }

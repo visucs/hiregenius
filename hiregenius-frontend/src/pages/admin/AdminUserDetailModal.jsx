@@ -76,11 +76,26 @@ export default function AdminUserDetailModal({
     setActionLoading(true);
     try {
       await adminService.approveRecruiter(detail.id);
-      setDetail(prev => ({ ...prev, adminApproved: true }));
-      toast.success('Recruiter account approved!');
+      setDetail(prev => ({ ...prev, adminApproved: true, emailVerified: true }));
+      toast.success('Recruiter account approved and email verified!');
       if (onUserUpdated) onUserUpdated();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to approve recruiter');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!detail || actionLoading) return;
+    setActionLoading(true);
+    try {
+      await adminService.verifyUserEmail(detail.id);
+      setDetail(prev => ({ ...prev, emailVerified: true }));
+      toast.success('User email verified successfully!');
+      if (onUserUpdated) onUserUpdated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to verify user email');
     } finally {
       setActionLoading(false);
     }
@@ -373,6 +388,29 @@ export default function AdminUserDetailModal({
                         }}
                       >
                         <Check size={14} /> Approve Recruiter
+                      </button>
+                    )}
+
+                    {!detail.emailVerified && (
+                      <button
+                        type="button"
+                        onClick={handleVerifyEmail}
+                        disabled={actionLoading}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 14px',
+                          borderRadius: 10,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: actionLoading ? 'wait' : 'pointer',
+                          background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+                          color: '#fff',
+                          border: 'none',
+                        }}
+                      >
+                        <Check size={14} /> Verify Email Address
                       </button>
                     )}
 

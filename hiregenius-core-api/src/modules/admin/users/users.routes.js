@@ -101,6 +101,28 @@ router.patch('/:id/privileges', verifyJwt, requireRole('ADMIN'), async (req, res
 });
 
 /**
+ * PATCH /api/admin/users/:id/verify-email
+ * Proxy to Spring Boot Auth Service to manually verify user email
+ */
+router.patch('/:id/verify-email', verifyJwt, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const authServiceBase = getAuthServiceBase();
+    const targetUrl = `${authServiceBase}/api/admin/users/${req.params.id}/verify-email`;
+    const response = await fetch(targetUrl, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': req.headers['authorization'] || '',
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * GET /api/admin/users/:id
  * Admin drill-down view returning user profile + activity aggregations
  */

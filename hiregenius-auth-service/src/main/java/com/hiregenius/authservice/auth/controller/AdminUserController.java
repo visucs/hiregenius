@@ -83,6 +83,17 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.ok("Recruiter account approved successfully", updatedUser));
     }
 
+    @PatchMapping("/{id}/verify-email")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Manually verify a user's email address (ADMIN only)")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> verifyUserEmail(
+            @PathVariable Long id,
+            @AuthenticationPrincipal SecurityUser currentAdmin
+    ) {
+        AdminUserResponse updatedUser = adminUserService.verifyUserEmail(id, currentAdmin);
+        return ResponseEntity.ok(ApiResponse.ok("User email verified successfully", updatedUser));
+    }
+
     @PatchMapping("/{id}/privileges")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update granular user privileges (can_post_jobs or can_apply_to_jobs) (ADMIN only)")

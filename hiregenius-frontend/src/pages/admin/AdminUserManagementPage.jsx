@@ -53,6 +53,7 @@ const AdminUserManagementPage = () => {
   const [actionError, setActionError]     = useState(null);
   const [updatingId, setUpdatingId]       = useState(null);
   const [approvingId, setApprovingId]     = useState(null);
+  const [verifyingEmailId, setVerifyingEmailId] = useState(null);
   const [togglingPrivilegeId, setTogglingPrivilegeId] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
 
@@ -139,11 +140,11 @@ const AdminUserManagementPage = () => {
 
     try {
       await adminService.approveRecruiter(targetUser.id);
-      // Optimistically mark as approved
+      // Optimistically mark as approved and email verified
       setUsers((prev) =>
-        prev.map((u) => (u.id === targetUser.id ? { ...u, adminApproved: true } : u))
+        prev.map((u) => (u.id === targetUser.id ? { ...u, adminApproved: true, emailVerified: true } : u))
       );
-      toast.success(`Recruiter approved! Notification email dispatched to ${targetUser.email}`);
+      toast.success(`Recruiter approved and email verified! Notification email dispatched to ${targetUser.email}`);
     } catch (err) {
       console.error('[AdminUserManagement] Recruiter approval failed:', err);
       const msg = err.response?.data?.message || err.message || 'Failed to approve recruiter';
@@ -151,6 +152,27 @@ const AdminUserManagementPage = () => {
       toast.error(msg);
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  // Handle Manual Email Verification
+  const handleVerifyUserEmail = async (targetUser) => {
+    setActionError(null);
+    setVerifyingEmailId(targetUser.id);
+
+    try {
+      await adminService.verifyUserEmail(targetUser.id);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, emailVerified: true } : u))
+      );
+      toast.success(`Email verified successfully for ${targetUser.email}`);
+    } catch (err) {
+      console.error('[AdminUserManagement] Email verification failed:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to verify email';
+      setActionError(msg);
+      toast.error(msg);
+    } finally {
+      setVerifyingEmailId(null);
     }
   };
 
@@ -510,6 +532,31 @@ const AdminUserManagementPage = () => {
                                 </motion.button>
                               )}
 
+                              {/* 1-Click Email Verification Button */}
+                              {u.role !== 'ADMIN' && !u.emailVerified && (
+                                <motion.button
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={(e) => { e.stopPropagation(); handleVerifyUserEmail(u); }}
+                                  disabled={verifyingEmailId === u.id}
+                                  id={`admin-users-verify-email-${u.id}`}
+                                  title="Verify user email address"
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 12px', minHeight: 36,
+                                    borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: verifyingEmailId === u.id ? 'wait' : 'pointer',
+                                    border: 'none', background: 'rgba(245,158,11,0.18)', color: '#f59e0b',
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.28)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.18)'; }}
+                                >
+                                  {verifyingEmailId === u.id ? (
+                                    <RefreshCw size={12} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle size={13} />
+                                  )}
+                                  Verify Email
+                                </motion.button>
+                              )}
+
                               {u.role !== 'ADMIN' ? (
                                 <motion.button
                                   whileTap={{ scale: 0.95 }}
@@ -669,6 +716,20 @@ const AdminUserManagementPage = () => {
                               }}
                             >
                               <CheckCircle size={13} /> Approve
+                            </motion.button>
+                          )}
+
+                          {u.role !== 'ADMIN' && !u.emailVerified && (
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleVerifyUserEmail(u)}
+                              disabled={verifyingEmailId === u.id}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 14px', minHeight: 40, borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                background: 'rgba(245,158,11,0.18)', color: '#f59e0b', border: 'none', cursor: 'pointer',
+                              }}
+                            >
+                              <CheckCircle size={13} /> Verify Email
                             </motion.button>
                           )}
 
