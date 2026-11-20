@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { atsResultSchema } = require('../candidates/candidates.openapi');
 const {
   createJobSchema,
   updateJobSchema,
@@ -504,6 +505,50 @@ function registerJobsOpenApi(registry) {
       },
     },
   });
+
+  // POST /api/jobs/{jobId}/ats-check
+  registry.registerPath({
+    method: 'post',
+    path: '/api/jobs/{jobId}/ats-check',
+    summary: 'Evaluate candidate resume against a specific open job',
+    description: 'Runs ATS keyword and skills matching against job requirements. Accepts optional resume file; if omitted, evaluates candidate stored resume.\n\n**Required Role:** CANDIDATE',
+    tags: ['Jobs', 'ATS'],
+    security: [{ bearerAuth: [] }],
+    request: {
+      params: z.object({
+        jobId: z.coerce.number().int().positive().openapi({ example: 1 }),
+      }),
+      body: {
+        description: 'Optional multipart form-data containing the resume file',
+        required: false,
+        content: {
+          'multipart/form-data': {
+            schema: z.object({
+              resume: z.string().optional().openapi({ type: 'string', format: 'binary', description: 'Optional resume file (PDF or DOCX)' }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Job ATS evaluation completed successfully',
+        content: {
+          'application/json': {
+            schema: apiSuccessEnvelopeSchema(atsResultSchema, 'Job ATS evaluation completed successfully'),
+          },
+        },
+      },
+      400: { description: 'Job not open or resume missing', content: { 'application/json': { schema: apiErrorSchema } } },
+      401: { description: 'Unauthorized', content: { 'application/json': { schema: apiErrorSchema } } },
+      403: { description: 'Forbidden', content: { 'application/json': { schema: apiErrorSchema } } },
+      404: { description: 'Job not found', content: { 'application/json': { schema: apiErrorSchema } } },
+      422: { description: 'Unprocessable document', content: { 'application/json': { schema: apiErrorSchema } } },
+      429: { description: 'Rate limit exceeded (10 checks/min)', content: { 'application/json': { schema: apiErrorSchema } } },
+      503: { description: 'AI service unavailable', content: { 'application/json': { schema: apiErrorSchema } } },
+    },
+  });
+
 }
 
 module.exports = { registerJobsOpenApi };

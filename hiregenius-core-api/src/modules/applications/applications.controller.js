@@ -53,6 +53,19 @@ class ApplicationsController {
       return next(err);
     }
   }
+
+  async getApplicationAts(req, res, next) {
+    try {
+      const result = await applicationsService.getApplicationAtsForRecruiter(
+        req.params.jobId,
+        req.params.applicationId,
+        req.user.userId,
+      );
+      return ApiResponse.success(res, result, 'Applicant ATS evaluation retrieved successfully', 200);
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new ApplicationsController();

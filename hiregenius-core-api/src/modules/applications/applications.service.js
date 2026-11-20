@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+const aiMlClient = require('../candidates/aiMlClient.service');
 const applicationsRepository = require('./applications.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const jobsRepository = require('../jobs/jobs.repository');
@@ -194,6 +197,79 @@ class ApplicationsService {
     }
 
     throw ApiError.forbidden('Forbidden: Access is denied');
+  }
+
+  /**
+   * Recruiter gets ATS check evaluation for an applicant's application.
+   * Enforces strict ownership check: application -> job -> recruiter_id must match authenticated recruiter.
+   *
+   * @param {number|string} jobId
+   * @param {number|string} applicationId
+   * @param {number|string} recruiterId
+   * @returns {Promise<object>} ATS evaluation result
+   */
+  async getApplicationAtsForRecruiter(jobId, applicationId, recruiterId) {
+    const application = await applicationsRepository.findById(applicationId);
+    if (!application) {
+      throw ApiError.notFound('Application not found');
+    }
+
+    if (Number(application.job_id) !== Number(jobId)) {
+      throw ApiError.notFound('Application not found for this job');
+    }
+
+    if (Number(application.recruiter_id) !== Number(recruiterId)) {
+      throw ApiError.forbidden('Forbidden: You do not have permission to view this application');
+    }
+
+    const job = await jobsRepository.findById(jobId);
+    if (!job) {
+      throw ApiError.notFound('Job not found');
+    }
+
+    // Build job description from title, skills, experience, description
+    const skillsText = Array.isArray(job.skills) ? job.skills.join(', ') : (job.skills || '');
+    const parts = [
+      job.title ? `Job Title: ${job.title}` : '',
+      job.experience ? `Experience Required: ${job.experience}` : '',
+      skillsText ? `Required Skills: ${skillsText}` : '',
+      job.description ? `Job Description:\n${job.description}` : '',
+    ].filter(Boolean);
+
+    let jdText = parts.join('\n\n').trim();
+    if (jdText.length < 30) {
+      throw ApiError.badRequest('Job description is too short for ATS evaluation (minimum 30 characters required).');
+    }
+    if (jdText.length > 10000) {
+      jdText = jdText.slice(0, 10000);
+    }
+
+    // Read candidate stored resume from disk if available
+    let fileBuffer = null;
+    let originalFilename = application.resume_original_name || 'resume.pdf';
+    let mimetype = 'application/pdf';
+
+    if (application.resume_path) {
+      const projectRoot = path.resolve(__dirname, '../../../');
+      const fullPath = path.resolve(projectRoot, application.resume_path);
+      try {
+        await fs.promises.access(fullPath, fs.constants.R_OK);
+        fileBuffer = await fs.promises.readFile(fullPath);
+        const ext = path.extname(application.resume_path).toLowerCase();
+        mimetype = ext === '.docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+      } catch {
+        // Fallback: file buffer null -> AI service will attempt to use stored resume in MongoDB
+      }
+    }
+
+    return aiMlClient.checkJobAts(
+      application.candidate_id,
+      jdText,
+      job.id,
+      fileBuffer,
+      originalFilename,
+      mimetype
+    );
   }
 }
 
