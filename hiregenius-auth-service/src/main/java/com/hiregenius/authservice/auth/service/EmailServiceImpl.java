@@ -27,16 +27,24 @@ public class EmailServiceImpl implements EmailService {
         this.mailSender = mailSender;
     }
 
+    private String resolveSenderEmail() {
+        if (mailFrom != null && !mailFrom.isBlank() && !mailFrom.equalsIgnoreCase("noreply@hiregenius.ai")) {
+            return mailFrom.trim();
+        }
+        return "krvisuji92@gmail.com";
+    }
+
     @Async("mailTaskExecutor")
     @Override
     public void sendPasswordResetEmail(String toEmail, String userName, String resetLink) {
         long asyncStartTime = System.currentTimeMillis();
-        log.info("[ASYNC-EMAIL] Starting background password reset email dispatch to {} on thread [{}]", toEmail, Thread.currentThread().getName());
+        String sender = resolveSenderEmail();
+        log.info("[ASYNC-EMAIL] Starting background password reset email dispatch from [{}] to [{}] on thread [{}]", sender, toEmail, Thread.currentThread().getName());
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(mailFrom);
+            helper.setFrom(sender, "HireGenius AI");
             helper.setTo(toEmail);
             helper.setSubject("Reset Your HireGenius AI Password");
 
@@ -46,7 +54,7 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.info("[ASYNC-EMAIL] Password reset email successfully sent to {} in {}ms on thread [{}]", toEmail, duration, Thread.currentThread().getName());
-        } catch (MessagingException | RuntimeException e) {
+        } catch (Exception e) {
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.error("[ASYNC-EMAIL] Failed to send password reset email to {} after {}ms on thread [{}]: {}", toEmail, duration, Thread.currentThread().getName(), e.getMessage(), e);
         }
@@ -121,12 +129,13 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendVerificationOtpEmail(String toEmail, String userName, String otpCode) {
         long asyncStartTime = System.currentTimeMillis();
-        log.info("[ASYNC-EMAIL] Starting verification OTP email dispatch to {} on thread [{}]", toEmail, Thread.currentThread().getName());
+        String sender = resolveSenderEmail();
+        log.info("[ASYNC-EMAIL] Starting verification OTP email dispatch from [{}] to [{}] on thread [{}]", sender, toEmail, Thread.currentThread().getName());
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(mailFrom);
+            helper.setFrom(sender, "HireGenius AI");
             helper.setTo(toEmail);
             helper.setSubject("Your HireGenius AI Verification Code: " + otpCode);
 
@@ -136,7 +145,7 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.info("[ASYNC-EMAIL] Verification OTP email successfully sent to {} in {}ms on thread [{}]", toEmail, duration, Thread.currentThread().getName());
-        } catch (MessagingException | RuntimeException e) {
+        } catch (Exception e) {
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.error("[ASYNC-EMAIL] Failed to send verification OTP email to {} after {}ms on thread [{}]: {}", toEmail, duration, Thread.currentThread().getName(), e.getMessage(), e);
         }
@@ -207,12 +216,13 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendRecruiterApprovalEmail(String toEmail, String userName) {
         long asyncStartTime = System.currentTimeMillis();
-        log.info("[ASYNC-EMAIL] Starting recruiter approval email dispatch to {} on thread [{}]", toEmail, Thread.currentThread().getName());
+        String sender = resolveSenderEmail();
+        log.info("[ASYNC-EMAIL] Starting recruiter approval email dispatch from [{}] to [{}] on thread [{}]", sender, toEmail, Thread.currentThread().getName());
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(mailFrom);
+            helper.setFrom(sender, "HireGenius AI");
             helper.setTo(toEmail);
             helper.setSubject("Your HireGenius AI Recruiter Account Has Been Approved!");
 
@@ -222,7 +232,7 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.info("[ASYNC-EMAIL] Recruiter approval email successfully sent to {} in {}ms on thread [{}]", toEmail, duration, Thread.currentThread().getName());
-        } catch (MessagingException | RuntimeException e) {
+        } catch (Exception e) {
             long duration = System.currentTimeMillis() - asyncStartTime;
             log.error("[ASYNC-EMAIL] Failed to send recruiter approval email to {} after {}ms on thread [{}]: {}", toEmail, duration, Thread.currentThread().getName(), e.getMessage(), e);
         }
