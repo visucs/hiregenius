@@ -284,23 +284,21 @@ public class AuthServiceImpl implements AuthService {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            // Only issue reset token if user has a password / is not purely Google OAuth
-            if (user.getPassword() != null && user.getAuthProvider() != AuthProvider.GOOGLE) {
-                String token = UUID.randomUUID().toString();
-                LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(30);
+            // Issue password reset token for any registered user (local or Google OAuth) so they can recover/set their password
+            String token = UUID.randomUUID().toString();
+            LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(30);
 
-                PasswordResetToken resetToken = new PasswordResetToken(user, token, expiresAt);
-                passwordResetTokenRepository.save(resetToken);
-                long tokenSavedDuration = System.currentTimeMillis() - startTime;
-                log.info("[FORGOT-PASSWORD] Token generated and saved to DB in {}ms for user id={}", tokenSavedDuration, user.getId());
+            PasswordResetToken resetToken = new PasswordResetToken(user, token, expiresAt);
+            passwordResetTokenRepository.save(resetToken);
+            long tokenSavedDuration = System.currentTimeMillis() - startTime;
+            log.info("[FORGOT-PASSWORD] Token generated and saved to DB in {}ms for user id={}", tokenSavedDuration, user.getId());
 
-                String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
-                emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
-                long emailDispatchedDuration = System.currentTimeMillis() - startTime;
-                log.info("[FORGOT-PASSWORD] Async email dispatch invoked in {}ms for user id={}", emailDispatchedDuration, user.getId());
-            } else {
-                log.info("[FORGOT-PASSWORD] Skipping password reset email for Google-only user without password [{}]", email);
-            }
+            String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
+            long emailDispatchedDuration = System.currentTimeMillis() - startTime;
+            log.info("[FORGOT-PASSWORD] Async email dispatch invoked in {}ms for user id={}", emailDispatchedDuration, user.getId());
+        } else {
+            log.info("[FORGOT-PASSWORD] No account found for email [{}], returning generic 200", email);
         }
 
         long totalDuration = System.currentTimeMillis() - startTime;
@@ -328,10 +326,6 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = resetToken.getUser();
-        if (user.getAuthProvider() == AuthProvider.GOOGLE && user.getPassword() == null) {
-            log.warn("Password reset rejected: User is Google-only account [{}]", user.getEmail());
-            throw new IllegalArgumentException("This account uses Google Sign-In and has no password to reset");
-        }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);

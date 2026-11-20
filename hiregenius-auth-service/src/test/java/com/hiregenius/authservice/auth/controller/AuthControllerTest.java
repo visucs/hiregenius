@@ -480,8 +480,8 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("19. Password reset rejected for Google-only account (400)")
-    void resetPasswordGoogleOnlyAccountRejected() throws Exception {
+    @DisplayName("19. Password reset succeeds for Google-only account allowing password creation (200)")
+    void resetPasswordGoogleOnlyAccountSucceeds() throws Exception {
         User googleUser = new User("Google Only User", "googleonly@hiregenius.ai", null, Role.CANDIDATE, AuthProvider.GOOGLE);
         userRepository.save(googleUser);
 
@@ -493,8 +493,12 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("This account uses Google Sign-In and has no password to reset")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message", containsString("Password has been reset successfully")));
+
+        User updatedUser = userRepository.findByEmail("googleonly@hiregenius.ai").orElseThrow();
+        assertTrue(passwordEncoder.matches("NewPassword123!", updatedUser.getPassword()));
     }
 
     @Test

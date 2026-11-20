@@ -32,11 +32,11 @@ services:
       - key: MAIL_PORT
         value: "587"
       - key: MAIL_USERNAME
-        sync: false
+        value: "krvisuji92@gmail.com"
       - key: MAIL_PASSWORD
-        sync: false
+        value: "fewacfrbspkkfijh"
       - key: MAIL_FROM
-        sync: false
+        value: "krvisuji92@gmail.com"
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
 
@@ -86,10 +86,10 @@ services:
       - key: MAIL_PORT
         value: "587"
       - key: MAIL_USERNAME
-        sync: false
+        value: "krvisuji92@gmail.com"
       - key: MAIL_PASSWORD
-        sync: false
+        value: "fewacfrbspkkfijh"
       - key: MAIL_FROM
-        sync: false
+        value: "krvisuji92@gmail.com"
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
