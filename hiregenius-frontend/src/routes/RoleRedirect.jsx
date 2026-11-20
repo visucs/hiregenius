@@ -17,11 +17,12 @@ export const ROLE_HOME = {
  * Prevents candidate from being redirected to recruiter dashboard and vice versa.
  */
 export const resolveRoleRedirect = (target, role) => {
-  const fallback = ROLE_HOME[role] || (role === 'CANDIDATE' ? '/candidate/dashboard' : '/recruiter/dashboard');
-  if (!target) return fallback;
-  if (target.startsWith('/recruiter') && role !== 'RECRUITER') return fallback;
-  if (target.startsWith('/candidate') && role !== 'CANDIDATE') return fallback;
-  if (target.startsWith('/admin') && role !== 'ADMIN') return fallback;
+  const normalizedRole = role ? String(role).toUpperCase() : 'CANDIDATE';
+  const fallback = ROLE_HOME[normalizedRole] || (normalizedRole === 'RECRUITER' ? '/recruiter/dashboard' : '/candidate/dashboard');
+  if (!target || target === '/dashboard' || target === '/') return fallback;
+  if (target.startsWith('/recruiter') && normalizedRole !== 'RECRUITER') return fallback;
+  if (target.startsWith('/candidate') && normalizedRole !== 'CANDIDATE') return fallback;
+  if (target.startsWith('/admin') && normalizedRole !== 'ADMIN') return fallback;
   return target;
 };
 

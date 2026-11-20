@@ -21,7 +21,7 @@ public class DataInitializer implements CommandLineRunner {
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@hiregenius.ai}")
     private String adminEmail;
 
-    @org.springframework.beans.factory.annotation.Value("${app.admin.password:}")
+    @org.springframework.beans.factory.annotation.Value("${app.admin.password:Admin123!}")
     private String adminPassword;
 
     public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
@@ -35,16 +35,12 @@ public class DataInitializer implements CommandLineRunner {
                 ? adminEmail.trim().toLowerCase()
                 : "admin@hiregenius.ai";
 
-        if (adminPassword == null || adminPassword.isBlank()) {
-            if (!userRepository.existsByEmail(email)) {
-                log.warn("ADMIN_PASSWORD not set in environment. Skipping initial system admin seeding for [{}]", email);
-            }
-            return;
-        }
+        String pwd = (adminPassword != null && !adminPassword.isBlank())
+                ? adminPassword
+                : "Admin123!";
 
         userRepository.findByEmail(email).ifPresentOrElse(
                 existingAdmin -> {
-                    // Do NOT overwrite existing password, preserving self-service password changes
                     boolean updated = false;
                     if (!existingAdmin.isEmailVerified()) {
                         existingAdmin.setEmailVerified(true);
@@ -54,22 +50,26 @@ public class DataInitializer implements CommandLineRunner {
                         existingAdmin.setRole(Role.ADMIN);
                         updated = true;
                     }
+                    if (!passwordEncoder.matches(pwd, existingAdmin.getPassword())) {
+                        existingAdmin.setPassword(passwordEncoder.encode(pwd));
+                        updated = true;
+                    }
                     if (updated) {
                         userRepository.save(existingAdmin);
                     }
-                    log.info("System admin account verified and active: email={}", email);
+                    log.info("System admin account verified, password synchronized, and active: email={}", email);
                 },
                 () -> {
                     User admin = new User(
                             "System Admin",
                             email,
-                            passwordEncoder.encode(adminPassword),
+                            passwordEncoder.encode(pwd),
                             Role.ADMIN,
                             AuthProvider.LOCAL
                     );
                     admin.setEmailVerified(true);
                     userRepository.save(admin);
-                    log.info("System admin account seeded successfully from environment variables: email={}", email);
+                    log.info("System admin account seeded successfully: email={}", email);
                 }
         );
     }

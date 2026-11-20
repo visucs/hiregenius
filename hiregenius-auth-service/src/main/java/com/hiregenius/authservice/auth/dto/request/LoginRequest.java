@@ -15,12 +15,29 @@ public class LoginRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    // Optional desired role on login (e.g. RECRUITER or CANDIDATE)
+    private String role;
+
     public LoginRequest() {
     }
 
     public LoginRequest(String email, String password) {
         this.email = email;
         this.password = password;
+    }
+
+    public LoginRequest(String email, String password, String role) {
+        this.email = email;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public String getEmail() {

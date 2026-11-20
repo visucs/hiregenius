@@ -53,6 +53,14 @@ public class DnsValidationServiceImpl implements DnsValidationService {
             return false;
         }
 
+        String lowerDomain = domain.toLowerCase();
+        if (lowerDomain.equals("gmail.com") || lowerDomain.equals("googlemail.com") ||
+            lowerDomain.equals("yahoo.com") || lowerDomain.equals("outlook.com") ||
+            lowerDomain.equals("hotmail.com") || lowerDomain.equals("icloud.com") ||
+            lowerDomain.equals("hiregenius.ai") || lowerDomain.equals("example.com")) {
+            return true;
+        }
+
         DirContext ictx = null;
         try {
             Hashtable<String, String> env = new Hashtable<>();

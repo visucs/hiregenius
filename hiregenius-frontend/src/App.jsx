@@ -186,6 +186,9 @@ const App = () => {
           </Route>
         </Route>
 
+        {/* ── DASHBOARD SHORTCUT (redirects to role dashboard) ────── */}
+        <Route path="/dashboard" element={<RoleRedirect><LandingPage /></RoleRedirect>} />
+
         {/* ── 404 ──────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFoundPage />} />
 

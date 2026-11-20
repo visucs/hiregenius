@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, LogIn, Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Sparkles, AlertCircle, ArrowLeft, Briefcase, Users } from 'lucide-react';
 
 import { loginSchema } from '../../utils/validationSchemas';
 import { authService } from '../../services/authService';
@@ -34,6 +34,9 @@ const LoginPage = () => {
 
   const searchParams = new URLSearchParams(location.search);
   const redirectParam = searchParams.get('redirect') || location.state?.from?.pathname || location.state?.redirect;
+  const [selectedRole, setSelectedRole] = useState(
+    searchParams.get('role')?.toUpperCase() === 'CANDIDATE' ? 'CANDIDATE' : 'RECRUITER'
+  );
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -48,11 +51,12 @@ const LoginPage = () => {
     dispatch(setLoading(true));
     dispatch(clearError());
     try {
-      const res = await authService.login(data);
+      const res = await authService.login({ ...data, role: selectedRole });
       const { token, user } = res.data;
-      dispatch(setCredentials({ token, user }));
+      const finalRole = user?.role || res.data?.role || selectedRole;
+      dispatch(setCredentials({ token, user: { ...user, role: finalRole }, role: finalRole }));
       toast.success(`Welcome back, ${user?.name || 'there'}!`);
-      navigate(resolveRoleRedirect(redirectParam, user?.role));
+      navigate(resolveRoleRedirect(redirectParam, finalRole));
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));
@@ -70,15 +74,16 @@ const LoginPage = () => {
         : await signInWithPopup(auth, googleProvider);
       // 2. Extract ID token
       const idToken = await result.user.getIdToken();
-      // 3. Build request payload (role absent on Login, as user already has role in backend)
-      const payload = { idToken };
-      // 4. Call mock API
+      // 3. Build request payload with selected role
+      const payload = { idToken, role: selectedRole };
+      // 4. Call API
       const res = await authService.googleLogin(payload);
-      const { token, role: returnedRole } = res;
+      const returnedRole = res?.user?.role || res?.role || selectedRole;
+      const token = res?.token;
       // 5. Populate Redux auth state & persist session
       const user = {
         id: result.user.uid,
-        name: result.user.displayName || 'Google User',
+        name: result.user.displayName || (returnedRole === 'RECRUITER' ? 'Recruiter' : 'Candidate'),
         email: result.user.email || '',
         role: returnedRole,
       };
@@ -200,6 +205,47 @@ const LoginPage = () => {
             </motion.div>
           )}
 
+          {/* Role selector tabs */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Signing in as
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {[
+                { value: 'RECRUITER', label: "I'm hiring (Recruiter)", icon: Users },
+                { value: 'CANDIDATE', label: "I'm looking for a job", icon: Briefcase },
+              ].map(({ value, label, icon: Icon }) => {
+                const isSelected = selectedRole === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedRole(value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      border: 'none',
+                      transition: 'all 0.18s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                      outline: isSelected ? '1.5px solid rgba(99,102,241,0.6)' : '1.5px solid var(--border)',
+                      color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: isSelected ? 600 : 500,
+                    }}
+                    id={`login-role-${value.toLowerCase()}`}
+                  >
+                    <Icon size={14} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Email */}
             <div>
@@ -242,7 +288,7 @@ const LoginPage = () => {
             </div>
 
             <GradientButton type="submit" isLoading={isLoading} disabled={isLoading} style={{ width: '100%', minHeight: 44, marginTop: 4 }} id="login-submit-btn">
-              <LogIn size={15} /> Sign In
+              <LogIn size={15} /> Sign In as {selectedRole === 'RECRUITER' ? 'Recruiter' : 'Candidate'}
             </GradientButton>
           </form>
 
@@ -261,7 +307,7 @@ const LoginPage = () => {
             isLoading={isGoogleLoading}
             disabled={isGoogleLoading || isLoading}
             onClick={handleGoogleSignIn}
-            label="Continue with Google"
+            label={`Continue with Google as ${selectedRole === 'RECRUITER' ? 'Recruiter' : 'Candidate'}`}
           />
 
           {/* Server wake-up notice for slow cold-start requests */}

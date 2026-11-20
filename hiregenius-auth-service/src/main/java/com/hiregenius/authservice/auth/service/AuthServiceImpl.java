@@ -190,6 +190,16 @@ public class AuthServiceImpl implements AuthService {
                 userRepository.findByEmail(email).orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"))
         );
 
+        // If an explicit role was selected on login and the user is not ADMIN, synchronize their role
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            Role requestedRole = parseAndValidatePublicRole(request.getRole());
+            if (user.getRole() != Role.ADMIN && user.getRole() != requestedRole) {
+                user.setRole(requestedRole);
+                user = userRepository.save(user);
+                log.info("Synchronized user [{}] role to [{}] on password login", email, requestedRole);
+            }
+        }
+
         String token = jwtService.generateToken(user);
         log.info("User logged in successfully: id={}, email={}, role={}", user.getId(), user.getEmail(), user.getRole());
 
@@ -246,9 +256,16 @@ public class AuthServiceImpl implements AuthService {
                 throw new DisabledException("Your account has been deactivated. Please contact support.");
             }
 
-            // Account-linking policy:
-            // If the account was previously registered locally, we preserve their credentials and stored role,
-            // allowing seamless Google sign-in for the verified email.
+            // If a role was selected (e.g. from Register or Login page role selector) and user is not ADMIN, synchronize their role
+            if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+                Role requestedRole = parseAndValidatePublicRole(request.getRole());
+                if (existingUser.getRole() != Role.ADMIN && existingUser.getRole() != requestedRole) {
+                    existingUser.setRole(requestedRole);
+                    existingUser = userRepository.save(existingUser);
+                    log.info("Synchronized existing user [{}] role to [{}] via Google sign-in", email, requestedRole);
+                }
+            }
+
             log.info("Existing user authenticated via Google OAuth: id={}, email={}, role={}, provider={}",
                     existingUser.getId(), existingUser.getEmail(), existingUser.getRole(), existingUser.getAuthProvider());
 

@@ -25,6 +25,7 @@ const RegisterPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const currentRole = useSelector((state) => state.auth.user?.role);
   const isLoading = useSelector(selectAuthLoading);
   const authError = useSelector(selectAuthError);
   const [showPassword, setShowPassword] = useState(false);
@@ -32,13 +33,16 @@ const RegisterPage = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard', { replace: true });
+    if (isAuthenticated) {
+      const target = ROLE_HOME[currentRole] || (currentRole === 'RECRUITER' ? '/recruiter/dashboard' : '/candidate/dashboard');
+      navigate(target, { replace: true });
+    }
     return () => dispatch(clearError());
-  }, [isAuthenticated, navigate, dispatch]);
+  }, [isAuthenticated, currentRole, navigate, dispatch]);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: '' },
+    defaultValues: { role: 'RECRUITER' },
   });
 
   const selectedRole = watch('role');
@@ -49,9 +53,13 @@ const RegisterPage = () => {
     const { confirmPassword: _confirmPassword, ...payload } = data;
     try {
       const res = await authService.register(payload);
-      dispatch(setCredentials({ token: res.data.token, user: res.data.user }));
-      toast.success('Account created! Please enter the 6-digit verification code sent to your email.');
-      navigate(`/verify-email?email=${encodeURIComponent(payload.email)}`);
+      const token = res?.data?.token || res?.token;
+      const user = res?.data?.user || res?.user;
+      const targetRole = user?.role || payload.role;
+      dispatch(setCredentials({ token, user: { ...user, role: targetRole }, role: targetRole }));
+      toast.success(`Account created! Welcome to HireGenius AI, ${payload.name || 'there'}!`);
+      const destination = ROLE_HOME[targetRole] || (targetRole === 'RECRUITER' ? '/recruiter/dashboard' : '/candidate/dashboard');
+      navigate(destination, { replace: true });
     } catch (err) {
       const msg = formatError(err);
       dispatch(setError(msg));
@@ -75,9 +83,10 @@ const RegisterPage = () => {
       const idToken = await result.user.getIdToken();
       // 3. Build request payload with chosen role (required on Register)
       const payload = { idToken, role: selectedRole };
-      // 4. Call mock API
+      // 4. Call API
       const res = await authService.googleLogin(payload);
-      const { token, role: returnedRole } = res;
+      const returnedRole = res?.user?.role || res?.role || selectedRole;
+      const token = res?.token;
       // 5. Store session in Redux & navigate to role dashboard
       const user = {
         id: result.user.uid,
@@ -87,7 +96,8 @@ const RegisterPage = () => {
       };
       dispatch(setCredentials({ token, user, role: returnedRole }));
       toast.success(`Account created! Welcome to HireGenius AI, ${result.user.displayName || ''}`);
-      navigate(ROLE_HOME[returnedRole] ?? '/dashboard');
+      const destination = ROLE_HOME[returnedRole] || (returnedRole === 'RECRUITER' ? '/recruiter/dashboard' : '/candidate/dashboard');
+      navigate(destination, { replace: true });
     } catch (err) {
       console.error('Google registration error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
