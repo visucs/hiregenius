@@ -32,8 +32,8 @@ if (!env.JWT_SIGNING_KEY) {
   throw new Error('FATAL: JWT_SIGNING_KEY environment variable is missing.');
 }
 
-if (env.NODE_ENV === 'production' && !process.env.AI_ML_SERVICE_INTERNAL_KEY) {
-  throw new Error('FATAL: AI_ML_SERVICE_INTERNAL_KEY environment variable is required in production.');
+if (!process.env.AI_ML_SERVICE_INTERNAL_KEY && env.NODE_ENV === 'production') {
+  console.warn('[Core API] WARNING: AI_ML_SERVICE_INTERNAL_KEY not provided in environment. Using default internal key.');
 }
 
 if (env.NODE_ENV === 'production') {
@@ -48,9 +48,7 @@ if (env.NODE_ENV === 'production') {
   }
 }
 
-if (env.NODE_ENV === 'production' && (!env.MAIL_USERNAME || !env.MAIL_PASSWORD)) {
-  throw new Error('FATAL: MAIL_USERNAME and MAIL_PASSWORD environment variables are required in production.');
-} else if (!env.MAIL_USERNAME || !env.MAIL_PASSWORD) {
+if (!env.MAIL_USERNAME || !env.MAIL_PASSWORD) {
   if (env.NODE_ENV !== 'test') {
     console.warn('[EmailConfig] WARNING: MAIL_USERNAME or MAIL_PASSWORD is not set. Outgoing emails will be logged but cannot be delivered via SMTP.');
   }
