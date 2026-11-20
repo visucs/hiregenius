@@ -1,3 +1,5 @@
+const fs = require('fs');
+const aiMlClient = require('../candidates/aiMlClient.service');
 const jobsRepository = require('./jobs.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const candidatesService = require('../candidates/candidates.service');
@@ -239,6 +241,73 @@ class JobsService {
     }
 
     return jobsRepository.softDelete(id);
+  }
+
+  /**
+   * Run job-specific ATS check for authenticated candidate against an open job.
+   *
+   * @param {number|string} userId
+   * @param {number|string} jobId
+   * @param {object|null} file Optional uploaded file
+   * @returns {Promise<object>} ATS evaluation result
+   */
+  async runJobAtsCheck(userId, jobId, file = null) {
+    const job = await jobsRepository.findById(jobId);
+    if (!job) {
+      throw ApiError.notFound('Job not found');
+    }
+    if (job.status !== 'OPEN') {
+      throw ApiError.badRequest('Job is not open for applications');
+    }
+
+    let candidate = await candidatesRepository.findByUserId(userId);
+    let fileBuffer = null;
+    let originalFilename = null;
+    let mimetype = 'application/pdf';
+
+    if (file) {
+      fileBuffer = file.buffer || (file.path ? await fs.promises.readFile(file.path) : null);
+      originalFilename = file.originalname;
+      mimetype = file.mimetype || 'application/pdf';
+
+      if (!candidate) {
+        candidate = await candidatesRepository.create({
+          user_id: Number(userId),
+          resume_path: null,
+          resume_original_name: null,
+        });
+      }
+    } else {
+      if (!candidate || !candidate.resume_path) {
+        throw ApiError.badRequest('Upload your resume first');
+      }
+    }
+
+    // Build job description from title, skills, experience, description
+    const skillsText = Array.isArray(job.skills) ? job.skills.join(', ') : (job.skills || '');
+    const parts = [
+      job.title ? `Job Title: ${job.title}` : '',
+      job.experience ? `Experience Required: ${job.experience}` : '',
+      skillsText ? `Required Skills: ${skillsText}` : '',
+      job.description ? `Job Description:\n${job.description}` : '',
+    ].filter(Boolean);
+
+    let jdText = parts.join('\n\n').trim();
+    if (jdText.length < 30) {
+      throw ApiError.badRequest('Job description is too short for ATS evaluation (minimum 30 characters required).');
+    }
+    if (jdText.length > 10000) {
+      jdText = jdText.slice(0, 10000);
+    }
+
+    return aiMlClient.checkJobAts(
+      candidate.id,
+      jdText,
+      job.id,
+      fileBuffer,
+      originalFilename,
+      mimetype
+    );
   }
 }
 

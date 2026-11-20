@@ -5,8 +5,11 @@ const requireRole = require('../../middleware/requireRole');
 const {
   candidateIdParamSchema,
   resumeUploadMiddleware,
+  optionalResumeUploadMiddleware,
+  getAtsQuerySchema,
   validate,
 } = require('./candidates.validation');
+const { atsRateLimiter } = require('../../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -61,6 +64,27 @@ router.patch(
   verifyJwt,
   requireRole('CANDIDATE'),
   (req, res, next) => candidatesController.updatePreferences(req, res, next),
+);
+
+
+// POST /api/candidates/me/ats-check - Run general ATS readability/structure check (optional file)
+router.post(
+  '/me/ats-check',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  atsRateLimiter,
+  optionalResumeUploadMiddleware,
+  (req, res, next) => candidatesController.checkGeneralAts(req, res, next),
+);
+
+// GET /api/candidates/me/ats - Get candidate's own ATS result (optional ?jobId=)
+router.get(
+  '/me/ats',
+  verifyJwt,
+  requireRole('CANDIDATE'),
+  atsRateLimiter,
+  validate(getAtsQuerySchema, 'query'),
+  (req, res, next) => candidatesController.getMyAts(req, res, next),
 );
 
 /**

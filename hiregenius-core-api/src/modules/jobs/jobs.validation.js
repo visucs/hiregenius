@@ -218,7 +218,18 @@ function validate(schema, source = 'body') {
   };
 }
 
+
+const jobIdRouteParamSchema = z
+  .object({
+    jobId: z.coerce.number().int().positive('Job ID must be a positive integer').openapi({
+      description: 'Job ID (primary key)',
+      example: 1,
+    }),
+  })
+  .openapi('JobIdRouteParam');
+
 module.exports = {
+  jobIdRouteParamSchema,
   createJobSchema,
   updateJobSchema,
   updateStatusSchema,

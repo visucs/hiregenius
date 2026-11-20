@@ -69,6 +69,20 @@ class JobsController {
       return next(err);
     }
   }
+
+  async checkJobAts(req, res, next) {
+    try {
+      const jobId = req.params.jobId || req.params.id;
+      const result = await jobsService.runJobAtsCheck(
+        req.user.userId,
+        jobId,
+        req.file
+      );
+      return ApiResponse.success(res, result, 'Job ATS evaluation completed successfully', 200);
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 module.exports = new JobsController();

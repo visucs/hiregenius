@@ -286,6 +286,77 @@ class CandidatesService {
     }
     return parsedData;
   }
+
+  /**
+   * Run general ATS check for authenticated candidate.
+   * If a file is uploaded, forwards it directly WITHOUT replacing the candidate's stored resume.
+   * If no file is uploaded, reads the candidate's stored resume from disk; if none, returns 400 "Upload your resume first".
+   *
+   * @param {number|string} userId
+   * @param {object|null} file Uploaded file object from multer (optional)
+   * @returns {Promise<object>} ATS evaluation result
+   */
+  async runGeneralAtsCheck(userId, file = null) {
+    let candidate = await candidatesRepository.findByUserId(userId);
+
+    let fileBuffer = null;
+    let originalFilename = null;
+    let mimetype = 'application/pdf';
+
+    if (file) {
+      fileBuffer = file.buffer || (file.path ? await fs.promises.readFile(file.path) : null);
+      originalFilename = file.originalname;
+      mimetype = file.mimetype || 'application/pdf';
+
+      if (!candidate) {
+        candidate = await candidatesRepository.create({
+          user_id: Number(userId),
+          resume_path: null,
+          resume_original_name: null,
+        });
+      }
+    } else {
+      if (!candidate || !candidate.resume_path) {
+        throw ApiError.badRequest('Upload your resume first');
+      }
+
+      const projectRoot = path.resolve(__dirname, '../../../');
+      const fullPath = path.resolve(projectRoot, candidate.resume_path);
+
+      try {
+        await fs.promises.access(fullPath, fs.constants.R_OK);
+        fileBuffer = await fs.promises.readFile(fullPath);
+      } catch {
+        throw ApiError.badRequest('Upload your resume first');
+      }
+
+      originalFilename = candidate.resume_original_name || path.basename(candidate.resume_path);
+      const ext = path.extname(originalFilename).toLowerCase();
+      mimetype = ext === '.docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      throw ApiError.badRequest('Upload your resume first');
+    }
+
+    return aiMlClient.checkGeneralAts(candidate.id, fileBuffer, originalFilename, mimetype);
+  }
+
+  /**
+   * Get candidate's stored ATS check result (own data only).
+   *
+   * @param {number|string} userId
+   * @param {string|null} [jobId]
+   * @returns {Promise<object>} ATS evaluation result
+   */
+  async getCandidateAts(userId, jobId = null) {
+    const candidate = await candidatesRepository.findByUserId(userId);
+    if (!candidate) {
+      throw ApiError.notFound('No ATS evaluation found for candidate');
+    }
+
+    return aiMlClient.getCandidateAts(candidate.id, jobId);
+  }
 }
 
 module.exports = new CandidatesService();
