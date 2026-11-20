@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Agentation } from 'agentation';
 
-import { selectToken, setCredentials, logout } from './features/auth/authSlice';
+import { selectToken, selectUserRole, setCredentials, logout } from './features/auth/authSlice';
 import { authService } from './services/authService';
 
 // ── Public pages ──────────────────────────────────────────────────
@@ -74,6 +74,14 @@ import AdminProfilePage           from './pages/admin/AdminProfilePage';
  *
  *   *                    → 404
  */
+const AnalyticsRedirect = () => {
+  const role = useSelector(selectUserRole);
+  const normalizedRole = role ? String(role).toUpperCase() : null;
+  if (normalizedRole === 'ADMIN') return <Navigate to="/admin/analytics" replace />;
+  if (normalizedRole === 'RECRUITER') return <Navigate to="/recruiter/analytics" replace />;
+  return <Navigate to="/products/analytics" replace />;
+};
+
 const App = () => {
   const dispatch = useDispatch();
   const token = useSelector(selectToken);
@@ -182,9 +190,13 @@ const App = () => {
             <Route path="/candidate/resume-score" element={<ResumeScorePage />} />
             <Route path="/candidate/score"        element={<ResumeScorePage />} />
             <Route path="/candidate/scan-history"  element={<ScanHistoryPage />} />
+            <Route path="/candidate/analytics"     element={<AnalyticsProductPage />} />
             <Route path="/candidate/settings"     element={<CandidateSettingsPage />} />
           </Route>
         </Route>
+
+        {/* ── ANALYTICS SHORTCUT (redirects to role analytics) ──────── */}
+        <Route path="/analytics" element={<AnalyticsRedirect />} />
 
         {/* ── DASHBOARD SHORTCUT (redirects to role dashboard) ────── */}
         <Route path="/dashboard" element={<RoleRedirect><LandingPage /></RoleRedirect>} />

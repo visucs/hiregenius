@@ -18,16 +18,8 @@
       "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users"
     },
     {
-      "source": "/api/admin/users/:id/status",
-      "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users/:id/status"
-    },
-    {
-      "source": "/api/admin/users/:id/approve",
-      "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users/:id/approve"
-    },
-    {
-      "source": "/api/admin/users/:id/privileges",
-      "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users/:id/privileges"
+      "source": "/api/admin/users/:path*",
+      "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users/:path*"
     },
     {
       "source": "/api/:path*",

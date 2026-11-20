@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import {
   History, Settings, Mic, X, Plus, LogOut,
   ChevronRight, ChevronLeft, Sparkles,
   Sun, Moon, Search, ChevronDown, Menu, HelpCircle,
-  Command,
+  Command, BarChart3,
 } from 'lucide-react';
 import { logout, selectUser, selectUserRole } from '../features/auth/authSlice';
 import useTheme from '../hooks/useTheme';
@@ -19,6 +19,7 @@ const CANDIDATE_GROUPS = [
     label: 'Overview',
     items: [
       { to: '/candidate/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+      { to: '/candidate/analytics',    label: 'Analytics',    icon: BarChart3       },
     ],
   },
   {
@@ -408,10 +409,10 @@ const CandidateTopbar = ({ onMenuToggle }) => {
   const [showUser,   setShowUser]            = useState(false);
   const [searchFocus, setSearchFocus]        = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const userRef   = React.useRef(null);
+  const userRef   = useRef(null);
   const initials  = getInitials(user?.name);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const h = e => {
       if (userRef.current && !userRef.current.contains(e.target)) setShowUser(false);
     };
