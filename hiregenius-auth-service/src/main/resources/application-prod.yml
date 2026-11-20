@@ -7,3 +7,10 @@ spring:
     url: ${PROD_DATASOURCE_URL:jdbc:mysql://bypmcpyebenomi3pdtis-mysql.services.clever-cloud.com:3306/bypmcpyebenomi3pdtis?useSSL=true&serverTimezone=UTC}
     username: ${PROD_DATASOURCE_USERNAME:ujh47p04xlqsiqbc}
     password: ${PROD_DATASOURCE_PASSWORD:KlztJEUdmkxx3A5yO62Q}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 60000
+      max-lifetime: 240000
+      validation-timeout: 5000

@@ -23,12 +23,16 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 120000, // 120s timeout to accommodate Render free-tier cold starts (~50s)
 });
 
-// Request interceptor — attach JWT, route Core API endpoints, and ensure 30s timeout for cold starts
+// Request interceptor — attach JWT, route Core API endpoints, and ensure 120s timeout for cold starts
 api.interceptors.request.use(
   (config) => {
+    // Ensure timeout is at least 120000ms for Render free tier spin-up
+    if (!config.timeout || config.timeout < 120000) {
+      config.timeout = 120000;
+    }
     // Route jobs, candidates, applications, interviews, notifications, and analytics endpoints to Core API
     const isCoreRequest = config.url && (
       config.url.startsWith('/jobs') || config.url.startsWith('jobs') ||
@@ -48,7 +52,7 @@ api.interceptors.request.use(
       config.baseURL = authBaseURL;
     }
 
-    // Ensure all auth-related requests have at least 30000ms timeout
+    // Ensure all auth-related requests have at least 120000ms timeout
     const isAuthRequest = config.url && (
       config.url.includes('/auth/login') ||
       config.url.includes('/auth/register') ||
@@ -60,8 +64,8 @@ api.interceptors.request.use(
       config.url.includes('/auth/resend-otp') ||
       config.url.includes('/auth/resend-verification')
     );
-    if (isAuthRequest && (!config.timeout || config.timeout < 30000)) {
-      config.timeout = 30000;
+    if (isAuthRequest && (!config.timeout || config.timeout < 120000)) {
+      config.timeout = 120000;
     }
 
     const state = store.getState();

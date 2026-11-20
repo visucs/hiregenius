@@ -12,12 +12,12 @@ import { Server } from 'lucide-react';
  * @param {Object} props
  * @param {boolean} props.isLoading - Current request loading state
  * @param {number} [props.delay=2500] - Delay in ms before notice is surfaced
- * @param {string} [props.message='Waking up the server, this may take up to 30 seconds on first use...']
+ * @param {string} [props.message='Waking up the server, this may take up to 50 seconds on first use...']
  */
 const ServerWakeupNotice = ({
   isLoading = false,
   delay = 2500,
-  message = 'Waking up the server, this may take up to 30 seconds on first use...',
+  message = 'Waking up the server, this may take up to 50 seconds on first use...',
 }) => {
   const [showNotice, setShowNotice] = useState(false);
 

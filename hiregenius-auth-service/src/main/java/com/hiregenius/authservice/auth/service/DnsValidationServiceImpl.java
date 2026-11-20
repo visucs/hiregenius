@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.naming.CommunicationException;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
@@ -55,8 +57,9 @@ public class DnsValidationServiceImpl implements DnsValidationService {
         try {
             Hashtable<String, String> env = new Hashtable<>();
             env.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
-            env.put("com.sun.jndi.dns.timeout.initial", "3000");
-            env.put("com.sun.jndi.dns.timeout.retries", "1");
+            // Bound strictly to 2000ms with 0 retries to prevent HTTP request thread starvation
+            env.put("com.sun.jndi.dns.timeout.initial", "2000");
+            env.put("com.sun.jndi.dns.timeout.retries", "0");
 
             ictx = dirContextProvider.createDirContext(env);
             Attributes attrs = ictx.getAttributes(domain, new String[]{"MX"});
@@ -76,9 +79,22 @@ public class DnsValidationServiceImpl implements DnsValidationService {
 
             log.debug("Domain {} verified with {} MX record(s)", domain, attr.size());
             return true;
-        } catch (Exception e) {
-            log.warn("DNS lookup failed for domain [{}]: {}", domain, e.getMessage());
+        } catch (NameNotFoundException e) {
+            log.warn("DNS name not found for domain [{}]: {}", domain, e.getMessage());
             return false;
+        } catch (CommunicationException e) {
+            // Network timeout / DNS server unreachable: fail open to avoid hanging or blocking registration
+            log.warn("DNS query timed out/unreachable for domain [{}] (failing open): {}", domain, e.getMessage());
+            return true;
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("DNS name not found") || msg.contains("response code 3")) {
+                log.warn("DNS name not found for domain [{}]: {}", domain, msg);
+                return false;
+            }
+            // Timeout or unexpected resolver communication issue: fail open
+            log.warn("DNS resolution failed for domain [{}] (failing open): {}", domain, msg);
+            return true;
         } finally {
             if (ictx != null) {
                 try {

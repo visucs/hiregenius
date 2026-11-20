@@ -3,6 +3,9 @@
  * Spring Boot returns { status, message, details } — we surface `message`.
  */
 export const formatError = (err) => {
+  if (err?.code === 'ECONNABORTED' || (err?.message && err.message.toLowerCase().includes('timeout'))) {
+    return 'The server took too long to respond. It may be waking up from free-tier sleep (up to 50s). Please wait a moment and try again.';
+  }
   return (
     err?.response?.data?.message ||
     err?.message ||
