@@ -6,8 +6,16 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/auth/:path*",
+      "destination": "https://hiregenius-auth-service.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/admin/users/:path*",
+      "destination": "https://hiregenius-auth-service.onrender.com/api/admin/users/:path*"
+    },
+    {
       "source": "/api/:path*",
-      "destination": "http://13.203.243.162/api/:path*"
+      "destination": "https://hiregenius-core-api.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
