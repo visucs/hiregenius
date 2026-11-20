@@ -12,5 +12,4 @@ coverage
 *.md
 .eslintrc*
 .prettier*
-Dockerfile*
 .dockerignore

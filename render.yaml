@@ -1,0 +1,93 @@
+services:
+  # ==============================================================================
+  # 1. HireGenius Auth Service (Spring Boot 3.2.3, Java 21, Docker)
+  # ==============================================================================
+  - type: web
+    name: hiregenius-auth-service
+    runtime: docker
+    rootDir: hiregenius-auth-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore # or oregon / frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SIGNING_KEY
+        sync: false
+      - key: JWT_EXPIRATION_MS
+        value: "86400000"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://hiregenius-delta.vercel.app,http://localhost:5173"
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+      - key: MAIL_HOST
+        value: "smtp.gmail.com"
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: FRONTEND_BASE_URL
+        value: "https://hiregenius-delta.vercel.app"
+
+  # ==============================================================================
+  # 2. HireGenius Core API (Node.js Express, Knex, Docker)
+  # ==============================================================================
+  - type: web
+    name: hiregenius-core-api
+    runtime: docker
+    rootDir: hiregenius-core-api
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore # or oregon / frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: PORT
+        value: 4000
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SIGNING_KEY
+        sync: false
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: web
+          name: hiregenius-auth-service
+          property: host
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://hiregenius-delta.vercel.app,http://localhost:5173"
+      - key: ENABLE_SWAGGER
+        value: "true"
+      - key: MAIL_HOST
+        value: "smtp.gmail.com"
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: FRONTEND_BASE_URL
+        value: "https://hiregenius-delta.vercel.app"
