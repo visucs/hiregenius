@@ -877,7 +877,17 @@ const ResumeScorePage = () => {
           </div>
         ) : (
           /* ── Extracted Profile Tab ─────────────────────────── */
-          <ParsedResumeCard />
+          <ParsedResumeCard
+            atsData={atsData}
+            onGoToChecker={() => {
+              setActiveTab('ats');
+              window.scrollTo({ top: 380, behavior: 'smooth' });
+            }}
+            onScanCompleted={(newScan) => {
+              setAtsData(newScan);
+              fetchScanHistory(1);
+            }}
+          />
         )}
       </div>
     </div>
