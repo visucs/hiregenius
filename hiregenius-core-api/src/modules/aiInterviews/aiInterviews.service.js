@@ -122,7 +122,9 @@ class AiInterviewsService {
 
     const questions = await aiInterviewsRepository.getQuestions(interview.id);
     return {
+      id: interview.id,
       ...interview,
+      interview,
       questions,
     };
   }
@@ -260,6 +262,8 @@ class AiInterviewsService {
     }));
 
     return {
+      id: interview.id,
+      ...interview,
       interview,
       questions: questionsWithAnswers,
       evaluation,

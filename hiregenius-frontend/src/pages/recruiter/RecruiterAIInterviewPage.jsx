@@ -193,13 +193,18 @@ const RecruiterAIInterviewPage = () => {
 
   // 5. Open Draft Reviewer
   const openDraftReview = async (interviewId) => {
+    if (!interviewId) {
+      toast.error('Invalid interview ID.');
+      return;
+    }
     setLoadingDetail(true);
     setShowDraftModal(true);
     try {
       const res = await aiInterviewsService.getInterviewDetail(interviewId);
-      const detail = res.data || res;
+      const raw = res.data || res;
+      const detail = raw.interview ? { ...raw.interview, ...raw, id: raw.interview.id } : raw;
       setSelectedInterview(detail);
-      setEditableQuestions(detail.questions || []);
+      setEditableQuestions(raw.questions || detail.questions || []);
     } catch (err) {
       console.error('[RecruiterAIInterview] Error fetching draft detail:', err);
       toast.error('Failed to load interview draft.');
@@ -210,10 +215,14 @@ const RecruiterAIInterviewPage = () => {
 
   // 6. Save Draft Question edits
   const handleSaveDraft = async () => {
-    if (!selectedInterview) return;
+    const targetId = selectedInterview?.id || selectedInterview?.interview?.id;
+    if (!targetId) {
+      toast.error('No interview selected to save.');
+      return;
+    }
     setIsSavingDraft(true);
     try {
-      await aiInterviewsService.updateQuestions(selectedInterview.id, {
+      await aiInterviewsService.updateQuestions(targetId, {
         questions: editableQuestions.map((q) => ({
           id: q.id,
           text: q.text,
@@ -233,15 +242,19 @@ const RecruiterAIInterviewPage = () => {
 
   // 7. Publish Interview & Send Notification
   const handlePublish = async () => {
-    if (!selectedInterview) return;
+    const targetId = selectedInterview?.id || selectedInterview?.interview?.id;
+    if (!targetId) {
+      toast.error('No interview selected to publish.');
+      return;
+    }
     setIsPublishing(true);
     try {
       const windowStart = new Date().toISOString();
       const windowEnd = new Date(Date.now() + publishDays * 24 * 60 * 60 * 1000).toISOString();
-      await aiInterviewsService.publishInterview(selectedInterview.id, {
+      await aiInterviewsService.publishInterview(targetId, {
         windowStart,
         windowEnd,
-        durationMinutes: selectedInterview.duration_minutes || 30,
+        durationMinutes: selectedInterview.duration_minutes || selectedInterview.interview?.duration_minutes || 30,
       });
       toast.success('AI Interview published! Candidate has been notified.');
       setShowPublishModal(false);
@@ -257,11 +270,16 @@ const RecruiterAIInterviewPage = () => {
 
   // 8. Open Evaluation Scorecard
   const openEvaluationView = async (interviewId) => {
+    if (!interviewId) {
+      toast.error('Invalid interview ID.');
+      return;
+    }
     setLoadingDetail(true);
     setShowEvalDrawer(true);
     try {
       const res = await aiInterviewsService.getInterviewDetail(interviewId);
-      const detail = res.data || res;
+      const raw = res.data || res;
+      const detail = raw.interview ? { ...raw.interview, ...raw, id: raw.interview.id } : raw;
       setSelectedInterview(detail);
     } catch (err) {
       console.error('[RecruiterAIInterview] Detail error:', err);
@@ -273,12 +291,17 @@ const RecruiterAIInterviewPage = () => {
 
   // 9. Release Feedback toggle
   const handleToggleFeedback = async () => {
-    if (!selectedInterview) return;
+    const targetId = selectedInterview?.id || selectedInterview?.interview?.id;
+    if (!targetId) return;
     setIsTogglingFeedback(true);
-    const newReleased = !selectedInterview.feedback_released;
+    const newReleased = !(selectedInterview.feedback_released ?? selectedInterview.interview?.feedback_released);
     try {
-      await aiInterviewsService.releaseFeedback(selectedInterview.id, newReleased);
-      setSelectedInterview((prev) => ({ ...prev, feedback_released: newReleased ? 1 : 0 }));
+      await aiInterviewsService.releaseFeedback(targetId, newReleased);
+      setSelectedInterview((prev) => ({
+        ...prev,
+        feedback_released: newReleased ? 1 : 0,
+        ...(prev?.interview ? { interview: { ...prev.interview, feedback_released: newReleased ? 1 : 0 } } : {}),
+      }));
       toast.success(`Feedback ${newReleased ? 'released to' : 'hidden from'} candidate.`);
       fetchJobInterviews();
     } catch (err) {
@@ -291,12 +314,13 @@ const RecruiterAIInterviewPage = () => {
 
   // 10. Retry AI Evaluation
   const handleRetryEvaluation = async () => {
-    if (!selectedInterview) return;
+    const targetId = selectedInterview?.id || selectedInterview?.interview?.id;
+    if (!targetId) return;
     setIsRetryingEval(true);
     try {
-      const res = await aiInterviewsService.retryEvaluation(selectedInterview.id);
+      const res = await aiInterviewsService.retryEvaluation(targetId);
       toast.success('Evaluation re-calculated successfully.');
-      openEvaluationView(selectedInterview.id);
+      openEvaluationView(targetId);
       fetchJobInterviews();
     } catch (err) {
       console.error('[RecruiterAIInterview] Retry error:', err);
@@ -308,12 +332,17 @@ const RecruiterAIInterviewPage = () => {
 
   // 11. Quick ATS Status Advance
   const handleAdvanceAts = async (newStatus) => {
-    if (!selectedInterview?.application_id) return;
+    const applicationId = selectedInterview?.application_id || selectedInterview?.interview?.application_id;
+    if (!applicationId) return;
     setIsUpdatingAts(true);
     try {
-      await applicationsService.updateStatus(selectedInterview.application_id, newStatus);
+      await applicationsService.updateStatus(applicationId, newStatus);
       toast.success(`Application updated to ${newStatus}`);
-      setSelectedInterview((prev) => ({ ...prev, application_status: newStatus }));
+      setSelectedInterview((prev) => ({
+        ...prev,
+        application_status: newStatus,
+        ...(prev?.interview ? { interview: { ...prev.interview, application_status: newStatus } } : {}),
+      }));
       fetchJobInterviews();
     } catch (err) {
       console.error('[RecruiterAIInterview] ATS update error:', err);
