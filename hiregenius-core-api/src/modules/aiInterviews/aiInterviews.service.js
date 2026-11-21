@@ -7,6 +7,18 @@ const ApiError = require('../../utils/ApiError');
 const env = require('../../config/env');
 const db = require('../../config/db');
 
+function parseDbDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'string') {
+    if (val.includes('T') || val.endsWith('Z')) {
+      return new Date(val);
+    }
+    return new Date(val.replace(' ', 'T') + 'Z');
+  }
+  return new Date(val);
+}
+
 class AiInterviewsService {
   /**
    * Recruiter: Generate AI Interview Draft for an application
@@ -192,7 +204,7 @@ class AiInterviewsService {
       await notificationsService.createNotification({
         userId: interview.candidate_user_id,
         type: 'INTERVIEW_SCHEDULED',
-        message: `You have been invited to take an AI assessment for "${interview.job_title}". Assessment closes on ${new Date(published.window_end).toUTCString()}.`,
+        message: `You have been invited to take an AI assessment for "${interview.job_title}". Assessment closes on ${parseDbDate(published.window_end).toUTCString()}.`,
         relatedEntityType: 'AI_INTERVIEW',
         relatedEntityId: published.id,
       });
@@ -393,19 +405,19 @@ class AiInterviewsService {
 
     const now = new Date();
     // Expiry check
-    if (new Date(interview.window_end) < now && ['DRAFT', 'PUBLISHED', 'IN_PROGRESS'].includes(interview.status)) {
+    if (parseDbDate(interview.window_end) < now && ['DRAFT', 'PUBLISHED', 'IN_PROGRESS'].includes(interview.status)) {
       await aiInterviewsRepository.update(interviewId, { status: 'EXPIRED' });
       throw ApiError.forbidden('The time window for this interview assessment has expired');
     }
 
-    if (new Date(interview.window_start) > now) {
+    if (parseDbDate(interview.window_start) > now) {
       throw ApiError.forbidden('The time window for this assessment has not yet opened');
     }
 
     // Server-side timer check if already in progress
     let remainingSeconds = (interview.duration_minutes || 30) * 60;
     if (interview.status === 'IN_PROGRESS' && interview.started_at) {
-      const elapsedMs = now.getTime() - new Date(interview.started_at).getTime();
+      const elapsedMs = now.getTime() - parseDbDate(interview.started_at).getTime();
       const totalAllowedMs = interview.duration_minutes * 60 * 1000;
       const leftMs = totalAllowedMs - elapsedMs;
       remainingSeconds = Math.max(0, Math.floor(leftMs / 1000));
@@ -489,7 +501,7 @@ class AiInterviewsService {
     }
 
     const now = new Date();
-    if (new Date(interview.window_end) < now) {
+    if (parseDbDate(interview.window_end) < now) {
       await aiInterviewsRepository.update(interviewId, { status: 'EXPIRED' });
       throw ApiError.forbidden('Assessment window has expired');
     }
@@ -520,7 +532,7 @@ class AiInterviewsService {
 
     // Check timer
     const now = new Date();
-    const elapsedMs = now.getTime() - new Date(interview.started_at).getTime();
+    const elapsedMs = now.getTime() - parseDbDate(interview.started_at).getTime();
     const totalAllowedMs = interview.duration_minutes * 60 * 1000 + 60000; // 1 min grace
     if (elapsedMs > totalAllowedMs) {
       await this.submitInterview(candidateUserId, interviewId);

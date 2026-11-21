@@ -1,5 +1,12 @@
 const db = require('../../config/db');
 
+function toSqlDatetime(val) {
+  if (!val) return null;
+  const d = val instanceof Date ? val : new Date(val);
+  if (isNaN(d.getTime())) return val;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function formatDbDates(obj) {
   if (!obj || typeof obj !== 'object') return obj;
   const formatted = { ...obj };
@@ -14,8 +21,8 @@ function formatDbDates(obj) {
     'updated_at',
   ];
   for (const field of dateFields) {
-    if (formatted[field] instanceof Date) {
-      formatted[field] = formatted[field].toISOString();
+    if (formatted[field] !== undefined && formatted[field] !== null) {
+      formatted[field] = toSqlDatetime(formatted[field]);
     }
   }
   return formatted;
@@ -103,9 +110,10 @@ class AiInterviewsRepository {
    */
   async countRecentGenerationsByRecruiter(recruiterUserId, hours = 1) {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const sinceSql = toSqlDatetime(since);
     const result = await db('ai_interviews')
       .where('created_by', recruiterUserId)
-      .where('created_at', '>=', since)
+      .where('created_at', '>=', sinceSql)
       .count('id as count')
       .first();
     return Number(result?.count || 0);
@@ -116,7 +124,8 @@ class AiInterviewsRepository {
    */
   async createQuestions(questionsList, trx = null) {
     const query = trx ? trx('ai_interview_questions') : db('ai_interview_questions');
-    await query.insert(questionsList);
+    const sanitizedList = (questionsList || []).map((q) => formatDbDates(q));
+    await query.insert(sanitizedList);
   }
 
   /**
@@ -190,7 +199,7 @@ class AiInterviewsRepository {
         .update({
           answer_text: answerText,
           char_count: charCount,
-          updated_at: new Date(),
+          updated_at: toSqlDatetime(new Date()),
         });
       return { ...existing, answer_text: answerText, char_count: charCount };
     } else {
@@ -200,7 +209,7 @@ class AiInterviewsRepository {
         answer_text: answerText,
         char_count: charCount,
         submitted_at: null,
-        updated_at: new Date(),
+        updated_at: toSqlDatetime(new Date()),
       });
       return { id, interview_id: interviewId, question_id: questionId, answer_text: answerText, char_count: charCount };
     }
@@ -213,7 +222,7 @@ class AiInterviewsRepository {
     const query = trx ? trx('ai_interview_answers') : db('ai_interview_answers');
     await query
       .where('interview_id', interviewId)
-      .update({ submitted_at: new Date(), updated_at: new Date() });
+      .update({ submitted_at: toSqlDatetime(new Date()), updated_at: toSqlDatetime(new Date()) });
   }
 
   /**
@@ -253,7 +262,7 @@ class AiInterviewsRepository {
         .update(payload);
       return { ...existing, ...payload };
     } else {
-      payload.created_at = new Date();
+      payload.created_at = toSqlDatetime(new Date());
       const [id] = await (trx ? trx('ai_interview_evaluations') : db('ai_interview_evaluations')).insert(payload);
       return { id, ...payload };
     }
@@ -378,7 +387,7 @@ class AiInterviewsRepository {
         .whereIn('interview_id', ids)
         .update({
           answer_text: '[PURGED_DUE_TO_RETENTION_POLICY]',
-          updated_at: new Date(),
+          updated_at: toSqlDatetime(new Date()),
         });
 
       // Clear heavy JSON evaluation dumps while keeping aggregate numerical scores
@@ -386,7 +395,7 @@ class AiInterviewsRepository {
         .whereIn('interview_id', ids)
         .update({
           result_json: null,
-          updated_at: new Date(),
+          updated_at: toSqlDatetime(new Date()),
         });
     });
 
