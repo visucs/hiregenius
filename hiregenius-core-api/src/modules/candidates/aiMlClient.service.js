@@ -300,6 +300,92 @@ class AiMlClientService {
 
     return response.json();
   }
+
+  /**
+   * Invokes hiregenius-ai-ml-service POST /api/interview/generate.
+   *
+   * @param {object} params
+   * @param {object} params.job
+   * @param {object} [params.parsedResume]
+   * @param {object} [params.options]
+   * @returns {Promise<object>}
+   */
+  async generateInterviewQuestions({ job, parsedResume = null, options = null }) {
+    const targetUrl = `${env.AI_ML_SERVICE_URL}/api/interview/generate`;
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 65000;
+
+    let response;
+    try {
+      response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        body: JSON.stringify({
+          job,
+          parsedResume,
+          options,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      console.error(`[AiMlClient] generateInterviewQuestions failed to connect to ${targetUrl}:`, err.message);
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        throw new ApiError(504, 'AI interview generation timed out. Please try again.');
+      }
+      throw new ApiError(503, 'AI interview service is temporarily unavailable. Please try again later.');
+    }
+
+    if (!response.ok) {
+      await this._handleAtsError(response);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Invokes hiregenius-ai-ml-service POST /api/interview/evaluate.
+   *
+   * @param {object} params
+   * @param {Array<object>} params.questions
+   * @param {Array<object>} params.answers
+   * @param {object} params.job
+   * @returns {Promise<object>}
+   */
+  async evaluateInterviewAnswers({ questions, answers, job }) {
+    const targetUrl = `${env.AI_ML_SERVICE_URL}/api/interview/evaluate`;
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 65000;
+
+    let response;
+    try {
+      response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        body: JSON.stringify({
+          questions,
+          answers,
+          job,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      console.error(`[AiMlClient] evaluateInterviewAnswers failed to connect to ${targetUrl}:`, err.message);
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        throw new ApiError(504, 'AI interview evaluation timed out. Please try again.');
+      }
+      throw new ApiError(503, 'AI interview service is temporarily unavailable. Please try again later.');
+    }
+
+    if (!response.ok) {
+      await this._handleAtsError(response);
+    }
+
+    return response.json();
+  }
 }
 
 module.exports = new AiMlClientService();

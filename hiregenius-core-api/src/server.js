@@ -28,6 +28,20 @@ async function startServer() {
       console.log(`[Core API] HireGenius Core API running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     });
 
+    // Retention cleanup for AI interview data (Addendum 2 - default 180 days)
+    const aiInterviewsService = require('./modules/aiInterviews/aiInterviews.service');
+    aiInterviewsService.cleanupOldInterviews().catch((err) => {
+      console.warn('[Core API] Initial AI interview retention cleanup notice:', err.message);
+    });
+    const retentionInterval = setInterval(() => {
+      aiInterviewsService.cleanupOldInterviews().catch((err) => {
+        console.warn('[Core API] Scheduled AI interview retention cleanup notice:', err.message);
+      });
+    }, 24 * 60 * 60 * 1000);
+    if (retentionInterval.unref) {
+      retentionInterval.unref();
+    }
+
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`[Core API] Port ${env.PORT} is already in use by another process. Please stop the existing process or set PORT=<new_port>.`);
