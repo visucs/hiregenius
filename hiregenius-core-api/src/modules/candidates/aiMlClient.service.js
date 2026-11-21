@@ -29,7 +29,11 @@ class AiMlClientService {
     }
 
     // Server-side / 5xx error
-    throw new ApiError(503, 'Resume analysis service is temporarily unavailable');
+    const errData = await response.json().catch(() => ({}));
+    const detailMsg = typeof errData.detail === 'string'
+      ? errData.detail
+      : (errData.detail?.message || errData.message);
+    throw new ApiError(503, detailMsg || 'AI Service is temporarily unavailable. Please try again shortly.');
   }
 
   /**

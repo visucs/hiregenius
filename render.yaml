@@ -138,6 +138,6 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: "gemini-2.5-flash"
+        value: "gemini-3.8-flash"
       - key: AI_ML_SERVICE_INTERNAL_KEY
         value: "hg_internal_dev_secret_key_2026"
