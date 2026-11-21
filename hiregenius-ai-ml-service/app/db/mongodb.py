@@ -19,6 +19,7 @@ class MongoDBManager:
         self.resumes_collection: Optional[AsyncIOMotorCollection] = None
         self.ats_collection: Optional[AsyncIOMotorCollection] = None
         self.jd_cache_collection: Optional[AsyncIOMotorCollection] = None
+        self.resume_chunks_collection: Optional[AsyncIOMotorCollection] = None
 
     async def connect(self) -> None:
         """Establish asynchronous connection to MongoDB cluster."""
@@ -43,6 +44,8 @@ class MongoDBManager:
             self.ats_collection = self.db["ats_results"]
             # Collection reference for cached Gemini JD keyword extractions
             self.jd_cache_collection = self.db["jd_keyword_cache"]
+            # Collection reference for RAG candidate resume chunks and vectors
+            self.resume_chunks_collection = self.db["resume_chunks"]
 
             # Verify connectivity immediately on startup with a lightweight ping
             await self.client.admin.command("ping")
@@ -67,6 +70,17 @@ class MongoDBManager:
             except Exception as idx_err:
                 logger.warning(f"[MongoDB] Notice: Could not create unique index on ats_results: {idx_err}")
 
+            # Ensure indexes on resume_chunks for fast applicant retrieval and uniqueness
+            try:
+                await self.resume_chunks_collection.create_index("candidate_id")
+                await self.resume_chunks_collection.create_index(
+                    [("candidate_id", 1), ("chunk_id", 1)],
+                    unique=True,
+                )
+                logger.info("[MongoDB] Ensured indexes on 'resume_chunks.(candidate_id, chunk_id)'.")
+            except Exception as idx_err:
+                logger.warning(f"[MongoDB] Notice: Could not create indexes on resume_chunks: {idx_err}")
+
         except Exception as e:
             logger.error(f"[MongoDB] Failed to connect to MongoDB: {e}")
             if settings.ENV == "production":
@@ -82,6 +96,7 @@ class MongoDBManager:
             self.resumes_collection = None
             self.ats_collection = None
             self.jd_cache_collection = None
+            self.resume_chunks_collection = None
             logger.info("[MongoDB] MongoDB connection closed cleanly.")
 
     async def ping(self) -> bool:
@@ -123,3 +138,8 @@ def get_ats_collection() -> Optional[AsyncIOMotorCollection]:
 def get_jd_cache_collection() -> Optional[AsyncIOMotorCollection]:
     """Retrieve reference to the cached JD keyword extraction collection."""
     return mongo_manager.jd_cache_collection
+
+
+def get_resume_chunks_collection() -> Optional[AsyncIOMotorCollection]:
+    """Retrieve reference to the RAG candidate resume chunks collection."""
+    return mongo_manager.resume_chunks_collection

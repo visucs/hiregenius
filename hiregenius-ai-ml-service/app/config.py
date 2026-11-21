@@ -90,6 +90,29 @@ class Settings:
         "Confidence is indicative and derived solely from textual signals."
     )
 
+    # ── Candidate Ranking (RAG) Configuration (Phase 8) ─────────────────────────
+    # NOTE: There is no ground-truth candidate ranking algorithm. Weights are UNTUNED
+    # heuristic estimates. Ranking is strictly advisory and NEVER auto-rejects candidates.
+    GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+    GEMINI_EMBEDDING_DIMENSION: int = int(os.getenv("GEMINI_EMBEDDING_DIMENSION", "768"))
+    RAG_SCORING_VERSION: str = "rag-ranking-v1-untuned"
+    RAG_WEIGHTS: dict = {
+        "semantic": 0.40,
+        "skills": 0.35,
+        "experience": 0.15,
+        "education": 0.10,
+    }
+    RAG_FALLBACK_WEIGHTS: dict = {
+        "skills": 0.60,
+        "experience": 0.25,
+        "education": 0.15,
+    }
+    RAG_TOP_N_EXPLANATIONS: int = int(os.getenv("RAG_TOP_N_EXPLANATIONS", "10"))
+    RAG_DISCLAIMER: str = (
+        "Candidate ranking is an AI-assisted heuristic evaluation designed for advisory guidance. "
+        "No ground-truth ranking exists; weights are untuned estimates. This system never auto-rejects candidates."
+    )
+
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment."""
         if self.ENV == "production":

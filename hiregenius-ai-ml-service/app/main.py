@@ -6,6 +6,7 @@ from app.db.mongodb import mongo_manager
 from app.api.resume import router as resume_router
 from app.api.ats import router as ats_router
 from app.api.interview import router as interview_router
+from app.api.rag import router as rag_router
 
 
 @asynccontextmanager
@@ -28,6 +29,7 @@ app = FastAPI(
 app.include_router(resume_router)
 app.include_router(ats_router)
 app.include_router(interview_router)
+app.include_router(rag_router)
 
 
 @app.get("/health")

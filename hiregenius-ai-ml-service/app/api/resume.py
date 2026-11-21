@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import logging
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from app.api.auth import verify_internal_key
 from app.config import settings
@@ -9,6 +10,7 @@ from app.models.resume import (
     ParsedResumeResponse,
     SavedResumeResponse,
 )
+from app.services.rag.vector_store import vector_store_service
 from app.services.resume_agent import (
     ResumeParsingConfigError,
     ResumeParsingError,
@@ -130,6 +132,21 @@ async def extract_resume_text(
     )
 
 
+async def _async_index_resume(candidate_id: str, parsed_resume: ParsedResume, raw_text: str) -> None:
+    """Asynchronous background task to index candidate vectors. Failure must never break upload."""
+    try:
+        await vector_store_service.index_candidate(
+            candidate_id=candidate_id,
+            parsed_resume=parsed_resume,
+            raw_text=raw_text,
+        )
+    except Exception as e:
+        logger.warning(
+            f"Asynchronous RAG indexing failed for '{candidate_id}': {e}. "
+            "Resume upload completed successfully; vectors can be indexed via backfill."
+        )
+
+
 @router.post(
     "/parse",
     response_model=ParsedResumeResponse,
@@ -139,6 +156,7 @@ async def extract_resume_text(
 async def parse_resume(
     file: UploadFile = File(..., description="Resume file in .pdf or .docx format (max 5MB)"),
     candidate_id: str = Form(..., description="Candidate ID from Core API"),
+    background_tasks: BackgroundTasks = None,
 ):
     clean_candidate_id = candidate_id.strip()
     if not clean_candidate_id:
@@ -197,6 +215,15 @@ async def parse_resume(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to persist parsed resume to database.",
+        )
+
+    # Step 5: Schedule non-blocking asynchronous RAG vector indexing
+    if background_tasks is not None:
+        background_tasks.add_task(
+            _async_index_resume,
+            candidate_id=clean_candidate_id,
+            parsed_resume=parsed_resume,
+            raw_text=raw_text,
         )
 
     return ParsedResumeResponse(
