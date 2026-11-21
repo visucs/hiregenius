@@ -79,6 +79,11 @@ services:
         value: "https://hiregenius-delta.vercel.app,http://localhost:5173"
       - key: ENABLE_SWAGGER
         value: "true"
+      - key: AI_ML_SERVICE_URL
+        fromService:
+          type: web
+          name: hiregenius-ai-ml-service
+          property: host
       - key: AI_ML_SERVICE_INTERNAL_KEY
         value: "hg_internal_dev_secret_key_2026"
       - key: MAIL_HOST
@@ -93,3 +98,30 @@ services:
         value: "krvisuji92@gmail.com"
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
+
+  # ==============================================================================
+  # 3. HireGenius AI/ML Service (FastAPI, Python 3.11, Docker)
+  # ==============================================================================
+  - type: web
+    name: hiregenius-ai-ml-service
+    runtime: docker
+    rootDir: hiregenius-ai-ml-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore # same region as other services
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: ENV
+        value: "production"
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: "hiregenius_ai"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: "gemini-2.5-flash"
+      - key: AI_ML_SERVICE_INTERNAL_KEY
+        value: "hg_internal_dev_secret_key_2026"
