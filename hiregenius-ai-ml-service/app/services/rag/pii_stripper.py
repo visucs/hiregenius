@@ -90,6 +90,8 @@ def sanitize_text(
     cleaned = "\n".join(filtered_lines)
 
     # 5. Normalize gender-coded pronouns to gender-neutral
+    # Handle possessive 'her' (her + noun/modifier) -> 'their' to match 'his'
+    cleaned = re.sub(r"\bher\s+([a-zA-Z]+)", r"their \1", cleaned, flags=re.IGNORECASE)
     for pattern, replacement in PRONOUN_MAP.items():
         cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
 

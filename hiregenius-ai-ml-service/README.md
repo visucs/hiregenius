@@ -277,7 +277,39 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
   - **Part 1 (AI Service)**: Structured question generator & answer evaluation with PII scrubbing, forbidden topic filtering, prompt injection boundary (`<candidate_answer_data>`), and evaluation caching.
   - **Part 2 (Core API)**: Session lifecycle, Knex migrations (`ai_interviews`, `ai_interview_questions`, `ai_interview_answers`, `ai_interview_evaluations`), server-authoritative countdown timer, autosave character limits, 180-day retention cleanup job (`AI_INTERVIEW_RETENTION_DAYS`), and feedback release controls.
   - **Part 3 (Frontend)**: Candidate AI Interview Room with mandatory Consent Notice modal (Addendum 1), real-time autosave indicator, Addendum 3 language guidance, and Recruiter Assessment Hub with question editor and evaluation scorecard drawer.
-- [ ] **Phase 8**: Live Video / Proctoring (Future).
+- [x] **Phase 8 - Candidate Ranking (RAG)**:
+  - **Part 1 (AI Service)**:
+    - PII & Demographic Stripping: Strict regex and normalizers removing names, emails, phones, URLs, DOB, gender, pronouns, marital status, and neutralizing university/company prestige. Tested for 100% fairness swap invariance.
+    - Chunking: Semantic typed chunking of parsed resumes (`summary`, `experience`, `project`, `skills`, `education`) with deterministic chunk IDs.
+    - Vector Indexing & Embeddings: Hosted Gemini embedding API (`gemini-embedding-001`, 768 dimensions), batched document embedding, query embedding cache keyed by `hash(query + model + dim)`. Endpoints: `POST /api/rag/index`, `DELETE /api/rag/index/{candidate_id}`, `GET /api/rag/index/status/{candidate_id}`, `POST /api/rag/index/backfill`.
+    - Privacy-Isolated Vector Search: Scopes all vector queries strictly to `$in: applicant_candidate_ids` of the recruiter's specific job. Non-applicants never appear.
+    - Multi-Factor Composite Ranking: Combines semantic score (40%), skills coverage (35%), experience fit (15%), and education fit (10%) with deterministic tie-breaking. Marked `UNTUNED` advisory.
+    - Grounded Explainer: Top N candidates receive schema-validated Gemini explanations with mandatory chunk citations (`[chunk_id]`). Unsupported claims omitted. Fallback mode activates if vector store or Gemini is unavailable (`semantic_unavailable=true`).
+  - **Part 2 (Core API)**:
+    - Knex migrations creating `job_rankings` and `job_ranking_items` tables with cascade deletion and indexing.
+    - Atomic transaction snapshot generation; no partial rankings ever stored.
+    - Recruiter ownership enforcement (403 for other recruiters), Candidate 403 block.
+    - In-memory sliding window rate limiter (`rankingRateLimiter`, 10 runs/10 min).
+    - Staleness detection: flags snapshot as stale if new applications or resume updates arrived since creation.
+    - Endpoints: `POST /api/jobs/:jobId/ranking`, `GET /api/jobs/:jobId/ranking`, `GET /api/jobs/:jobId/ranking/history`.
+  - **Part 3 (Frontend)**:
+    - Recruiter Candidate Ranking page (`/recruiter/ranking`): interactive job selector, stack-ranked cards (#1 Gold, #2 Silver, #3 Bronze), multi-factor breakdown dials, matched/missing skill chips, grounded AI reasoning accordion with chunk citations.
+    - Shortlist/Reject quick action buttons with live status mutation.
+    - Staleness banner with one-click re-rank button.
+    - Dedicated "Not Rankable Applicants" accordion with diagnostic failure reasons.
+    - Mandatory uncalibrated advisory banner and semantic-unavailable notices.
+- [ ] **Phase 9**: Live Video / Proctoring (Future).
+
+---
+
+## 7. Phase 8: Candidate Ranking (RAG) Details & Policies
+
+### 7.1. Honesty & Fairness Rules
+1. **Advisory Only**: No ground-truth ranking exists; ranking weights (semantic 0.40, skills 0.35, experience 0.15, education 0.10) are configuration and marked `UNTUNED`. Ranking is advisory and never auto-rejects candidates.
+2. **Grounded Explanations**: Explanations cite only provided resume chunks with chunk IDs. Unsupported claims are omitted.
+3. **PII & Prestige Invariance**: Names, contact info, pronouns, and university/company prestige are stripped prior to embedding or evaluation. Swapping names or gender-coded terms produces 100% identical chunk texts and ranking scores.
+4. **Recruiter Privacy & Applicant Set Isolation**: Recruiters rank ONLY the applicants of their own jobs. Vector search strictly scopes to the applicant candidate ID set. Candidate-to-candidate global searches are prohibited.
+5. **Fallback Resilience**: If Gemini or the vector store is unavailable, the engine gracefully falls back to deterministic ATS keyword scoring with `semantic_unavailable=true`. Applicants with unparseable or scanned resumes are returned in a dedicated "Not Rankable" list with explicit reasons.
 
 ---
 

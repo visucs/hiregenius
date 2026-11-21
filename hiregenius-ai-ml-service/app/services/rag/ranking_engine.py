@@ -211,6 +211,7 @@ class CandidateRankingEngine:
         except (GeminiEmbeddingError, Exception) as emb_err:
             logger.warning(f"Vector semantic search unavailable: {emb_err}. Falling back to deterministic scoring.")
             semantic_unavailable = True
+            chunks_by_applicant = {}
             for cid in rankable_ids:
                 semantic_scores[cid] = 0.0
 

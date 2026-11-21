@@ -14,14 +14,14 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** ATS Score Checker v2 (Part 1 AI/ML engine complete & verified) | Next: Part 2 Core API persistence & rate limiting
+- **Active Phase:** Phase 8: Candidate Ranking (RAG) Complete (AI/ML Service, Core API, Frontend, & E2E Verification) | Next: Phase 9
 - **Last Updated:** 2026-11-21
 
 ## Repo / Service Locations
 - Frontend: hiregenius-frontend/ (live on Vercel)
 - Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
 - Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6 Parts A, B, C & D complete)
+- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6, 7 & 8 complete)
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -2286,3 +2286,40 @@ pm run lint --prefix hiregenius-frontend).
 pm run build --prefix hiregenius-frontend).
   - **Core API Backend Tests**: 216 tests passing across 17 test suites (
 pm test --prefix hiregenius-core-api).
+
+---
+
+### 2026-11-21 — Phase 8: Candidate Ranking (RAG) Architecture & Implementation
+
+- **Branch**: `feature/candidate-ranking-rag` (branched from latest `dev`)
+- **Scope**: Implemented full Phase 8 Candidate Ranking (RAG) across AI/ML Service, Core API, and Frontend with zero touches to `hiregenius-auth-service/` and zero external npm/pip dependencies added.
+- **Architectural & Security Highlights**:
+  - **Reused ATS v2 Engine**: Strictly reused existing ATS v2 components (`jd_keyword_cache`, keyword extraction, experience fit, education fit). No third scoring engine introduced.
+  - **Honesty & Fairness Invariance**:
+    - Scoring weights marked `UNTUNED` (semantic 0.40, skills 0.35, experience 0.15, education 0.10). Advisory only; never auto-rejects.
+    - PII, contact info, pronouns, and university/company prestige stripped before chunking or embedding. Swapping demographic tokens (male vs. female, Stanford vs. Harvard, Google vs. Meta) proved 100% word-for-word chunk text and score invariance.
+  - **Recruiter Privacy & Applicant Set Isolation**:
+    - Core API strictly passes the recruiter's own job applicant IDs.
+    - Vector queries are strictly scoped to `candidate_id: { $in: applicant_ids }`. Non-applicants can never be searched or leaked.
+  - **Hosted Gemini Embeddings**:
+    - Model: `models/gemini-embedding-001` with 768 output dimensions and query caching keyed by `hash(query + model + dim)`.
+  - **Grounded Explanations**:
+    - Structured output with schema validation citing only provided chunks (`[chunk_id]`). Unsupported claims omitted. Fallback mode handles vector store or Gemini downtime with `semantic_unavailable=true`.
+  - **Core API Persistence & Rate Limiting**:
+    - Knex migration `20261121_create_job_rankings_tables.js` with `job_rankings` and `job_ranking_items` tables.
+    - Atomic transaction snapshot generation; no partial snapshots stored.
+    - Sliding window in-memory rate limiter `rankingRateLimiter` (10 runs / 10 minutes).
+    - Staleness detection comparing applicant count and application update timestamps.
+  - **Frontend Recruiter Candidate Ranking Page**:
+    - Interactive job selector, gold/silver/bronze rank badges, match percentage dials, multi-factor score breakdown, matched/missing skill pills, grounded AI reasoning with chunk evidence snippets, shortlist/reject status actions, staleness banner with re-rank trigger, not-rankable accordion, and mandatory uncalibrated advisory banner.
+- **Verification Results**:
+  - **AI Service Unit & Verification Tests**: 102/102 tests passed.
+  - **Core API Integration Tests**: 20/20 test suites passed, 267/267 tests passed.
+  - **Core API Lint**: 0 errors.
+  - **Frontend Production Build**: Vite build passed in 1.30s (0 errors).
+  - **Frontend Lint**: 0 errors.
+  - **E2E Verification Suite (`test_rag_verification.py`)**:
+    - Verification 1: Fairness swap invariance — 100% identical chunks word-for-word across name & gender swaps.
+    - Verification 2: Privacy rule — non-applicants strictly excluded from ranking queries.
+    - Verification 3: Live Gemini embedding API token test — `gemini-embedding-001`, 768 dimensions, 418.8 ms latency.
+    - Verification 4: Benchmark — 100 applicants ranked in 0.457s (218.6 applicants/second throughput).
