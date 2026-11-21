@@ -1,12 +1,8 @@
 name: Deploy Auth Service to AWS EC2
 
+# Automatic deployment to AWS EC2 disabled per configuration.
+# Trigger manually via GitHub Actions workflow_dispatch if needed.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'hiregenius-auth-service/**'
-      - '.github/workflows/deploy-aws.yml'
   workflow_dispatch:
 
 jobs:
