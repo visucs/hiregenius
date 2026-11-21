@@ -25,6 +25,15 @@ SECTION_NAMES = [
     "Certifications",
 ]
 
+CORE_SECTION_NAMES = [
+    "Contact Info",
+    "Summary/Objective",
+    "Experience",
+    "Education",
+    "Skills",
+    "Projects",
+]
+
 HEADING_PATTERNS: Dict[str, str] = {
     "Contact Info": (
         r"^(?:contact(?:\s+info(?:rmation)?)?|personal\s+details|reach\s+me)$"
@@ -63,6 +72,21 @@ PERSONAL_DEMOGRAPHICS_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+DEMOGRAPHIC_LINE_PATTERNS = [
+    (re.compile(r"^\s*(?:d\.?o\.?b\.?|date\s+of\s+birth)\s*[:\-–]\s*.*$", re.IGNORECASE), "Date of Birth"),
+    (re.compile(r"^\s*marital\s+status\s*[:\-–]\s*.*$", re.IGNORECASE), "Marital Status"),
+    (re.compile(r"^\s*father'?s?\s+name\s*[:\-–]\s*.*$", re.IGNORECASE), "Father's Name"),
+    (re.compile(r"^\s*(?:gender|sex)\s*[:\-–]\s*(?:male|female|other|transgender|non-binary|prefer\s+not\s+to\s+say).*$", re.IGNORECASE), "Gender"),
+    (re.compile(r"^\s*nationality\s*[:\-–]\s*.*$", re.IGNORECASE), "Nationality"),
+    (re.compile(r"^\s*religion\s*[:\-–]\s*.*$", re.IGNORECASE), "Religion"),
+    (re.compile(r"^\s*(?:photo|photograph)\s*[:\-–]?\s*.*$", re.IGNORECASE), "Photo"),
+]
+
+PERSONAL_DETAILS_HEADER_REGEX = re.compile(
+    r"^\s*(?:#+\s*)?(?:personal\s+details|personal\s+information|personal\s+profile)\s*[:\-–]?\s*$",
+    re.IGNORECASE,
+)
+
 FRESHER_KEYWORDS_REGEX = re.compile(
     r"\b(?:fresher|entry\s*level|internship|intern|recent\s*graduate|seeking\s+(?:an?\s+)?entry[- ]level|career\s*objective|0\s*years?|6\s*months?|1\.5\s*yrs?)\b",
     re.IGNORECASE,
@@ -74,6 +98,69 @@ def detect_personal_demographics(text: str) -> bool:
     if not text:
         return False
     return bool(PERSONAL_DEMOGRAPHICS_REGEX.search(text))
+
+
+def strip_personal_demographics(text: str) -> Tuple[str, List[str]]:
+    """
+    Strips personal demographic lines and personal details sections so demographic attributes
+    cannot alter ANY downstream scoring category (contact, sections, skills, content quality, length).
+    Preserves legitimate sentences in project/experience descriptions that mention words like 'date' or 'gender'.
+    Returns (cleaned_text, list_of_detected_fields).
+    """
+    if not text:
+        return "", []
+
+    detected_fields = set()
+    cleaned_lines = []
+    in_personal_details_block = False
+
+    for line in text.splitlines():
+        # Check if line is a "Personal Details" section heading
+        if PERSONAL_DETAILS_HEADER_REGEX.match(line):
+            in_personal_details_block = True
+            detected_fields.add("Personal Details Section")
+            continue
+
+        # If inside a Personal Details block, check if we reached an empty line or another major section heading
+        if in_personal_details_block:
+            clean_l = line.strip()
+            if not clean_l:
+                in_personal_details_block = False
+                continue
+            is_another_section = any(
+                re.match(pattern, re.sub(r"^[\s#\*\-_•]+|[\s:\-_|]+$", "", clean_l).strip(), re.IGNORECASE)
+                for sec, pattern in HEADING_PATTERNS.items()
+                if sec != "Contact Info"
+            )
+            if is_another_section:
+                in_personal_details_block = False
+                cleaned_lines.append(line)
+                continue
+            # Check for demographic fields within personal details block
+            for pattern, field_name in DEMOGRAPHIC_LINE_PATTERNS:
+                if pattern.match(line):
+                    detected_fields.add(field_name)
+                    break
+            else:
+                # Standalone short items in personal details like "Single", "Indian", "Male"
+                if len(clean_l.split()) <= 4:
+                    continue
+                else:
+                    cleaned_lines.append(line)
+            continue
+
+        # Outside personal details block: check individual line patterns (must start with Key: Value)
+        matched_demographic = False
+        for pattern, field_name in DEMOGRAPHIC_LINE_PATTERNS:
+            if pattern.match(line):
+                detected_fields.add(field_name)
+                matched_demographic = True
+                break
+
+        if not matched_demographic:
+            cleaned_lines.append(line)
+
+    return "\n".join(cleaned_lines), sorted(list(detected_fields))
 
 
 def is_fresher_profile(
@@ -165,7 +252,9 @@ def compute_section_score(
 ) -> float:
     """
     Return section completeness percentage (0.0 to 100.0).
-    If candidate is a fresher, having Projects + Education + Skills waives any Experience section penalty.
+    Core sections: Contact Info, Summary/Objective, Experience, Education, Skills, Projects.
+    Certifications is optional (no point penalty if missing, actionable tip emitted).
+    If candidate is a fresher, having Projects waives any Experience section penalty.
     """
     if not sections:
         return 0.0
@@ -175,4 +264,5 @@ def compute_section_score(
         # Projects count in place of Experience for freshers with no penalty
         eval_sections["Experience"] = True
 
-    return round((sum(eval_sections.values()) / len(eval_sections)) * 100.0, 1)
+    core_found = sum(1 for s in CORE_SECTION_NAMES if eval_sections.get(s, False))
+    return round((core_found / len(CORE_SECTION_NAMES)) * 100.0, 1)

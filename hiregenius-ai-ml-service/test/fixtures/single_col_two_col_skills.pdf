@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 748 >>
+stream
+BT
+/F1 10 Tf
+1 0 0 1 50 750 Tm (Morgan Lee) Tj
+1 0 0 1 50 735 Tm (morgan.lee@example.com | 555-987-6543 | Seattle, WA) Tj
+1 0 0 1 50 710 Tm (TECHNICAL SKILLS) Tj
+1 0 0 1 50 690 Tm (* Python, FastAPI, Django) Tj
+1 0 0 1 250 690 Tm (* Docker, Kubernetes, AWS) Tj
+1 0 0 1 50 675 Tm (* PostgreSQL, Redis, MongoDB) Tj
+1 0 0 1 250 675 Tm (* Git, GitHub Actions, CI/CD) Tj
+1 0 0 1 50 640 Tm (EXPERIENCE) Tj
+1 0 0 1 50 620 Tm (Backend Engineer - DataStream Inc) Tj
+1 0 0 1 50 605 Tm (- Developed high-throughput streaming systems using Python and Redis.) Tj
+1 0 0 1 50 590 Tm (- Improved API response times by 35% through caching strategies.) Tj
+1 0 0 1 50 560 Tm (EDUCATION) Tj
+1 0 0 1 50 540 Tm (B.S. in Computer Science - University of Washington) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+50
+%%EOF

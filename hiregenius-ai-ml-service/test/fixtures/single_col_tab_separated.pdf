@@ -1,0 +1,40 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 642 >>
+stream
+BT
+/F1 10 Tf
+1 0 0 1 50 750 Tm (Jordan Taylor) Tj
+1 0 0 1 50 735 Tm (jordan.taylor@example.com | 555-123-4567 | Austin, TX) Tj
+1 0 0 1 50 710 Tm (WORK EXPERIENCE) Tj
+1 0 0 1 50 690 Tm (Acme Corporation 										 2022 - 2024) Tj
+1 0 0 1 50 675 Tm (Full Stack Developer) Tj
+1 0 0 1 50 660 Tm (- Built modern responsive web applications using React and Node.js.) Tj
+1 0 0 1 50 630 Tm (Beta Systems 										 2019 - 2022) Tj
+1 0 0 1 50 615 Tm (Junior Developer) Tj
+1 0 0 1 50 600 Tm (- Created REST APIs and optimized SQL database queries.) Tj
+1 0 0 1 50 570 Tm (EDUCATION) Tj
+1 0 0 1 50 550 Tm (University of Texas 									 2015 - 2019) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+50
+%%EOF

@@ -129,13 +129,20 @@ def test_fresher_handling_no_experience_penalty():
     res = analyze_v2(text=fresher_text, mode="GENERAL")
     sec_item = next(c for c in res.categoryScores if c.name == "Section Completeness")
     # Freshers with projects + education + skills should not be penalized for lacking professional experience
-    assert sec_item.score >= 17.0
+    assert sec_item.score == 20.0
     assert res.overallScore >= 70.0
 
+    # Certifications optional: without Certifications, still earns full 20.0 core section points
+    fresher_no_certs = fresher_text.replace("Certifications\n    • Python for Everybody Specialization (Coursera).", "")
+    res_no_certs = analyze_v2(text=fresher_no_certs, mode="GENERAL")
+    sec_no_certs = next(c for c in res_no_certs.categoryScores if c.name == "Section Completeness")
+    assert sec_no_certs.score == 20.0
+    assert any("Certifications" in i.message and i.severity == "tip" for i in res_no_certs.issues)
 
-# ── 3. Personal Field Invariance ───────────────────────────────────────────────
 
-def test_personal_field_invariance():
+# ── 3. Personal Field Invariance & Legitimate Content ──────────────────────────
+
+def test_personal_field_invariance_and_legitimate_content():
     base_resume = """
     John Doe
     Email: john.doe@example.com
@@ -160,25 +167,39 @@ def test_personal_field_invariance():
     • Web Analytics Platform: Real-time event ingestion engine.
     """
 
-    resume_with_demographics = f"""{base_resume}
-    Personal Details:
-    DOB: 15/08/1995
-    Marital Status: Single
-    Father's Name: Robert Doe
-    Gender: Male
-    Photo Attached: Yes
-    """
-
     res_base = analyze_v2(text=base_resume, mode="GENERAL")
-    res_demo = analyze_v2(text=resume_with_demographics, mode="GENERAL")
 
-    # STRICT INVARIANCE: Personal fields must NOT change the score
-    assert res_base.overallScore == res_demo.overallScore
+    # Field-by-field test
+    fields = [
+        "Date of Birth: 15/08/1995\n",
+        "DOB: 12/04/1996\n",
+        "Marital Status: Single\n",
+        "Father's Name: Robert Doe\n",
+        "Gender: Male\n",
+        "Nationality: American\n",
+        "Religion: None\n",
+        "Personal Details:\nDOB: 15/08/1995\nMarital Status: Married\nFather Name: John Sr\nGender: Female\n",
+    ]
 
-    # But resume with demographics must surface a tip recommending removal
-    tip_categories = [i.category for i in res_demo.issues]
-    assert "Contact Completeness" in tip_categories
-    assert any("demographics" in i.message.lower() or "personal" in i.message.lower() for i in res_demo.issues)
+    for field_line in fields:
+        res_with_field = analyze_v2(text=field_line + base_resume, mode="GENERAL")
+        # STRICT INVARIANCE: Personal fields must NOT change score across any category
+        assert res_with_field.overallScore == res_base.overallScore
+        assert len(res_with_field.categoryScores) == len(res_base.categoryScores)
+        for c_base, c_field in zip(res_base.categoryScores, res_with_field.categoryScores):
+            assert c_base.score == c_field.score
+
+        # Must surface tip recommending removal
+        assert any(i.category == "Personal Details" for i in res_with_field.issues)
+
+    # Legitimate content preservation: "gender" or "date" inside project bullets
+    legit_resume = base_resume + """
+    • Built ML model analyzing customer churn by cohort signup date and gender distributions.
+    • Optimized database queries on order date and delivery date fields.
+    """
+    res_legit = analyze_v2(text=legit_resume, mode="GENERAL")
+    # Must NOT emit personal details tip for legitimate technical descriptions
+    assert not any(i.category == "Personal Details" for i in res_legit.issues)
 
 
 # ── 4. Scanned & Encrypted Documents -> HTTP 200 with Capped Score ─────────────
@@ -210,17 +231,45 @@ def test_scanned_pdf_returns_200_with_capped_score():
 
 
 def test_encrypted_pdf_handling():
-    # Calling analyze_v2 with is_unreadable=True and password protected reason
-    res = analyze_v2(
-        text="",
-        file_bytes=b"%PDF-encrypted",
-        filename="protected.pdf",
-        is_unreadable=True,
-        unreadable_reason="File is password protected. ATS cannot decrypt or read the document.",
-        mode="GENERAL",
-    )
-    assert res.overallScore <= settings.CAPPED_SCORE_UNREADABLE
-    assert any(i.severity == "critical" and "password" in i.message.lower() for i in res.issues)
+    enc_path = FIXTURES_DIR / "encrypted_password_resume.pdf"
+    with open(enc_path, "rb") as f:
+        resp = client.post(
+            "/api/ats/scan",
+            headers=AUTH_HEADERS,
+            files={"file": (enc_path.name, f, "application/pdf")},
+            data={"mode": "GENERAL"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["overallScore"] <= settings.CAPPED_SCORE_UNREADABLE
+    assert data["grade"] == "Needs Work"
+    assert any(i["severity"] == "critical" and "password" in i["message"].lower() for i in data["issues"])
+
+
+# ── 5. Layout Evaluation & Single-Column False Positive Shield ─────────────────
+
+def test_synthetic_single_column_not_flagged_as_multi_column():
+    single_col_fixtures = [
+        "single_col_right_aligned_dates.pdf",
+        "single_col_tab_separated.pdf",
+        "single_col_two_col_skills.pdf",
+    ]
+    for fix_name in single_col_fixtures:
+        fix_path = FIXTURES_DIR / fix_name
+        with open(fix_path, "rb") as f:
+            resp = client.post(
+                "/api/ats/scan",
+                headers=AUTH_HEADERS,
+                files={"file": (fix_name, f, "application/pdf")},
+                data={"mode": "GENERAL"},
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        pars_item = next(c for c in data["categoryScores"] if c["name"] == "Parsability & Format")
+        # Must NOT flag as multi-column
+        assert pars_item["details"].get("multi_column") is False
+        assert pars_item["score"] == pars_item["max"]
 
 
 # ── 5. Canva-Style Multi-Column Synthetic Fixture ──────────────────────────────

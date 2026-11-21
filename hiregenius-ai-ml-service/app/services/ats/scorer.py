@@ -33,10 +33,12 @@ from app.services.ats.jd_extractor import JDExtractedRequirements
 from app.services.ats.keywords import DOMAIN_KEYWORDS, extract_jd_keywords, match_skill
 from app.services.ats.parsability import analyze_parsability
 from app.services.ats.sections import (
+    CORE_SECTION_NAMES,
     compute_section_score,
     detect_personal_demographics,
     detect_sections,
     is_fresher_profile,
+    strip_personal_demographics,
 )
 from app.services.ats.suggestions import generate_ats_suggestions
 
@@ -363,13 +365,14 @@ def analyze_v2(
         )
 
     # ── 2. REAL EXTRACTED TEXT SCORING ──────────────────────────────────────────
-    word_count = _strip_demographics_for_word_count(clean_text)
-    is_fresher = is_fresher_profile(clean_text, parsed_resume=parsed_resume)
-    sections_found = detect_sections(clean_text, parsed_resume=parsed_resume)
-    has_demographics = detect_personal_demographics(clean_text)
+    # Strip personal demographic lines first so demographic attributes cannot alter ANY category score
+    eval_text, detected_demographics = strip_personal_demographics(clean_text)
+    word_count = len(eval_text.split())
+    is_fresher = is_fresher_profile(eval_text, parsed_resume=parsed_resume)
+    sections_found = detect_sections(eval_text, parsed_resume=parsed_resume)
 
     # Parsability analysis
-    parsability_info = analyze_parsability(file_bytes, filename, len(clean_text))
+    parsability_info = analyze_parsability(file_bytes, filename, len(eval_text))
     parsability_raw = parsability_info.get("score", 100.0)
 
     issues: List[IssueItem] = []
@@ -377,13 +380,13 @@ def analyze_v2(
         issues.append(IssueItem(**iss))
 
     # Personal field suggestion (invariance: 0 point penalty!)
-    if has_demographics:
+    if detected_demographics:
         issues.append(
             IssueItem(
                 severity="tip",
-                category="Contact Completeness",
-                message="Personal demographics (e.g. date of birth, marital status, father's name, or gender) detected.",
-                how_to_fix="Standard ATS practice recommends omitting personal demographics to prevent unconscious bias and preserve space for technical skills.",
+                category="Personal Details",
+                message=f"Personal details detected ({', '.join(detected_demographics)}). Modern ATS and recruiters advise removing personal demographic details.",
+                how_to_fix="Remove Date of Birth, marital status, father's name, gender, nationality, and photos to protect against unconscious bias and ensure compliance with modern hiring standards.",
             )
         )
 
@@ -393,10 +396,10 @@ def analyze_v2(
         req_skills = job_requirements.required_skills or []
         pref_skills = job_requirements.preferred_skills or []
 
-        matched_req = [s for s in req_skills if match_skill(s, clean_text)]
-        missing_req = [s for s in req_skills if not match_skill(s, clean_text)]
-        matched_pref = [s for s in pref_skills if match_skill(s, clean_text)]
-        missing_pref = [s for s in pref_skills if not match_skill(s, clean_text)]
+        matched_req = [s for s in req_skills if match_skill(s, eval_text)]
+        missing_req = [s for s in req_skills if not match_skill(s, eval_text)]
+        matched_pref = [s for s in pref_skills if match_skill(s, eval_text)]
+        missing_pref = [s for s in pref_skills if not match_skill(s, eval_text)]
 
         all_matched = matched_req + matched_pref
 
@@ -407,17 +410,34 @@ def analyze_v2(
         if parsed_resume and parsed_resume.projects:
             experience_text += " ".join(proj.description or "" for proj in parsed_resume.projects)
 
+        if not experience_text and eval_text:
+            exp_matches = re.findall(
+                r"(?:experience|projects|employment|work\s+history)[\s\S]*?(?=(?:education|skills|certifications|summary|objective|$))",
+                eval_text,
+                re.IGNORECASE,
+            )
+            if exp_matches:
+                experience_text = " ".join(exp_matches)
+            else:
+                experience_text = re.sub(
+                    r"(?:skills|technical\s+skills)[\s\S]*?(?=(?:experience|projects|education|certifications|$))",
+                    "",
+                    eval_text,
+                    flags=re.IGNORECASE,
+                )
+
         if experience_text:
-            for s in all_matched[:5]:
+            for s in all_matched:
                 if not match_skill(s, experience_text):
                     issues.append(
                         IssueItem(
                             severity="tip",
                             category="Required & Preferred Skills",
-                            message=f"Skill '{s}' is listed in your profile but lacks context in your project or experience descriptions.",
-                            how_to_fix=f"Describe how you applied '{s}' in an accomplishment bullet point.",
+                            message=f"Skill '{s}' is listed in your skills section but lacks context in your project or experience descriptions.",
+                            how_to_fix=f"Describe how you applied '{s}' in an accomplishment bullet point with context and results.",
                         )
                     )
+                    break
 
         req_ratio = len(matched_req) / max(len(req_skills), 1) if req_skills else 1.0
         pref_ratio = len(matched_pref) / max(len(pref_skills), 1) if pref_skills else 1.0
@@ -435,18 +455,18 @@ def analyze_v2(
 
         # 2. Title / Seniority Alignment (10 pts max)
         title_pts, title_issues, title_details = _evaluate_title_seniority(
-            clean_text, job_requirements.target_title, job_requirements.role_level, parsed_resume
+            eval_text, job_requirements.target_title, job_requirements.role_level, parsed_resume
         )
         issues.extend(title_issues)
 
         # 3. Experience Fit (15 pts max)
         exp_pts, exp_issues, exp_details = _evaluate_experience_fit(
-            clean_text, job_requirements, parsed_resume, is_fresher
+            eval_text, job_requirements, parsed_resume, is_fresher
         )
         issues.extend(exp_issues)
 
         # 4. Education Fit (10 pts max)
-        edu_pts, edu_issues, edu_details = _evaluate_education_fit(clean_text, parsed_resume)
+        edu_pts, edu_issues, edu_details = _evaluate_education_fit(eval_text, parsed_resume)
         issues.extend(edu_issues)
 
         # 5. Parsability & Format (20 pts max)
@@ -481,21 +501,34 @@ def analyze_v2(
         # 2. Section Completeness (20 pts max)
         section_pct = compute_section_score(sections_found, is_fresher=is_fresher)
         section_pts = round((section_pct / 100.0) * 20.0, 1)
-        missing_sections = [s for s, found in sections_found.items() if not found and not (is_fresher and s == "Experience")]
-        if missing_sections:
+        missing_core_sections = [
+            s for s in CORE_SECTION_NAMES
+            if not sections_found.get(s) and not (is_fresher and s == "Experience" and sections_found.get("Projects"))
+        ]
+        if missing_core_sections:
             issues.append(
                 IssueItem(
                     severity="warning",
                     category="Section Completeness",
-                    message=f"Missing standard section headings: {', '.join(missing_sections[:3])}.",
+                    message=f"Missing standard section headings: {', '.join(missing_core_sections[:3])}.",
                     how_to_fix="Add clear standalone section headings (e.g. 'Skills', 'Projects', 'Education').",
                 )
             )
 
+        if not sections_found.get("Certifications"):
+            issues.append(
+                IssueItem(
+                    severity="tip",
+                    category="Section Completeness",
+                    message="No Certifications section detected.",
+                    how_to_fix="Consider adding relevant industry certifications or online course credentials to strengthen your profile.",
+                )
+            )
+
         # 3. Contact Completeness (10 pts max)
-        has_email = bool(re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text))
-        has_phone = bool(re.search(r"\+?\d[\d\s\-\(\)]{8,}\d", clean_text))
-        has_links = bool(re.search(r"(?:linkedin\.com|github\.com|portfolio)", clean_text, re.IGNORECASE))
+        has_email = bool(re.search(r"[\w\.-]+@[\w\.-]+\.\w+", eval_text))
+        has_phone = bool(re.search(r"\+?\d[\d\s\-\(\)]{8,}\d", eval_text))
+        has_links = bool(re.search(r"(?:linkedin\.com|github\.com|portfolio)", eval_text, re.IGNORECASE))
 
         contact_pts = 0.0
         if has_email:
@@ -535,10 +568,10 @@ def analyze_v2(
             )
 
         # 4. Skills & Keywords Quality (15 pts max)
-        best_cat, match_str, low_conf, top_3 = predict_category(clean_text, parsed_resume=parsed_resume)
+        best_cat, match_str, low_conf, top_3 = predict_category(eval_text, parsed_resume=parsed_resume)
         cat_kws = DOMAIN_KEYWORDS.get(best_cat, []) if best_cat != "Unknown" else []
-        matched_domain = [k for k in cat_kws if match_skill(k, clean_text)]
-        missing_domain = [k for k in cat_kws if not match_skill(k, clean_text)]
+        matched_domain = [k for k in cat_kws if match_skill(k, eval_text)]
+        missing_domain = [k for k in cat_kws if not match_skill(k, eval_text)]
 
         num_skills = len(matched_domain)
         if num_skills >= 8:
@@ -559,7 +592,7 @@ def analyze_v2(
             )
 
         # 5. Content Quality (20 pts max)
-        content_score_raw, content_issues, content_details = compute_content_quality(clean_text)
+        content_score_raw, content_issues, content_details = compute_content_quality(eval_text)
         content_pts = round((content_score_raw / 100.0) * 20.0, 1)
         issues.extend(IssueItem(**ci) for ci in content_issues)
 

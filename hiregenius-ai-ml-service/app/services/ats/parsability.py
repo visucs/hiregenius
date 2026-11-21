@@ -12,11 +12,15 @@ Extracts layout metrics and detects potential parsing hazards for PDF and DOCX d
 
 import io
 import logging
+import re
 from typing import Any, Dict, List, Optional
 import docx
 import pypdf
 
-logger = logging.getLogger("hiregenius.ai_ml_service.services.ats.parsability")
+DATE_OR_LOC_REGEX = re.compile(
+    r"^(?:\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*|\d{1,2}/\d{4}|present|current|[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}|[A-Z][a-zA-Z\s]+,\s*[a-zA-Z]+)(?:\s*[\-–—to]+\s*(?:\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*|\d{1,2}/\d{4}|present|current))?$",
+    re.IGNORECASE,
+)
 
 
 def inspect_parsability(
@@ -101,8 +105,10 @@ def analyze_parsability(
             page_count = len(reader.pages)
 
             # Analyze pages for multi-column layout and embedded images
-            x_left_count = 0
-            x_mid_right_count = 0
+            # True multi-column layout requires sustained parallel text blocks of significant width
+            # and substance over many lines, NOT a few isolated right-aligned dates or a brief 2-column skills list.
+            right_substantive_y_levels = set()
+            left_substantive_y_levels = set()
 
             for page in reader.pages:
                 try:
@@ -111,23 +117,26 @@ def analyze_parsability(
                     pass
 
                 def visitor_coords(text, cm, tm, font_dict, font_size):
-                    nonlocal x_left_count, x_mid_right_count
                     clean_str = text.strip()
-                    if len(clean_str) >= 3:
+                    if len(clean_str) >= 4 and not DATE_OR_LOC_REGEX.match(clean_str):
                         x = tm[4]
+                        y = tm[5]
+                        y_bucket = round(y / 10) * 10
                         if x < 180:
-                            x_left_count += 1
-                        elif x >= 240:
-                            x_mid_right_count += 1
+                            left_substantive_y_levels.add(y_bucket)
+                        elif x >= 220:
+                            right_substantive_y_levels.add(y_bucket)
 
                 try:
                     page.extract_text(visitor_text=visitor_coords)
                 except Exception:
                     pass
 
-            total_chunks = x_left_count + x_mid_right_count
-            if total_chunks >= 6 and (x_mid_right_count / total_chunks) >= 0.25 and x_mid_right_count >= 3:
-                multi_column = True
+            if len(right_substantive_y_levels) >= 4 and len(left_substantive_y_levels) >= 4:
+                right_span = max(right_substantive_y_levels) - min(right_substantive_y_levels)
+                # Sustained vertical span of secondary column (at least 70pt, > 4 lines)
+                if right_span >= 70:
+                    multi_column = True
 
             text_per_page = round(text_length / max(page_count, 1))
 
