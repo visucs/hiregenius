@@ -40,6 +40,7 @@ api.interceptors.request.use(
       config.url.startsWith('/candidates') || config.url.startsWith('candidates') ||
       config.url.startsWith('/applications') || config.url.startsWith('applications') ||
       config.url.startsWith('/interviews') || config.url.startsWith('interviews') ||
+      config.url.startsWith('/ai-interviews') || config.url.startsWith('ai-interviews') ||
       config.url.startsWith('/notifications') || config.url.startsWith('notifications') ||
       config.url.startsWith('/recruiters') || config.url.startsWith('recruiters') ||
       config.url.startsWith('/analytics') || config.url.startsWith('analytics') ||

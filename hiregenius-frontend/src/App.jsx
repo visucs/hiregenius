@@ -36,6 +36,7 @@ import InterviewsPage        from './pages/candidate/InterviewsPage';
 import ResumeScorePage       from './pages/candidate/ResumeScorePage';
 import ScanHistoryPage       from './pages/candidate/ScanHistoryPage';
 import CandidateSettingsPage from './pages/candidate/CandidateSettingsPage';
+import CandidateAIRoomPage   from './pages/candidate/CandidateAIRoomPage';
 
 // ── Recruiter pages ───────────────────────────────────────────────
 import RecruiterDashboardHome        from './pages/recruiter/RecruiterDashboardHome';
@@ -183,6 +184,7 @@ const App = () => {
 
         {/* ── PROTECTED: CANDIDATE ──────────────────────────────────── */}
         <Route element={<ProtectedRoute allowedRoles={['CANDIDATE']} />}>
+          <Route path="/candidate/ai-interviews/:id/room" element={<CandidateAIRoomPage />} />
           <Route element={<AppShell />}>
             <Route path="/candidate/dashboard"    element={<CandidateDashboard />} />
             <Route path="/candidate/applications" element={<ApplicationsPage />} />

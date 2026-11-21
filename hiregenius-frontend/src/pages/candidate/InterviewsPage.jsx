@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom';
 import {
   CalendarDays, Calendar, Clock, Video, ExternalLink,
   CheckCircle2, Ban, RefreshCw, AlertCircle, Briefcase,
-  Copy, Check, ArrowRight, MessageSquare, Sparkles,
+  Copy, Check, ArrowRight, MessageSquare, Sparkles, Bot, Shield, Play
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import interviewsService from '../../services/interviewsService';
+import aiInterviewsService from '../../services/aiInterviewsService';
 
 /* ─── Status configuration ────────────────────────────────── */
 const STATUS_CFG = {
@@ -39,8 +40,11 @@ const formatInterviewDateTime = (dateStr) => {
 };
 
 const InterviewsPage = () => {
+  const [activeTab, setActiveTab] = useState('AI_ASSESSMENTS');
   const [interviews, setInterviews] = useState([]);
+  const [aiInterviews, setAiInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAi, setLoadingAi] = useState(true);
   const [error, setError] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
@@ -50,7 +54,6 @@ const InterviewsPage = () => {
     setError(null);
     try {
       const res = await interviewsService.getCandidateInterviews();
-      // res.data is an array of candidate interviews
       setInterviews(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
       console.error('[CandidateInterviews] Error fetching interviews:', err);
@@ -61,9 +64,27 @@ const InterviewsPage = () => {
     }
   }, []);
 
+  const fetchAiInterviews = useCallback(async () => {
+    setLoadingAi(true);
+    try {
+      const res = await aiInterviewsService.getCandidateAiInterviews();
+      setAiInterviews(Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []));
+    } catch (err) {
+      console.error('[CandidateAiInterviews] Error:', err);
+    } finally {
+      setLoadingAi(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchInterviews();
-  }, [fetchInterviews]);
+    fetchAiInterviews();
+  }, [fetchInterviews, fetchAiInterviews]);
+
+  const refreshAll = () => {
+    fetchInterviews();
+    fetchAiInterviews();
+  };
 
   const handleCopyLink = (link, id) => {
     if (!link) return;
@@ -325,8 +346,219 @@ const InterviewsPage = () => {
           })}
         </div>
 
-        {/* ── Interviews List ────────────────────────────────── */}
-        {loading ? (
+        {/* ── Mode Tabs Switcher ────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 14 }}>
+          <button
+            onClick={() => setActiveTab('AI_ASSESSMENTS')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 20px',
+              borderRadius: 10,
+              background: activeTab === 'AI_ASSESSMENTS' ? 'linear-gradient(135deg, #10b981, #059669)' : 'var(--bg-elevated)',
+              color: activeTab === 'AI_ASSESSMENTS' ? '#fff' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: 13,
+              border: activeTab === 'AI_ASSESSMENTS' ? 'none' : '1px solid var(--border)',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'AI_ASSESSMENTS' ? '0 4px 14px rgba(16,185,129,0.3)' : 'none',
+            }}
+          >
+            <Bot size={16} /> AI Assessments ({aiInterviews.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('LIVE_INTERVIEWS')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 20px',
+              borderRadius: 10,
+              background: activeTab === 'LIVE_INTERVIEWS' ? 'linear-gradient(135deg, #0284c7, #0ea5e9)' : 'var(--bg-elevated)',
+              color: activeTab === 'LIVE_INTERVIEWS' ? '#fff' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: 13,
+              border: activeTab === 'LIVE_INTERVIEWS' ? 'none' : '1px solid var(--border)',
+              cursor: 'pointer',
+              boxShadow: activeTab === 'LIVE_INTERVIEWS' ? '0 4px 14px rgba(14,165,233,0.3)' : 'none',
+            }}
+          >
+            <Video size={16} /> Live Video Interviews ({interviews.length})
+          </button>
+        </div>
+
+        {/* ── TAB 1: AI ASSESSMENTS ──────────────────────────── */}
+        {activeTab === 'AI_ASSESSMENTS' && (
+          loadingAi ? (
+            <div style={{ padding: 60, textAlign: 'center', background: 'var(--bg-elevated)', borderRadius: 20, border: '1px solid var(--border)' }}>
+              <RefreshCw size={26} className="animate-spin" style={{ margin: '0 auto 12px', color: '#10b981' }} />
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Loading AI assessments…</p>
+            </div>
+          ) : aiInterviews.length === 0 ? (
+            <div style={{ padding: 60, textAlign: 'center', background: 'var(--bg-elevated)', borderRadius: 20, border: '1px solid var(--border)' }}>
+              <Bot size={40} color="#10b981" style={{ margin: '0 auto 14px', opacity: 0.8 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
+                No AI assessments assigned yet
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                When recruiters invite you to take an automated AI assessment for an applied job, the test window and room link will appear here.
+              </p>
+              <Link
+                to="/candidate/applications"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 22px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                }}
+              >
+                <Briefcase size={15} /> Check Job Applications
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {aiInterviews.map((aiInt, idx) => {
+                const isActionable = ['PUBLISHED', 'IN_PROGRESS'].includes(aiInt.status);
+                const isCompleted = ['SUBMITTED', 'EVALUATED'].includes(aiInt.status);
+
+                let statusBadgeStyle = { bg: 'rgba(56,189,248,0.14)', color: '#38bdf8', label: aiInt.status };
+                if (aiInt.status === 'PUBLISHED') statusBadgeStyle = { bg: 'rgba(56,189,248,0.14)', color: '#38bdf8', label: 'Invitation Open' };
+                if (aiInt.status === 'IN_PROGRESS') statusBadgeStyle = { bg: 'rgba(234,179,8,0.14)', color: '#facc15', label: 'In Progress' };
+                if (aiInt.status === 'SUBMITTED') statusBadgeStyle = { bg: 'rgba(168,85,247,0.14)', color: '#c084fc', label: 'Submitted' };
+                if (aiInt.status === 'EVALUATED') statusBadgeStyle = { bg: 'rgba(52,211,153,0.14)', color: '#34d399', label: 'Evaluated' };
+                if (aiInt.status === 'EXPIRED') statusBadgeStyle = { bg: 'rgba(248,113,113,0.14)', color: '#f87171', label: 'Window Closed' };
+
+                return (
+                  <motion.div
+                    key={aiInt.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    style={{
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 16,
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 16,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 240, flex: 1 }}>
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          background: 'rgba(16,185,129,0.14)',
+                          border: '1px solid rgba(16,185,129,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Bot size={22} className="text-emerald-400" />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <h4 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                            {aiInt.job_title || 'Role Assessment'}
+                          </h4>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: statusBadgeStyle.bg,
+                              color: statusBadgeStyle.color,
+                            }}
+                          >
+                            {statusBadgeStyle.label}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                          <span>⏱️ {aiInt.duration_minutes || 30} mins allocated</span>
+                          <span>•</span>
+                          <span>Deadline: {new Date(aiInt.window_end).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {aiInt.feedback_released && aiInt.overall_score !== null && aiInt.overall_score !== undefined && (
+                      <div style={{ background: '#1a2234', padding: '6px 14px', borderRadius: 10, border: '1px solid rgba(56,189,248,0.25)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>Overall Score</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#38bdf8' }}>{aiInt.overall_score}%</div>
+                      </div>
+                    )}
+
+                    <div>
+                      {isActionable ? (
+                        <Link
+                          to={`/candidate/ai-interviews/${aiInt.id}/room`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '9px 18px',
+                            borderRadius: 10,
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#fff',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                          }}
+                        >
+                          <Play size={14} /> {aiInt.status === 'IN_PROGRESS' ? 'Resume Assessment' : 'Start Assessment'}
+                        </Link>
+                      ) : isCompleted ? (
+                        <Link
+                          to={`/candidate/ai-interviews/${aiInt.id}/room`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '9px 18px',
+                            borderRadius: 10,
+                            background: '#1e293b',
+                            color: '#f8fafc',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          View Results <ArrowRight size={13} />
+                        </Link>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          Assessment Closed
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {/* ── TAB 2: LIVE VIDEO INTERVIEWS ──────────────────── */}
+        {activeTab === 'LIVE_INTERVIEWS' && (
+          loading ? (
           <div style={{ padding: 60, textAlign: 'center', background: 'var(--bg-elevated)', borderRadius: 20, border: '1px solid var(--border)' }}>
             <RefreshCw size={26} className="animate-spin" style={{ margin: '0 auto 12px', color: 'var(--primary)' }} />
             <p style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>Loading your interview schedule…</p>
@@ -543,7 +775,8 @@ const InterviewsPage = () => {
               );
             })}
           </div>
-        )}
+        )
+      )}
       </div>
     </div>
   );
