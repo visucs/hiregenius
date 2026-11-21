@@ -72,6 +72,24 @@ class Settings:
         "parsability": 20.0,
     }
 
+    # ── AI Interview Module Configuration (Phase 7) ─────────────────────────────
+    # NOTE: AI output is strictly advisory. Weights and thresholds are UNTUNED heuristic
+    # estimates designed for recruiter diagnostic assistance, not autonomous hiring.
+    INTERVIEW_RUBRIC_VERSION: str = "rubric-v1-untuned"
+    INTERVIEW_WEIGHTS: dict = {
+        "technical": 0.65,
+        "communication": 0.35,
+    }
+    INTERVIEW_THRESHOLDS: dict = {
+        "proceed": 75.0,
+        "consider": 50.0,
+    }
+    INTERVIEW_MIN_ANSWER_CHARS: int = 15
+    INTERVIEW_DISCLAIMER: str = (
+        "AI output is advisory; the recruiter makes the final decision. "
+        "Confidence is indicative and derived solely from textual signals."
+    )
+
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment."""
         if self.ENV == "production":

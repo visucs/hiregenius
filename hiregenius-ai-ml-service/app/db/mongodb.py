@@ -95,6 +95,12 @@ class MongoDBManager:
             logger.warning(f"[MongoDB] Ping failed: {e}")
             return False
 
+    def get_collection(self, collection_name: str) -> Optional[AsyncIOMotorCollection]:
+        """Safely retrieve any named collection if database is connected."""
+        if self.db is not None:
+            return self.db[collection_name]
+        return None
+
 
 mongo_manager = MongoDBManager()
 
