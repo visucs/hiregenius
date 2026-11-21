@@ -3,6 +3,19 @@ const dotenv = require('dotenv');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+function normalizeServiceUrl(url) {
+  if (!url || typeof url !== 'string') return 'http://localhost:8000';
+  let cleaned = url.trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(cleaned)) {
+    if (cleaned.includes('localhost') || cleaned.includes(':8000') || !cleaned.includes('.')) {
+      cleaned = `http://${cleaned}`;
+    } else {
+      cleaned = `https://${cleaned}`;
+    }
+  }
+  return cleaned;
+}
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '4000', 10),
@@ -21,10 +34,11 @@ const env = {
   MAIL_USERNAME: process.env.MAIL_USERNAME || 'krvisuji92@gmail.com',
   MAIL_PASSWORD: process.env.MAIL_PASSWORD || 'fewacfrbspkkfijh',
   MAIL_FROM: process.env.MAIL_FROM || 'krvisuji92@gmail.com',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   FRONTEND_BASE_URL: process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app',
   CORE_API_URL: process.env.CORE_API_URL || 'http://localhost:4000',
   CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_BASE_URL || 'https://hiregenius-delta.vercel.app,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://localhost:3000',
-  AI_ML_SERVICE_URL: process.env.AI_ML_SERVICE_URL || 'http://localhost:8000',
+  AI_ML_SERVICE_URL: normalizeServiceUrl(process.env.AI_ML_SERVICE_URL || 'http://localhost:8000'),
   AI_ML_SERVICE_INTERNAL_KEY: process.env.AI_ML_SERVICE_INTERNAL_KEY || 'hg_internal_dev_secret_key_2026',
   AI_ML_SERVICE_TIMEOUT_MS: parseInt(process.env.AI_ML_SERVICE_TIMEOUT_MS || '65000', 10),
   ATS_DAILY_LIMIT_CANDIDATE: parseInt(process.env.ATS_DAILY_LIMIT_CANDIDATE || '10', 10),

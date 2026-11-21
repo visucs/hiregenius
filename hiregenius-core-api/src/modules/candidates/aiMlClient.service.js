@@ -53,13 +53,14 @@ class AiMlClientService {
     const fileBlob = new Blob([fileBuffer], { type: mimetype || 'application/pdf' });
     formData.append('file', fileBlob, originalFilename || 'resume.pdf');
 
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 65000;
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
       },
       body: formData,
-      signal: AbortSignal.timeout(15000), // 15 second timeout guard for LLM
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!response.ok) {
@@ -81,12 +82,13 @@ class AiMlClientService {
     if (!candidateId) return null;
 
     const targetUrl = `${env.AI_ML_SERVICE_URL}/api/resume/${encodeURIComponent(candidateId)}`;
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 45000;
     const response = await fetch(targetUrl, {
       method: 'GET',
       headers: {
         'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (response.status === 404) {
@@ -131,7 +133,7 @@ class AiMlClientService {
           'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
         },
         body: formData,
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(env.AI_ML_SERVICE_TIMEOUT_MS || 65000),
       });
     } catch {
       throw new ApiError(503, 'Resume analysis service is temporarily unavailable');
@@ -185,7 +187,7 @@ class AiMlClientService {
           'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
         },
         body: formData,
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(env.AI_ML_SERVICE_TIMEOUT_MS || 65000),
       });
     } catch {
       throw new ApiError(503, 'Resume analysis service is temporarily unavailable');
@@ -220,7 +222,7 @@ class AiMlClientService {
         headers: {
           'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
         },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(env.AI_ML_SERVICE_TIMEOUT_MS || 65000),
       });
     } catch {
       throw new ApiError(503, 'Resume analysis service is temporarily unavailable');

@@ -71,6 +71,34 @@ class EmailService {
     }
 
     try {
+      if (env.RESEND_API_KEY && env.NODE_ENV !== 'test') {
+        try {
+          const resendResp = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'HireGenius AI <onboarding@resend.dev>',
+              to: [to],
+              subject,
+              html,
+              text: text || undefined,
+            }),
+            signal: AbortSignal.timeout(6000),
+          });
+          if (resendResp.ok) {
+            const data = await resendResp.json();
+            const duration = Date.now() - startTime;
+            console.log(`[EmailService] Email sent via Resend API to ${to} (${type}) in ${duration}ms [id: ${data.id}]`);
+            return { success: true, messageId: data.id };
+          }
+        } catch (resendErr) {
+          console.warn(`[EmailService] Resend API dispatch error: ${resendErr.message}. Falling back to SMTP.`);
+        }
+      }
+
       const mailOptions = {
         from: env.MAIL_FROM || `HireGenius AI <${env.MAIL_USERNAME}>`,
         to,

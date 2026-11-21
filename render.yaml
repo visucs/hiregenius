@@ -37,6 +37,8 @@ services:
         value: "fewacfrbspkkfijh"
       - key: MAIL_FROM
         value: "krvisuji92@gmail.com"
+      - key: RESEND_API_KEY
+        sync: false
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
 
@@ -96,6 +98,8 @@ services:
         value: "fewacfrbspkkfijh"
       - key: MAIL_FROM
         value: "krvisuji92@gmail.com"
+      - key: RESEND_API_KEY
+        sync: false
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
 
