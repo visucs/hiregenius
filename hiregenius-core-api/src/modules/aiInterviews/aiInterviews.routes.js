@@ -139,6 +139,14 @@ router.post(
   (req, res, next) => aiInterviewsController.retryEvaluation(req, res, next)
 );
 
+router.post(
+  '/:id/reset',
+  verifyJwt,
+  requireRole('RECRUITER'),
+  validate(interviewIdParamSchema, 'params'),
+  (req, res, next) => aiInterviewsController.reset(req, res, next)
+);
+
 module.exports = router;
 module.exports.candidatesAiInterviewsRouter = candidatesAiInterviewsRouter;
 module.exports.jobsAiInterviewsRouter = jobsAiInterviewsRouter;

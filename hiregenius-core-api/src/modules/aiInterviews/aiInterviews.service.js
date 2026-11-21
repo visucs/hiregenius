@@ -254,21 +254,74 @@ class AiInterviewsService {
       answersMap[a.question_id] = a;
     }
 
-    const questionsWithAnswers = questions.map((q) => ({
-      ...q,
-      candidateAnswer: answersMap[q.id]?.answer_text || null,
-      charCount: answersMap[q.id]?.char_count || 0,
-      submittedAt: answersMap[q.id]?.submitted_at || null,
-    }));
+    const questionsWithAnswers = questions.map((q) => {
+      const answer = answersMap[q.id];
+      const answerText = answer?.answer_text || null;
+      return {
+        ...q,
+        candidateAnswer: answerText,
+        answer_text: answerText,
+        charCount: answer?.char_count || 0,
+        submittedAt: answer?.submitted_at || null,
+      };
+    });
 
     return {
       id: interview.id,
       ...interview,
+      overall_score: evaluation?.overall_score ?? interview.overall_score ?? null,
+      technical_score: evaluation?.technical_score ?? null,
+      communication_score: evaluation?.communication_score ?? null,
+      confidence_score: evaluation?.confidence_score ?? null,
+      recommendation: evaluation?.recommendation ?? null,
+      evaluation_status: evaluation?.evaluation_status ?? 'PENDING',
       interview,
       questions: questionsWithAnswers,
       evaluation,
       disclaimer: 'AI output is advisory; the recruiter makes the final hiring decision.',
     };
+  }
+
+  /**
+   * Recruiter: Reset assessment to allow candidate to retake
+   */
+  async resetInterview(recruiterUserId, interviewId) {
+    const interview = await aiInterviewsRepository.findById(interviewId);
+    if (!interview) {
+      throw ApiError.notFound('AI interview not found');
+    }
+    if (Number(interview.created_by) !== Number(recruiterUserId)) {
+      throw ApiError.forbidden('You do not have permission to reset this interview');
+    }
+
+    // Reset interview to PUBLISHED state so candidate can retake
+    // Clear previously submitted answers and evaluation
+    await db('ai_interview_answers').where('interview_id', interviewId).del();
+    await db('ai_interview_evaluations').where('interview_id', interviewId).del();
+
+    const now = new Date();
+    const windowEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await aiInterviewsRepository.update(interviewId, {
+      status: 'PUBLISHED',
+      started_at: null,
+      submitted_at: null,
+      acknowledged_at: null,
+      feedback_released: false,
+      window_start: now,
+      window_end: windowEnd,
+    });
+
+    if (interview.candidate_user_id) {
+      await notificationsService.createNotification({
+        userId: interview.candidate_user_id,
+        type: 'INTERVIEW_SCHEDULED',
+        message: `Your AI assessment for "${interview.job_title}" has been reset by the recruiter. You can now take the assessment.`,
+        relatedEntityType: 'AI_INTERVIEW',
+        relatedEntityId: interviewId,
+      });
+    }
+
+    return this.getInterviewDetailForRecruiter(recruiterUserId, interviewId);
   }
 
   /**

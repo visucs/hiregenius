@@ -115,6 +115,14 @@ const aiInterviewsService = {
   },
 
   /**
+   * Reset assessment to allow candidate to retake
+   */
+  async resetInterview(interviewId) {
+    const res = await api.post(`/ai-interviews/${interviewId}/reset`);
+    return res.data;
+  },
+
+  /**
    * List all AI interviews for a specific job
    */
   async getJobAiInterviews(jobId) {

@@ -66,6 +66,7 @@ const RecruiterAIInterviewPage = () => {
   const [isTogglingFeedback, setIsTogglingFeedback] = useState(false);
   const [isRetryingEval, setIsRetryingEval] = useState(false);
   const [isUpdatingAts, setIsUpdatingAts] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Helper to load applications for a specific job
   const loadAppsForJob = useCallback(async (jobId) => {
@@ -349,6 +350,27 @@ const RecruiterAIInterviewPage = () => {
       toast.error('Failed to update application status.');
     } finally {
       setIsUpdatingAts(false);
+    }
+  };
+
+  // 12. Reset / Allow Retake
+  const handleResetInterview = async () => {
+    const targetId = selectedInterview?.id || selectedInterview?.interview?.id;
+    if (!targetId) return;
+    if (!window.confirm('Are you sure you want to reset this assessment? The candidate will be notified and allowed to retake with a fresh submission.')) {
+      return;
+    }
+    setIsResetting(true);
+    try {
+      await aiInterviewsService.resetInterview(targetId);
+      toast.success('Assessment reset successfully! Candidate can now retake.');
+      setShowEvalDrawer(false);
+      fetchJobInterviews();
+    } catch (err) {
+      console.error('[RecruiterAIInterview] Reset error:', err);
+      toast.error(err.response?.data?.message || 'Failed to reset assessment.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -985,32 +1007,43 @@ const RecruiterAIInterviewPage = () => {
                 </div>
 
                 {/* Top Metrics Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 14 }}>
-                  <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Overall Score</div>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: '#38bdf8' }}>
-                      {selectedInterview?.overall_score || 0}%
+                {['PUBLISHED', 'IN_PROGRESS'].includes(selectedInterview?.status) ? (
+                  <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#38bdf8', marginBottom: 4 }}>
+                      ⏱️ Assessment in Progress / Awaiting Candidate Submission
+                    </div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                      Candidate has been invited. Scores and evaluation signals will appear here once the candidate completes and submits the assessment.
                     </div>
                   </div>
-                  <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Technical Substance</div>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: '#34d399' }}>
-                      {selectedInterview?.technical_score || 0}%
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 14 }}>
+                    <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Overall Score</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: '#38bdf8' }}>
+                        {selectedInterview?.overall_score ?? selectedInterview?.evaluation?.overall_score ?? 0}%
+                      </div>
+                    </div>
+                    <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Technical Substance</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: '#34d399' }}>
+                        {selectedInterview?.technical_score ?? selectedInterview?.evaluation?.technical_score ?? 0}%
+                      </div>
+                    </div>
+                    <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Communication Clarity</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: '#a78bfa' }}>
+                        {selectedInterview?.communication_score ?? selectedInterview?.evaluation?.communication_score ?? 0}%
+                      </div>
+                    </div>
+                    <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Indicative Confidence</div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: '#fbbf24' }}>
+                        {selectedInterview?.confidence_score ?? selectedInterview?.evaluation?.confidence_score ?? 0}%
+                      </div>
                     </div>
                   </div>
-                  <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Communication Clarity</div>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: '#a78bfa' }}>
-                      {selectedInterview?.communication_score || 0}%
-                    </div>
-                  </div>
-                  <div style={{ background: '#1a2234', borderRadius: 12, padding: 14, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Indicative Confidence</div>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: '#fbbf24' }}>
-                      {selectedInterview?.confidence_score || 0}%
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Per-Question Transcript & Candidate Answers */}
                 <div>
@@ -1018,18 +1051,25 @@ const RecruiterAIInterviewPage = () => {
                     Candidate Responses & Questions
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {Array.isArray(selectedInterview?.questions) && selectedInterview.questions.map((q, idx) => (
-                      <div key={q.id || idx} style={{ background: '#1a2234', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: '#10b981' }}>Q{idx + 1}</span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc' }}>{q.text}</span>
+                    {Array.isArray(selectedInterview?.questions) && selectedInterview.questions.map((q, idx) => {
+                      const candidateText = q.candidateAnswer || q.answer_text;
+                      return (
+                        <div key={q.id || idx} style={{ background: '#1a2234', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: '#10b981' }}>Q{idx + 1}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc' }}>{q.text}</span>
+                          </div>
+                          <div style={{ background: '#131826', borderRadius: 8, padding: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, marginTop: 8 }}>
+                            <strong style={{ color: '#94a3b8', display: 'block', fontSize: 11, marginBottom: 4 }}>CANDIDATE ANSWER:</strong>
+                            {candidateText ? (
+                              <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#f1f5f9' }}>{candidateText}</p>
+                            ) : (
+                              <span style={{ color: '#64748b', fontStyle: 'italic' }}>No answer provided</span>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ background: '#131826', borderRadius: 8, padding: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.5, marginTop: 8 }}>
-                          <strong style={{ color: '#94a3b8', display: 'block', fontSize: 11, marginBottom: 4 }}>CANDIDATE ANSWER:</strong>
-                          {q.answer_text || <span style={{ color: '#64748b', fontStyle: 'italic' }}>No answer provided</span>}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1074,6 +1114,28 @@ const RecruiterAIInterviewPage = () => {
                   >
                     {selectedInterview?.feedback_released ? <Check size={14} /> : <Eye size={14} />}
                     {selectedInterview?.feedback_released ? 'Feedback Released to Candidate' : 'Release Feedback to Candidate'}
+                  </button>
+
+                  <button
+                    disabled={isResetting}
+                    onClick={handleResetInterview}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      background: 'rgba(234,179,8,0.12)',
+                      color: '#fbbf24',
+                      border: '1px solid rgba(234,179,8,0.25)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: isResetting ? 'not-allowed' : 'pointer',
+                    }}
+                    title="Clear previous attempt and allow candidate to take the assessment again"
+                  >
+                    <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
+                    Allow Retake / Reset
                   </button>
                 </div>
 

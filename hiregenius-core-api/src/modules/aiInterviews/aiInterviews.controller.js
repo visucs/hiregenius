@@ -77,6 +77,16 @@ class AiInterviewsController {
     }
   }
 
+  async reset(req, res, next) {
+    try {
+      const recruiterId = req.user.userId || req.user.id;
+      const result = await aiInterviewsService.resetInterview(recruiterId, req.params.id);
+      return ApiResponse.success(res, result, 'AI interview reset successfully; candidate may now retake');
+    } catch (err) {
+      return next(err);
+    }
+  }
+
   async getJobInterviews(req, res, next) {
     try {
       const recruiterId = req.user.userId || req.user.id;
