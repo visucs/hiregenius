@@ -273,6 +273,23 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
 - [x] **Phase 6 Part D**: Resume Parsing Agent (LangChain + Google Gemini structured output, anti-hallucination prompt, OCR quality gate, mocked test suite).
 - [x] **Phase 6 Part E**: Save Parsed Resume to MongoDB (`save_parsed_resume`, `get_parsed_resume_by_candidate_id`, upsert-by-candidate_id).
 - [x] **Phase 6 Part F**: Core API integration & Frontend rewiring (candidate dashboard, applicant detail modal, resume score display).
-- [ ] **Phase 7 (Next)**: Skill Matching & Scoring Service.
-- [ ] **Phase 8**: Interview Question Generator Agent.
+- [x] **Phase 7 - AI Interview Module**:
+  - **Part 1 (AI Service)**: Structured question generator & answer evaluation with PII scrubbing, forbidden topic filtering, prompt injection boundary (`<candidate_answer_data>`), and evaluation caching.
+  - **Part 2 (Core API)**: Session lifecycle, Knex migrations (`ai_interviews`, `ai_interview_questions`, `ai_interview_answers`, `ai_interview_evaluations`), server-authoritative countdown timer, autosave character limits, 180-day retention cleanup job (`AI_INTERVIEW_RETENTION_DAYS`), and feedback release controls.
+  - **Part 3 (Frontend)**: Candidate AI Interview Room with mandatory Consent Notice modal (Addendum 1), real-time autosave indicator, Addendum 3 language guidance, and Recruiter Assessment Hub with question editor and evaluation scorecard drawer.
+- [ ] **Phase 8**: Live Video / Proctoring (Future).
+
+---
+
+## 7. Phase 7: AI Interview Module Details & Policies
+
+### 7.1. Addendums Implemented
+1. **Consent Notice Gate (Addendum 1)**: Candidates must explicitly acknowledge the AI evaluation consent modal before the session opens; `acknowledged_at` timestamp is persisted to the database.
+2. **Data Retention & Purge (Addendum 2)**: Configurable retention period via `AI_INTERVIEW_RETENTION_DAYS` (default: 180 days). Answers and evaluations older than the retention window are automatically purged via a 24-hour background cleanup job and cascaded upon candidate account deletion.
+3. **Language Neutrality (Addendum 3)**: Answers submitted in English, Hindi, or Hinglish are evaluated purely on technical substance and clarity without penalizing communication scores.
+
+### 7.2. Core Honesty & Governance Rules
+- AI evaluations are strictly **advisory**; recruiters make final hiring and status decisions.
+- Candidate "Confidence" is derived solely from textual indicators (hedging, specificity, completeness) and labeled as **indicative**.
+- "Communication" represents clarity and structure rather than grammatical perfection.
 
