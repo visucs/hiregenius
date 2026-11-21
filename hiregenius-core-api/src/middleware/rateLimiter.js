@@ -1,4 +1,5 @@
 const ApiError = require('../utils/ApiError');
+const env = require('../config/env');
 
 /**
  * In-memory sliding-window rate limiter for resource-intensive endpoints.
@@ -12,6 +13,7 @@ function createRateLimiter({
   windowMs = 60 * 1000,
   max = 10,
   message = 'Rate limit exceeded: maximum 10 ATS checks per minute. Please try again shortly.',
+  keyGenerator = null,
 } = {}) {
   const hits = new Map();
 
@@ -30,7 +32,9 @@ function createRateLimiter({
   }
 
   function rateLimiterMiddleware(req, res, next) {
-    const key = req.user?.userId ? `user_${req.user.userId}` : `ip_${req.ip || 'unknown'}`;
+    const key = typeof keyGenerator === 'function'
+      ? keyGenerator(req)
+      : (req.user?.userId ? `user_${req.user.userId}` : `ip_${req.ip || 'unknown'}`);
     const now = Date.now();
 
     let record = hits.get(key);
@@ -78,7 +82,15 @@ const atsRateLimiter = createRateLimiter({
   message: 'Rate limit exceeded: maximum 10 ATS checks per minute. Please try again shortly.',
 });
 
+const rankingRateLimiter = createRateLimiter({
+  windowMs: env.RANKING_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000,
+  max: env.RANKING_RATE_LIMIT_MAX || 10,
+  message: 'Candidate ranking rate limit exceeded. Please wait before creating another ranking snapshot.',
+  keyGenerator: (req) => `user_${req.user?.userId || 'unknown'}_job_${req.params?.jobId || 'all'}`,
+});
+
 module.exports = {
   createRateLimiter,
   atsRateLimiter,
+  rankingRateLimiter,
 };

@@ -386,6 +386,112 @@ class AiMlClientService {
 
     return response.json();
   }
+
+  /**
+   * Ranks applicants for a specific job posting using the AI service RAG composite engine.
+   *
+   * @param {object} params
+   * @param {string|number} params.jobId
+   * @param {string} params.jobTitle
+   * @param {string} params.jobDescription
+   * @param {Array<string|number>} params.candidateIds
+   * @param {number} [params.topNExplanations]
+   * @returns {Promise<object>}
+   */
+  async rankApplicants({ jobId, jobTitle, jobDescription, candidateIds, topNExplanations = 10 }) {
+    const targetUrl = `${env.AI_ML_SERVICE_URL}/api/rag/rank`;
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 65000;
+
+    let response;
+    try {
+      response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        body: JSON.stringify({
+          job_id: String(jobId),
+          job_title: jobTitle,
+          job_description: jobDescription,
+          candidate_ids: candidateIds.map(String),
+          top_n_explanations: topNExplanations,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      console.error(`[AiMlClient] rankApplicants failed to connect to ${targetUrl}:`, err.message);
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        throw new ApiError(504, 'Candidate ranking request timed out');
+      }
+      throw new ApiError(503, 'Candidate ranking service is temporarily unavailable');
+    }
+
+    if (!response.ok) {
+      if (response.status === 504) {
+        throw new ApiError(504, 'Candidate ranking request timed out');
+      }
+      if (response.status >= 500) {
+        throw new ApiError(503, 'Candidate ranking service is temporarily unavailable');
+      }
+      const errData = await response.json().catch(() => ({}));
+      const message = errData.detail || `AI ranking service returned HTTP ${response.status}`;
+      throw new ApiError(response.status, message);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Triggers asynchronous background resume vector indexing for RAG.
+   * Non-blocking; never throws.
+   *
+   * @param {string|number} candidateId
+   */
+  async indexCandidateResume(candidateId) {
+    if (!candidateId) return;
+    try {
+      const targetUrl = `${env.AI_ML_SERVICE_URL}/api/rag/index`;
+      const timeoutMs = 15000;
+      fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        body: JSON.stringify({ candidate_id: String(candidateId) }),
+        signal: AbortSignal.timeout(timeoutMs),
+      }).catch((err) => {
+        console.warn(`[AiMlClient] Non-blocking vector index call failed for candidate ${candidateId}:`, err.message);
+      });
+    } catch (err) {
+      console.warn(`[AiMlClient] Failed to initiate vector index for candidate ${candidateId}:`, err.message);
+    }
+  }
+
+  /**
+   * Deletes candidate resume chunks and vectors from vector store.
+   * Non-blocking; never throws.
+   *
+   * @param {string|number} candidateId
+   */
+  async deleteCandidateVectors(candidateId) {
+    if (!candidateId) return;
+    try {
+      const targetUrl = `${env.AI_ML_SERVICE_URL}/api/rag/index/${encodeURIComponent(String(candidateId))}`;
+      fetch(targetUrl, {
+        method: 'DELETE',
+        headers: {
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        signal: AbortSignal.timeout(10000),
+      }).catch((err) => {
+        console.warn(`[AiMlClient] Failed to delete candidate vectors for ${candidateId}:`, err.message);
+      });
+    } catch (err) {
+      console.warn(`[AiMlClient] Error dispatching delete candidate vectors for ${candidateId}:`, err.message);
+    }
+  }
 }
 
 module.exports = new AiMlClientService();

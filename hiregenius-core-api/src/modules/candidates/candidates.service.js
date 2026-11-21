@@ -126,6 +126,13 @@ class CandidatesService {
       );
     }
 
+    // Non-blocking resume vector indexing for Candidate Ranking (RAG)
+    try {
+      aiMlClient.indexCandidateResume(result.candidate.id);
+    } catch (ragErr) {
+      console.warn(`[CandidatesService] Failed to trigger RAG indexing for candidate ${result.candidate.id}:`, ragErr.message);
+    }
+
     // Non-blocking security/welcome notification email dispatch
     const dispatchPromise = (async () => {
 
