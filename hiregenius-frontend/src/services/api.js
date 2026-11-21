@@ -33,8 +33,9 @@ api.interceptors.request.use(
     if (!config.timeout || config.timeout < 120000) {
       config.timeout = 120000;
     }
-    // Route jobs, candidates, applications, interviews, notifications, and analytics endpoints to Core API
+    // Route jobs, candidates, applications, interviews, notifications, analytics, and ats endpoints to Core API
     const isCoreRequest = config.url && (
+      config.url.startsWith('/ats') || config.url.startsWith('ats') ||
       config.url.startsWith('/jobs') || config.url.startsWith('jobs') ||
       config.url.startsWith('/candidates') || config.url.startsWith('candidates') ||
       config.url.startsWith('/applications') || config.url.startsWith('applications') ||
