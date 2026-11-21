@@ -27,7 +27,75 @@ class EmailService {
   }
 
   isConfigured() {
-    return Boolean(this.transporter);
+    return Boolean(this.transporter) || Boolean(env.RESEND_API_KEY) || Boolean(env.GMAIL_REFRESH_TOKEN);
+  }
+
+  /**
+   * Dispatches email via Google Gmail REST API (HTTPS port 443).
+   * Works without a custom domain, requires no open SMTP ports, and is never blocked on cloud providers like Render.
+   */
+  async sendViaGmailApi(to, subject, html, text) {
+    if (!env.GMAIL_CLIENT_ID || !env.GMAIL_CLIENT_SECRET || !env.GMAIL_REFRESH_TOKEN) {
+      return null;
+    }
+    try {
+      const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: env.GMAIL_CLIENT_ID,
+          client_secret: env.GMAIL_CLIENT_SECRET,
+          refresh_token: env.GMAIL_REFRESH_TOKEN,
+          grant_type: 'refresh_token',
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!tokenResp.ok) {
+        const errJson = await tokenResp.json().catch(() => ({}));
+        console.warn('[EmailService] Gmail OAuth token refresh failed:', errJson);
+        return null;
+      }
+      const tokenData = await tokenResp.json();
+      const sender = env.MAIL_FROM || env.MAIL_USERNAME || 'krvisuji92@gmail.com';
+      const encodedSubject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+
+      const rawMessage = [
+        `From: HireGenius AI <${sender}>`,
+        `To: ${to}`,
+        `Subject: ${encodedSubject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        html || text,
+      ].join('\r\n');
+
+      const base64Url = Buffer.from(rawMessage).toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const sendResp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ raw: base64Url }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (sendResp.ok) {
+        const sendData = await sendResp.json();
+        return { success: true, messageId: sendData.id };
+      } else {
+        const sendErr = await sendResp.json().catch(() => ({}));
+        console.warn('[EmailService] Gmail REST send failed:', sendErr);
+        return null;
+      }
+    } catch (err) {
+      console.warn('[EmailService] Gmail API dispatch exception:', err.message);
+      return null;
+    }
   }
 
   /**
@@ -71,6 +139,17 @@ class EmailService {
     }
 
     try {
+      // 1. Google Gmail REST API (No domain required, HTTPS port 443, never blocked on cloud providers)
+      if (env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN && env.NODE_ENV !== 'test') {
+        const gmailResult = await this.sendViaGmailApi(to, subject, html, text);
+        if (gmailResult && gmailResult.success) {
+          const duration = Date.now() - startTime;
+          console.log(`[EmailService] Email sent via Gmail REST API to ${to} (${type}) in ${duration}ms [id: ${gmailResult.messageId}]`);
+          return gmailResult;
+        }
+      }
+
+      // 2. Resend REST API
       if (env.RESEND_API_KEY && env.NODE_ENV !== 'test') {
         try {
           const resendResp = await fetch('https://api.resend.com/emails', {

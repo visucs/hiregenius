@@ -39,6 +39,12 @@ services:
         value: "krvisuji92@gmail.com"
       - key: RESEND_API_KEY
         sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"
 
@@ -99,6 +105,12 @@ services:
       - key: MAIL_FROM
         value: "krvisuji92@gmail.com"
       - key: RESEND_API_KEY
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
         sync: false
       - key: FRONTEND_BASE_URL
         value: "https://hiregenius-delta.vercel.app"

@@ -56,6 +56,10 @@ app:
   mail:
     from: ${MAIL_FROM:krvisuji92@gmail.com}
     resend-api-key: ${RESEND_API_KEY:}
+    gmail:
+      client-id: ${GMAIL_CLIENT_ID:}
+      client-secret: ${GMAIL_CLIENT_SECRET:}
+      refresh-token: ${GMAIL_REFRESH_TOKEN:}
   frontend:
     base-url: ${FRONTEND_BASE_URL:https://hiregenius-delta.vercel.app}
     url: ${FRONTEND_BASE_URL:https://hiregenius-delta.vercel.app}

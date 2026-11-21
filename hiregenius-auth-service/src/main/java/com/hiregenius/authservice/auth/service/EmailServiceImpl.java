@@ -11,10 +11,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 
 @Service
 public class EmailServiceImpl implements EmailService {
@@ -32,6 +35,15 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.resend.api-key:${RESEND_API_KEY:}}")
     private String resendApiKey;
 
+    @Value("${app.mail.gmail.client-id:${GMAIL_CLIENT_ID:}}")
+    private String gmailClientId;
+
+    @Value("${app.mail.gmail.client-secret:${GMAIL_CLIENT_SECRET:}}")
+    private String gmailClientSecret;
+
+    @Value("${app.mail.gmail.refresh-token:${GMAIL_REFRESH_TOKEN:}}")
+    private String gmailRefreshToken;
+
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -41,6 +53,82 @@ public class EmailServiceImpl implements EmailService {
             return mailFrom.trim();
         }
         return "krvisuji92@gmail.com";
+    }
+
+    private boolean trySendWithGmailApi(String toEmail, String subject, String htmlContent) {
+        if (gmailClientId == null || gmailClientId.isBlank() ||
+            gmailClientSecret == null || gmailClientSecret.isBlank() ||
+            gmailRefreshToken == null || gmailRefreshToken.isBlank()) {
+            return false;
+        }
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(4))
+                    .build();
+
+            String tokenBody = "client_id=" + URLEncoder.encode(gmailClientId.trim(), StandardCharsets.UTF_8)
+                    + "&client_secret=" + URLEncoder.encode(gmailClientSecret.trim(), StandardCharsets.UTF_8)
+                    + "&refresh_token=" + URLEncoder.encode(gmailRefreshToken.trim(), StandardCharsets.UTF_8)
+                    + "&grant_type=refresh_token";
+
+            HttpRequest tokenRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/token"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(tokenBody))
+                    .timeout(Duration.ofSeconds(6))
+                    .build();
+
+            HttpResponse<String> tokenResponse = client.send(tokenRequest, HttpResponse.BodyHandlers.ofString());
+            if (tokenResponse.statusCode() < 200 || tokenResponse.statusCode() >= 300) {
+                log.warn("[GMAIL-API] Failed to refresh access token: status={} body={}", tokenResponse.statusCode(), tokenResponse.body());
+                return false;
+            }
+
+            String tokenJson = tokenResponse.body();
+            String accessTokenMarker = "\"access_token\":\"";
+            int idx = tokenJson.indexOf(accessTokenMarker);
+            if (idx == -1) {
+                accessTokenMarker = "\"access_token\": \"";
+                idx = tokenJson.indexOf(accessTokenMarker);
+            }
+            if (idx == -1) return false;
+            int start = idx + accessTokenMarker.length();
+            int end = tokenJson.indexOf("\"", start);
+            if (end == -1) return false;
+            String accessToken = tokenJson.substring(start, end);
+
+            String sender = resolveSenderEmail();
+            String b64Subject = Base64.getEncoder().encodeToString(subject.getBytes(StandardCharsets.UTF_8));
+            String rawMessage = "From: HireGenius AI <" + sender + ">\r\n"
+                    + "To: " + toEmail + "\r\n"
+                    + "Subject: =?utf-8?B?" + b64Subject + "?=\r\n"
+                    + "MIME-Version: 1.0\r\n"
+                    + "Content-Type: text/html; charset=utf-8\r\n\r\n"
+                    + htmlContent;
+
+            String base64Url = Base64.getUrlEncoder().withoutPadding().encodeToString(rawMessage.getBytes(StandardCharsets.UTF_8));
+            String sendBody = "{\"raw\":\"" + base64Url + "\"}";
+
+            HttpRequest sendRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://gmail.googleapis.com/gmail/v1/users/me/messages/send"))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(sendBody))
+                    .timeout(Duration.ofSeconds(6))
+                    .build();
+
+            HttpResponse<String> sendResponse = client.send(sendRequest, HttpResponse.BodyHandlers.ofString());
+            if (sendResponse.statusCode() >= 200 && sendResponse.statusCode() < 300) {
+                log.info("[GMAIL-API] Password reset email delivered successfully to {} via Gmail REST API: status={}", toEmail, sendResponse.statusCode());
+                return true;
+            } else {
+                log.warn("[GMAIL-API] Send returned non-2xx [{}]: {}. Trying fallbacks.", sendResponse.statusCode(), sendResponse.body());
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("[GMAIL-API] Dispatch error: {}. Trying fallbacks.", e.getMessage());
+            return false;
+        }
     }
 
     private boolean trySendWithResend(String toEmail, String subject, String htmlContent) {
@@ -90,6 +178,12 @@ public class EmailServiceImpl implements EmailService {
         log.info("[ASYNC-EMAIL] Starting background password reset email dispatch from [{}] to [{}] on thread [{}]", sender, toEmail, Thread.currentThread().getName());
         try {
             String htmlContent = buildResetPasswordEmailHtml(userName, resetLink);
+
+            if (trySendWithGmailApi(toEmail, subject, htmlContent)) {
+                long duration = System.currentTimeMillis() - asyncStartTime;
+                log.info("[ASYNC-EMAIL] Password reset email delivered immediately to {} via Gmail REST API in {}ms", toEmail, duration);
+                return;
+            }
 
             if (trySendWithResend(toEmail, subject, htmlContent)) {
                 long duration = System.currentTimeMillis() - asyncStartTime;
