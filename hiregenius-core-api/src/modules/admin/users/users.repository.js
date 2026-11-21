@@ -220,6 +220,9 @@ class AdminUsersRepository {
       if (await trx.schema.hasTable('password_reset_tokens')) {
         await trx('password_reset_tokens').where({ user_id: uid }).del();
       }
+      if (await trx.schema.hasTable('ats_scans')) {
+        await trx('ats_scans').where({ candidate_user_id: uid }).orWhere({ triggered_by_user_id: uid }).del();
+      }
       await trx('users').where({ id: uid }).del();
     });
 
@@ -252,6 +255,9 @@ class AdminUsersRepository {
       }
       if (await trx.schema.hasTable('password_reset_tokens')) {
         await trx('password_reset_tokens').where({ user_id: uid }).del();
+      }
+      if (await trx.schema.hasTable('ats_scans')) {
+        await trx('ats_scans').where({ candidate_user_id: uid }).orWhere({ triggered_by_user_id: uid }).del();
       }
       await trx('users').where({ id: uid }).del();
     });

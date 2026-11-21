@@ -3,6 +3,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const candidatesRepository = require('./candidates.repository');
 const aiMlClient = require('./aiMlClient.service');
+const atsRepository = require('../ats/ats.repository');
 const emailService = require('../email/email.service');
 const {
   resumeUpdatedTemplate,
@@ -297,6 +298,18 @@ class CandidatesService {
    * @returns {Promise<object>} ATS evaluation result
    */
   async runGeneralAtsCheck(userId, file = null) {
+    // Check rolling 24h quota for candidate
+    const limit = env.ATS_DAILY_LIMIT_CANDIDATE || 10;
+    const currentCount = await atsRepository.countScansIn24h(userId);
+    if (currentCount >= limit) {
+      const resetAt = await atsRepository.getOldestScanIn24h(userId);
+      throw new ApiError(429, 'Daily ATS scan quota reached. Please try again later.', {
+        remaining: 0,
+        resetAt: resetAt ? resetAt.toISOString() : null,
+        limit,
+      });
+    }
+
     let candidate = await candidatesRepository.findByUserId(userId);
 
     let fileBuffer = null;
@@ -339,7 +352,26 @@ class CandidatesService {
       throw ApiError.badRequest('Upload your resume first');
     }
 
-    return aiMlClient.checkGeneralAts(candidate.id, fileBuffer, originalFilename, mimetype);
+    const result = await aiMlClient.checkGeneralAts(candidate.id, fileBuffer, originalFilename, mimetype);
+
+    // Save scan to MySQL ats_scans as single source of truth
+    try {
+      await atsRepository.createScan({
+        candidate_user_id: userId,
+        triggered_by_user_id: userId,
+        triggered_by_role: 'CANDIDATE',
+        job_id: null,
+        mode: 'GENERAL',
+        source: file ? 'UPLOAD' : 'PROFILE',
+        overall_score: result.overall_score || result.overallScore || 0,
+        scoring_version: result.scoringVersion || 'ats-v2-untuned',
+        result_json: result,
+      });
+    } catch (saveErr) {
+      console.error('[CandidatesService] Failed to record ats_scan in MySQL:', saveErr.message);
+    }
+
+    return result;
   }
 
   /**
@@ -355,6 +387,13 @@ class CandidatesService {
       throw ApiError.notFound('No ATS evaluation found for candidate');
     }
 
+    // 1. First check MySQL ats_scans (single source of truth)
+    const latestScan = await atsRepository.getLatestForCandidate(userId, jobId, true);
+    if (latestScan && latestScan.result) {
+      return latestScan.result;
+    }
+
+    // 2. Fallback to legacy Mongo storage via aiMlClient
     return aiMlClient.getCandidateAts(candidate.id, jobId);
   }
 }

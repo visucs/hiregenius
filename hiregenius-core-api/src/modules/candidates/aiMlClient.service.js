@@ -232,6 +232,71 @@ class AiMlClientService {
 
     return response.json();
   }
+
+  /**
+   * Invokes hiregenius-ai-ml-service POST /api/ats/scan (Unified v2 ATS scoring engine).
+   *
+   * @param {object} params
+   * @param {string} params.mode - 'GENERAL' or 'JOB'
+   * @param {string} [params.jobTitle]
+   * @param {string} [params.jobDescription]
+   * @param {string|number} [params.candidateId]
+   * @param {Buffer} [params.fileBuffer]
+   * @param {string} [params.originalFilename]
+   * @param {string} [params.mimetype]
+   * @returns {Promise<object>}
+   */
+  async scanAts({
+    mode = 'GENERAL',
+    jobTitle = null,
+    jobDescription = null,
+    candidateId = null,
+    fileBuffer = null,
+    originalFilename = null,
+    mimetype = 'application/pdf',
+  }) {
+    const targetUrl = `${env.AI_ML_SERVICE_URL}/api/ats/scan`;
+    const formData = new FormData();
+    formData.append('mode', mode);
+
+    if (jobTitle) {
+      formData.append('job_title', jobTitle);
+    }
+    if (jobDescription) {
+      formData.append('job_description', jobDescription);
+    }
+    if (candidateId) {
+      formData.append('candidate_id', String(candidateId));
+    }
+    if (fileBuffer) {
+      const fileBlob = new Blob([fileBuffer], { type: mimetype || 'application/pdf' });
+      formData.append('file', fileBlob, originalFilename || 'resume.pdf');
+    }
+
+    let response;
+    const timeoutMs = env.AI_ML_SERVICE_TIMEOUT_MS || 25000;
+    try {
+      response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'X-Internal-Key': env.AI_ML_SERVICE_INTERNAL_KEY,
+        },
+        body: formData,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        throw new ApiError(504, 'Resume analysis service timed out. Please try again.');
+      }
+      throw new ApiError(503, 'Resume analysis service is temporarily unavailable. Please try again later.');
+    }
+
+    if (!response.ok) {
+      await this._handleAtsError(response);
+    }
+
+    return response.json();
+  }
 }
 
 module.exports = new AiMlClientService();

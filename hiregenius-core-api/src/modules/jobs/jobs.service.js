@@ -1,5 +1,6 @@
 const fs = require('fs');
 const aiMlClient = require('../candidates/aiMlClient.service');
+const atsRepository = require('../ats/ats.repository');
 const jobsRepository = require('./jobs.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const candidatesService = require('../candidates/candidates.service');
@@ -300,7 +301,18 @@ class JobsService {
       jdText = jdText.slice(0, 10000);
     }
 
-    return aiMlClient.checkJobAts(
+    const limit = env.ATS_DAILY_LIMIT_CANDIDATE || 10;
+    const currentCount = await atsRepository.countScansIn24h(userId);
+    if (currentCount >= limit) {
+      const resetAt = await atsRepository.getOldestScanIn24h(userId);
+      throw new ApiError(429, 'Daily ATS scan quota reached. Please try again later.', {
+        remaining: 0,
+        resetAt: resetAt ? resetAt.toISOString() : null,
+        limit,
+      });
+    }
+
+    const result = await aiMlClient.checkJobAts(
       candidate.id,
       jdText,
       job.id,
@@ -308,6 +320,25 @@ class JobsService {
       originalFilename,
       mimetype
     );
+
+    // Save scan to MySQL ats_scans as single source of truth
+    try {
+      await atsRepository.createScan({
+        candidate_user_id: userId,
+        triggered_by_user_id: userId,
+        triggered_by_role: 'CANDIDATE',
+        job_id: job.id,
+        mode: 'JOB',
+        source: file ? 'UPLOAD' : 'PROFILE',
+        overall_score: result.overall_score || result.overallScore || 0,
+        scoring_version: result.scoringVersion || 'ats-v2-untuned',
+        result_json: result,
+      });
+    } catch (saveErr) {
+      console.error('[JobsService] Failed to record ats_scan in MySQL:', saveErr.message);
+    }
+
+    return result;
   }
 }
 

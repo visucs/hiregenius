@@ -1,12 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const aiMlClient = require('../candidates/aiMlClient.service');
+const atsRepository = require('../ats/ats.repository');
 const applicationsRepository = require('./applications.repository');
 const candidatesRepository = require('../candidates/candidates.repository');
 const jobsRepository = require('../jobs/jobs.repository');
 const notificationsService = require('../notifications/notifications.service');
 const settingsService = require('../admin/settings/settings.service');
 const ApiError = require('../../utils/ApiError');
+const env = require('../../config/env');
 const db = require('../../config/db');
 
 class ApplicationsService {
@@ -262,7 +264,19 @@ class ApplicationsService {
       }
     }
 
-    return aiMlClient.checkJobAts(
+    // Check rolling 24h quota for recruiter
+    const limit = env.ATS_DAILY_LIMIT_RECRUITER || 50;
+    const currentCount = await atsRepository.countScansIn24h(recruiterId);
+    if (currentCount >= limit) {
+      const resetAt = await atsRepository.getOldestScanIn24h(recruiterId);
+      throw new ApiError(429, 'Daily ATS scan quota reached. Please try again later.', {
+        remaining: 0,
+        resetAt: resetAt ? resetAt.toISOString() : null,
+        limit,
+      });
+    }
+
+    const result = await aiMlClient.checkJobAts(
       application.candidate_id,
       jdText,
       job.id,
@@ -270,6 +284,28 @@ class ApplicationsService {
       originalFilename,
       mimetype
     );
+
+    // Save scan to MySQL ats_scans as single source of truth (recruiter-triggered)
+    try {
+      const candidateRecord = await candidatesRepository.findById(application.candidate_id);
+      const candidateUserId = candidateRecord ? candidateRecord.user_id : application.candidate_id;
+
+      await atsRepository.createScan({
+        candidate_user_id: candidateUserId,
+        triggered_by_user_id: recruiterId,
+        triggered_by_role: 'RECRUITER',
+        job_id: job.id,
+        mode: 'JOB',
+        source: 'PROFILE',
+        overall_score: result.overall_score || result.overallScore || 0,
+        scoring_version: result.scoringVersion || 'ats-v2-untuned',
+        result_json: result,
+      });
+    } catch (saveErr) {
+      console.error('[ApplicationsService] Failed to record ats_scan in MySQL:', saveErr.message);
+    }
+
+    return result;
   }
 }
 
