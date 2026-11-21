@@ -118,12 +118,14 @@ const RecruiterCandidatesPage = () => {
 
   // 3. Handle Status Update (PATCH /api/applications/:id/status)
   const handleStatusChange = async (appId, newStatus) => {
+    if (!appId) return;
     setUpdatingAppId(appId);
     try {
       await applicationsService.updateStatus(appId, newStatus);
       toast.success(`Application updated to ${newStatus}`);
-      // Optimistically update in state
-      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+      // Optimistically update in state strictly for this application
+      setApplications(prev => prev.map(a => (a.id && Number(a.id) === Number(appId)) ? { ...a, status: newStatus } : a));
+      setSelectedCandidate(prev => (prev && Number(prev.application_id || prev.id) === Number(appId)) ? { ...prev, status: newStatus } : prev);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to update status';
       toast.error(msg);

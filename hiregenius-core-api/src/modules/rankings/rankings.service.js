@@ -56,7 +56,7 @@ class RankingsService {
 
     const candidateAppMap = new Map();
     applications.forEach((app) => {
-      candidateAppMap.set(String(app.candidate_id), app.application_id);
+      candidateAppMap.set(String(app.candidate_id), app.id || app.application_id);
     });
 
     const applicantCandidateIds = applications.map((app) => String(app.candidate_id));

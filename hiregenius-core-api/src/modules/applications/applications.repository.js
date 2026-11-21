@@ -105,6 +105,7 @@ class ApplicationsRepository {
       .where('applications.job_id', Number(jobId))
       .select(
         'applications.id',
+        'applications.id as application_id',
         'applications.job_id',
         'applications.candidate_id',
         'applications.status',
@@ -129,14 +130,19 @@ class ApplicationsRepository {
   }
 
   async updateStatus(id, status) {
+    const numericId = Number(id);
+    if (!numericId || isNaN(numericId)) {
+      throw new Error(`Cannot update application status: Invalid application ID ${id}`);
+    }
+
     await db('applications')
-      .where('id', Number(id))
+      .where('id', numericId)
       .update({
         status,
         updated_at: db.fn.now(),
       });
 
-    return this.findById(id);
+    return this.findById(numericId);
   }
 
   async countByJob(jobId) {

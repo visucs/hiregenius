@@ -49,6 +49,7 @@ const getMinDateTimeLocal = () => {
 const RecruiterSchedulerPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const prefillAppId = searchParams.get('applicationId');
+  const prefillJobId = searchParams.get('jobId');
 
   // Main state
   const [interviews, setInterviews] = useState([]);
@@ -67,7 +68,7 @@ const RecruiterSchedulerPage = () => {
   // Scheduling Form state
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState('');
+  const [selectedJobId, setSelectedJobId] = useState(prefillJobId || '');
   const [jobApplications, setJobApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState(prefillAppId || '');
@@ -139,12 +140,15 @@ const RecruiterSchedulerPage = () => {
 
   // Handle URL prefill params (e.g. from Candidates page)
   useEffect(() => {
+    if (prefillJobId) {
+      setSelectedJobId(prefillJobId);
+    }
     if (prefillAppId) {
       setSelectedAppId(prefillAppId);
       setIsScheduleModalOpen(true);
       fetchJobs();
     }
-  }, [prefillAppId, fetchJobs]);
+  }, [prefillAppId, prefillJobId, fetchJobs]);
 
   const handleOpenScheduleModal = () => {
     setIsScheduleModalOpen(true);

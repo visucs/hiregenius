@@ -305,6 +305,7 @@ class AiInterviewsRepository {
         'ai_interviews.*',
         'jobs.id as job_id',
         'jobs.title as job_title',
+        'applications.status as application_status',
         'candidate_user.name as candidate_name',
         'candidate_user.email as candidate_email',
         'ai_interview_evaluations.overall_score',
@@ -333,6 +334,7 @@ class AiInterviewsRepository {
       .select(
         'ai_interviews.*',
         'jobs.title as job_title',
+        'applications.status as application_status',
         'candidate_user.name as candidate_name',
         'candidate_user.email as candidate_email',
         'ai_interview_evaluations.overall_score',

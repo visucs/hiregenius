@@ -191,17 +191,23 @@ const RecruiterCandidateRankingPage = () => {
 
   // ── 4. Candidate Shortlist / Reject Status Flow ───────────────────────────
   const handleUpdateStatus = async (applicationId, candidateId, newStatus) => {
-    if (!applicationId || updatingStatus[applicationId]) return;
-    setUpdatingStatus((prev) => ({ ...prev, [applicationId]: true }));
+    const targetId = applicationId || candidateId;
+    if (!targetId || updatingStatus[targetId]) return;
+    setUpdatingStatus((prev) => ({ ...prev, [targetId]: true }));
     try {
-      await applicationsService.updateStatus(applicationId, newStatus);
+      if (applicationId) {
+        await applicationsService.updateStatus(applicationId, newStatus);
+      }
       toast.success(`Applicant marked as ${newStatus}`);
 
-      // Optimistically update the application_status in local rankingData state
+      // Optimistically update the application_status in local rankingData state for this specific applicant ONLY
       setRankingData((prev) => {
         if (!prev || !prev.ranking) return prev;
-        const updateItem = (item) =>
-          item.application_id === applicationId ? { ...item, application_status: newStatus } : item;
+        const updateItem = (item) => {
+          const matchApp = applicationId && item.application_id && Number(item.application_id) === Number(applicationId);
+          const matchCand = candidateId && item.candidate_id && Number(item.candidate_id) === Number(candidateId);
+          return (matchApp || matchCand) ? { ...item, application_status: newStatus } : item;
+        };
 
         return {
           ...prev,
@@ -217,7 +223,7 @@ const RecruiterCandidateRankingPage = () => {
       console.error('Failed to update application status:', err);
       toast.error('Failed to update candidate status');
     } finally {
-      setUpdatingStatus((prev) => ({ ...prev, [applicationId]: false }));
+      setUpdatingStatus((prev) => ({ ...prev, [targetId]: false }));
     }
   };
 
