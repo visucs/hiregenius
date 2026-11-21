@@ -285,6 +285,7 @@ class AiMlClientService {
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {
+      console.error(`[AiMlClient] scanAts failed to connect to ${targetUrl}:`, err.message);
       if (err.name === 'TimeoutError' || err.name === 'AbortError') {
         throw new ApiError(504, 'Resume analysis service timed out. Please try again.');
       }

@@ -294,6 +294,7 @@ public class AuthServiceImpl implements AuthService {
             log.info("[FORGOT-PASSWORD] Token generated and saved to DB in {}ms for user id={}", tokenSavedDuration, user.getId());
 
             String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
+            log.info("[FORGOT-PASSWORD] Generated password reset link for user {}: {}", user.getEmail(), resetLink);
             emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
             long emailDispatchedDuration = System.currentTimeMillis() - startTime;
             log.info("[FORGOT-PASSWORD] Async email dispatch invoked in {}ms for user id={}", emailDispatchedDuration, user.getId());
