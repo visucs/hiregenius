@@ -10,6 +10,12 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
 @Service
 public class EmailServiceImpl implements EmailService {
 
@@ -23,6 +29,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.frontend.url:https://hiregenius-delta.vercel.app}")
     private String frontendBaseUrl;
 
+    @Value("${app.mail.resend.api-key:${RESEND_API_KEY:}}")
+    private String resendApiKey;
+
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -34,21 +43,73 @@ public class EmailServiceImpl implements EmailService {
         return "krvisuji92@gmail.com";
     }
 
+    private boolean trySendWithResend(String toEmail, String subject, String htmlContent) {
+        if (resendApiKey == null || resendApiKey.isBlank()) {
+            return false;
+        }
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(4))
+                    .build();
+
+            String sender = resolveSenderEmail();
+            String fromField = sender.contains("@resend.dev") ? sender : "HireGenius AI <onboarding@resend.dev>";
+
+            String escapedSubject = subject.replace("\"", "\\\"");
+            String escapedHtml = htmlContent.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+            String bodyJson = "{\"from\":\"" + fromField + "\",\"to\":[\"" + toEmail + "\"],\"subject\":\"" + escapedSubject + "\",\"html\":\"" + escapedHtml + "\"}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .timeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("[RESEND-API] Real-time email dispatched successfully to {} via Resend: status={}", toEmail, response.statusCode());
+                return true;
+            } else {
+                log.warn("[RESEND-API] Resend returned non-2xx [{}]: {}. Falling back to high-priority SMTP.", response.statusCode(), response.body());
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("[RESEND-API] Dispatch error: {}. Falling back to high-priority SMTP.", e.getMessage());
+            return false;
+        }
+    }
+
     @Async("mailTaskExecutor")
     @Override
     public void sendPasswordResetEmail(String toEmail, String userName, String resetLink) {
         long asyncStartTime = System.currentTimeMillis();
         String sender = resolveSenderEmail();
+        String subject = "Reset Your HireGenius AI Password";
         log.info("[ASYNC-EMAIL] Starting background password reset email dispatch from [{}] to [{}] on thread [{}]", sender, toEmail, Thread.currentThread().getName());
         try {
+            String htmlContent = buildResetPasswordEmailHtml(userName, resetLink);
+
+            if (trySendWithResend(toEmail, subject, htmlContent)) {
+                long duration = System.currentTimeMillis() - asyncStartTime;
+                log.info("[ASYNC-EMAIL] Password reset email delivered immediately to {} via Resend in {}ms", toEmail, duration);
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setFrom(sender, "HireGenius AI");
             helper.setTo(toEmail);
-            helper.setSubject("Reset Your HireGenius AI Password");
+            helper.setSubject(subject);
 
-            String htmlContent = buildResetPasswordEmailHtml(userName, resetLink);
+            // High-priority transactional headers to prevent delay and bypass bulk filtering
+            message.setHeader("X-Priority", "1");
+            message.setHeader("Priority", "Urgent");
+            message.setHeader("Importance", "high");
+            message.setHeader("X-MSMail-Priority", "High");
+
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
@@ -139,6 +200,12 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(toEmail);
             helper.setSubject("Your HireGenius AI Verification Code: " + otpCode);
 
+            // High-priority transactional headers
+            message.setHeader("X-Priority", "1");
+            message.setHeader("Priority", "Urgent");
+            message.setHeader("Importance", "high");
+            message.setHeader("X-MSMail-Priority", "High");
+
             String htmlContent = buildVerificationOtpEmailHtml(userName, otpCode);
             helper.setText(htmlContent, true);
 
@@ -225,6 +292,12 @@ public class EmailServiceImpl implements EmailService {
             helper.setFrom(sender, "HireGenius AI");
             helper.setTo(toEmail);
             helper.setSubject("Your HireGenius AI Recruiter Account Has Been Approved!");
+
+            // High-priority transactional headers
+            message.setHeader("X-Priority", "1");
+            message.setHeader("Priority", "Urgent");
+            message.setHeader("Importance", "high");
+            message.setHeader("X-MSMail-Priority", "High");
 
             String htmlContent = buildRecruiterApprovalEmailHtml(userName);
             helper.setText(htmlContent, true);

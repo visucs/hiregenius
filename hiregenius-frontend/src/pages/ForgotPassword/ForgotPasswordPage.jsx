@@ -94,8 +94,11 @@ const ForgotPasswordPage = () => {
               <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                 Check your email
               </h2>
-              <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                 If an account exists for that email, we&apos;ve sent password reset instructions.
+              </p>
+              <p className="text-xs mb-6 px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--surface-raised, #f9fafb)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                Please check your inbox as well as your <strong>Spam</strong> or <strong>Promotions</strong> folder.
               </p>
               <Link
                 to="/login"

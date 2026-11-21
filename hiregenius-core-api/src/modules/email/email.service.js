@@ -77,6 +77,12 @@ class EmailService {
         subject,
         html,
         text: text || '',
+        headers: {
+          'X-Priority': '1',
+          'Priority': 'Urgent',
+          'Importance': 'high',
+          'X-MSMail-Priority': 'High',
+        },
       };
 
       console.log(`[EmailService] Preparing dispatch - TYPE: ${type} | TO: ${to} | FROM: ${mailOptions.from} | SUBJECT: "${subject}"`);
