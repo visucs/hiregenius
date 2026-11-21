@@ -42,6 +42,36 @@ class Settings:
         "AI_ML_SERVICE_INTERNAL_KEY", "hg_internal_dev_secret_key_2026"
     )
 
+    # ── ATS Scoring Configuration (v2 Heuristic Engine) ──────────────────────────
+    # NOTE: There is no universal ATS algorithm. These weights are UNTUNED heuristic
+    # estimates designed for diagnostic feedback, not a supervised machine learning model.
+    SCORING_VERSION: str = "ats-v2-untuned"
+    CAPPED_SCORE_UNREADABLE: float = 10.0
+    ATS_DISCLAIMER: str = (
+        "This score is a transparent heuristic estimate based on structural formatting and "
+        "keyword alignment. Real applicant tracking systems vary widely, and scores should be "
+        "used as guidance rather than an absolute evaluation."
+    )
+
+    # General Mode Weights (Total: 100 points) - UNTUNED
+    ATS_WEIGHTS_GENERAL: dict = {
+        "parsability": 25.0,
+        "sections": 20.0,
+        "contact": 10.0,
+        "skills": 15.0,
+        "content": 20.0,
+        "length": 10.0,
+    }
+
+    # Job-Specific Mode Weights (Total: 100 points) - UNTUNED
+    ATS_WEIGHTS_JOB: dict = {
+        "keywords": 45.0,
+        "title": 10.0,
+        "experience": 15.0,
+        "education": 10.0,
+        "parsability": 20.0,
+    }
+
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment."""
         if self.ENV == "production":

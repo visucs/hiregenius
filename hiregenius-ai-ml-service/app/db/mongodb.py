@@ -18,6 +18,7 @@ class MongoDBManager:
         self.db: Optional[AsyncIOMotorDatabase] = None
         self.resumes_collection: Optional[AsyncIOMotorCollection] = None
         self.ats_collection: Optional[AsyncIOMotorCollection] = None
+        self.jd_cache_collection: Optional[AsyncIOMotorCollection] = None
 
     async def connect(self) -> None:
         """Establish asynchronous connection to MongoDB cluster."""
@@ -40,6 +41,8 @@ class MongoDBManager:
             self.resumes_collection = self.db["resumes"]
             # Collection reference for ATS evaluation results
             self.ats_collection = self.db["ats_results"]
+            # Collection reference for cached Gemini JD keyword extractions
+            self.jd_cache_collection = self.db["jd_keyword_cache"]
 
             # Verify connectivity immediately on startup with a lightweight ping
             await self.client.admin.command("ping")
@@ -78,6 +81,7 @@ class MongoDBManager:
             self.db = None
             self.resumes_collection = None
             self.ats_collection = None
+            self.jd_cache_collection = None
             logger.info("[MongoDB] MongoDB connection closed cleanly.")
 
     async def ping(self) -> bool:
@@ -108,3 +112,8 @@ def get_resumes_collection() -> Optional[AsyncIOMotorCollection]:
 def get_ats_collection() -> Optional[AsyncIOMotorCollection]:
     """Retrieve reference to the ats_results collection."""
     return mongo_manager.ats_collection
+
+
+def get_jd_cache_collection() -> Optional[AsyncIOMotorCollection]:
+    """Retrieve reference to the cached JD keyword extraction collection."""
+    return mongo_manager.jd_cache_collection

@@ -14,7 +14,7 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 6 complete (AI Resume Parsing + ATS Checker Engine + Frontend ATS UI fully wired & verified) | Ready for Phase 7 (AI Interview Module)
+- **Active Phase:** ATS Score Checker v2 (Part 1 AI/ML engine complete & verified) | Next: Part 2 Core API persistence & rate limiting
 - **Last Updated:** 2026-11-21
 
 ## Repo / Service Locations

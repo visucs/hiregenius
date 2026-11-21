@@ -82,3 +82,42 @@ class ATSCheckResponse(BaseModel):
 
 class CategoriesResponse(BaseModel):
     categories: List[str] = Field(..., description="List of 24 supported job categories")
+
+
+# ── V2 Unified ATS Scan Models ──────────────────────────────────────────────────
+
+class CategoryScoreItem(BaseModel):
+    name: str = Field(..., description="Name of category (e.g. Parsability & Format, Keywords Match)")
+    score: float = Field(..., description="Earned points for this category")
+    max: float = Field(..., description="Maximum possible points for this category")
+    details: Optional[Dict[str, Any]] = Field(default=None, description="Detailed diagnostic breakdown")
+    not_assessable: bool = Field(False, description="True if text could not be extracted (e.g. scanned/encrypted)")
+
+
+class IssueItem(BaseModel):
+    severity: Literal["critical", "warning", "tip"] = Field(..., description="Urgency: critical, warning, or tip")
+    category: str = Field(..., description="Related evaluation category")
+    message: str = Field(..., description="Concise diagnostic message")
+    how_to_fix: str = Field(..., description="Actionable recommendation on how to address the issue")
+
+
+class MissingKeywords(BaseModel):
+    required: List[str] = Field(default_factory=list, description="Mandatory job skills missing from resume")
+    preferred: List[str] = Field(default_factory=list, description="Nice-to-have or preferred skills missing from resume")
+
+
+class ATSScanResponse(BaseModel):
+    overallScore: float = Field(..., description="Calculated ATS heuristic score (0-100)")
+    grade: str = Field(..., description="Grade descriptor: Excellent, Good Match, Moderate, Needs Work")
+    mode: Literal["GENERAL", "JOB"] = Field(..., description="Evaluation mode: GENERAL or JOB")
+    categoryScores: List[CategoryScoreItem] = Field(..., description="Category points breakdown")
+    issues: List[IssueItem] = Field(default_factory=list, description="Prioritized actionable issues")
+    matchedKeywords: List[str] = Field(default_factory=list, description="Target keywords identified in resume")
+    missingKeywords: MissingKeywords = Field(default_factory=MissingKeywords, description="Missing keywords breakdown")
+    extractedTextPreview: str = Field(..., description="First 500 characters of extracted text as seen by parser")
+    disclaimer: str = Field(..., description="Transparency notice that score is an untuned heuristic estimate")
+    scoringVersion: str = Field(..., description="Version of the scoring engine (e.g. ats-v2-untuned)")
+    ai_suggestions_unavailable: bool = Field(False, description="True if LLM JD extraction fell back to rule-based")
+    candidateId: Optional[str] = Field(None, description="Candidate ID if profile resume was used")
+    jobId: Optional[str] = Field(None, description="Job ID if job-specific match was run")
+    source: Literal["PROFILE", "UPLOAD"] = Field(..., description="Resume source: PROFILE or UPLOAD")

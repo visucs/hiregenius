@@ -1,13 +1,18 @@
 """
-Resume Section Detection.
+Resume Section Detection and Structure Analysis.
 
 Implements heading-style section detection (short standalone lines at line start),
 inspects structured ParsedResume fields when provided, and provides regex
 fallbacks so ATS checks remain 100% functional without an LLM or parsed resume.
+
+Includes:
+- Fresher detection: Projects/Internships/Education substitute for Experience with zero penalty.
+- Support for Indian academic and career formats (B.Tech, B.E., BCA, MCA, Diploma, 'Objective').
+- Personal-field detection for modern bias-free ATS recommendations (DOB, marital status, father's name, gender, photo).
 """
 
 import re
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 from app.models.resume import ParsedResume
 
 SECTION_NAMES = [
@@ -28,7 +33,7 @@ HEADING_PATTERNS: Dict[str, str] = {
         r"^(?:summary|professional\s+summary|executive\s+summary|objective|career\s+objective|about\s+me|profile)$"
     ),
     "Experience": (
-        r"^(?:experience|work\s+experience|professional\s+experience|employment(?:\s+history)?|work\s+history)$"
+        r"^(?:experience|work\s+experience|professional\s+experience|employment(?:\s+history)?|work\s+history|internships?)$"
     ),
     "Education": (
         r"^(?:education|academic\s+background|academics|qualifications|academic\s+history)$"
@@ -46,12 +51,52 @@ HEADING_PATTERNS: Dict[str, str] = {
 
 FALLBACK_PATTERNS: Dict[str, str] = {
     "Summary/Objective": r"(?:^|\n)\s*(?:#+\s*)?(?:summary|objective|career\s+objective|professional\s+summary|about\s+me)\b",
-    "Experience": r"(?:^|\n)\s*(?:#+\s*)?(?:work\s+experience|professional\s+experience|employment\s+history|experience)\b",
-    "Education": r"(?:^|\n)\s*(?:#+\s*)?(?:education|academic\s+background|academics)\b",
+    "Experience": r"(?:^|\n)\s*(?:#+\s*)?(?:work\s+experience|professional\s+experience|employment\s+history|experience|internships?)\b",
+    "Education": r"(?:^|\n)\s*(?:#+\s*)?(?:education|academic\s+background|academics|b\.?tech|b\.?e\.?|bca|mca|diploma)\b",
     "Skills": r"(?:^|\n)\s*(?:#+\s*)?(?:technical\s+skills|core\s+competencies|skills)\b",
     "Projects": r"(?:^|\n)\s*(?:#+\s*)?(?:key\s+projects|personal\s+projects|academic\s+projects|projects)\s*(?::|\n|$)",
     "Certifications": r"(?:^|\n)\s*(?:#+\s*)?(?:certifications?|licenses?|credentials?)\b",
 }
+
+PERSONAL_DEMOGRAPHICS_REGEX = re.compile(
+    r"\b(?:d\.?o\.?b\.?|date\s+of\s+birth|marital\s+status|father'?s?\s+name|father\s+name|gender\s*:\s*(?:male|female|other)|marital\s*:\s*(?:single|married))\b",
+    re.IGNORECASE,
+)
+
+FRESHER_KEYWORDS_REGEX = re.compile(
+    r"\b(?:fresher|entry\s*level|internship|intern|recent\s*graduate|seeking\s+(?:an?\s+)?entry[- ]level|career\s*objective|0\s*years?|6\s*months?|1\.5\s*yrs?)\b",
+    re.IGNORECASE,
+)
+
+
+def detect_personal_demographics(text: str) -> bool:
+    """Detect presence of personal fields (DOB, marital status, father's name, gender, photo mention)."""
+    if not text:
+        return False
+    return bool(PERSONAL_DEMOGRAPHICS_REGEX.search(text))
+
+
+def is_fresher_profile(
+    text: str,
+    parsed_resume: Optional[ParsedResume] = None,
+) -> bool:
+    """
+    Detect if the candidate is early-career / fresher.
+    """
+    if parsed_resume is not None:
+        if not parsed_resume.experience or len(parsed_resume.experience) == 0:
+            return True
+        total_months = 0
+        for exp in parsed_resume.experience:
+            if getattr(exp, "duration_months", None):
+                total_months += exp.duration_months
+        if total_months > 0 and total_months <= 12:
+            return True
+
+    if not text:
+        return False
+
+    return bool(FRESHER_KEYWORDS_REGEX.search(text))
 
 
 def detect_sections(
@@ -114,8 +159,20 @@ def detect_sections(
     return results
 
 
-def compute_section_score(sections: Dict[str, bool]) -> float:
-    """Return section completeness percentage (0.0 to 100.0)."""
+def compute_section_score(
+    sections: Dict[str, bool],
+    is_fresher: bool = False,
+) -> float:
+    """
+    Return section completeness percentage (0.0 to 100.0).
+    If candidate is a fresher, having Projects + Education + Skills waives any Experience section penalty.
+    """
     if not sections:
         return 0.0
-    return round((sum(sections.values()) / len(sections)) * 100.0, 1)
+
+    eval_sections = dict(sections)
+    if is_fresher and not eval_sections.get("Experience") and eval_sections.get("Projects"):
+        # Projects count in place of Experience for freshers with no penalty
+        eval_sections["Experience"] = True
+
+    return round((sum(eval_sections.values()) / len(eval_sections)) * 100.0, 1)

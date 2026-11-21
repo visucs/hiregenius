@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from app.api.auth import verify_internal_key
 from app.models.ats import (
     ATSCheckResponse,
+    ATSScanResponse,
     CategoriesResponse,
     CategoryMatchItem,
     FormatSignals,
@@ -29,7 +30,8 @@ from app.models.ats import (
     ScoreBreakdown,
 )
 from app.models.resume import ParsedResume
-from app.services.ats import JOB_CATEGORIES, analyze, inspect_parsability
+from app.services.ats import JOB_CATEGORIES, analyze, analyze_v2, inspect_parsability
+from app.services.ats.jd_extractor import extract_job_requirements
 from app.services.ats_repository import (
     AtsRepositoryError,
     DatabaseNotConnectedError,
@@ -159,6 +161,128 @@ def _extract_text_safe(content: bytes, filename: str) -> str:
             "DocumentProcessingError",
             f"Failed to extract text from '{filename}': Document processing error.",
         )
+
+
+@router.post(
+    "/scan",
+    response_model=ATSScanResponse,
+    summary="Unified ATS Heuristic Evaluation (v2)",
+    description="Evaluates resume compatibility against GENERAL standards or target JOB requirements with transparent heuristic scoring.",
+)
+async def scan_resume(
+    file: Optional[UploadFile] = File(None, description="Draft resume file (.pdf/.docx up to 5MB, not saved)"),
+    candidate_id: Optional[str] = Form(None, description="Candidate ID to evaluate stored resume from MongoDB"),
+    mode: str = Form("GENERAL", description="Evaluation mode: GENERAL or JOB"),
+    job_id: Optional[str] = Form(None, description="Job ID for job-specific evaluation"),
+    job_title: Optional[str] = Form(None, description="Target job title"),
+    job_description: Optional[str] = Form(None, description="Pasted job description text"),
+):
+    mode_upper = (mode or "GENERAL").strip().upper()
+    if mode_upper not in {"GENERAL", "JOB"}:
+        _raise_ats_error(
+            status.HTTP_400_BAD_REQUEST,
+            "ValidationError",
+            "mode must be either 'GENERAL' or 'JOB'.",
+        )
+
+    content: Optional[bytes] = None
+    filename: Optional[str] = None
+    raw_text: str = ""
+    is_unreadable = False
+    unreadable_reason = ""
+    parsed_resume_model: Optional[ParsedResume] = None
+
+    if file is not None:
+        source = "UPLOAD"
+        content, filename = await _read_and_validate_file(file)
+
+        try:
+            raw_text = extract_text(content, filename)
+            if len(raw_text.strip()) < MIN_RESUME_TEXT_CHARS:
+                is_unreadable = True
+                unreadable_reason = "ATS cannot read text from this file. The document contains very little extractable text and appears to be an image scan."
+        except ScannedDocumentError as e:
+            is_unreadable = True
+            unreadable_reason = "ATS cannot read text from this file. The document appears to be an image-only scan without an extractable text layer."
+        except EncryptedFileError as e:
+            is_unreadable = True
+            unreadable_reason = "File is password protected. ATS cannot decrypt or read the document."
+        except CorruptedFileError as e:
+            is_unreadable = True
+            unreadable_reason = f"File is corrupted or unreadable: {str(e)}"
+        except Exception as e:
+            is_unreadable = True
+            unreadable_reason = f"Document processing error: {str(e)}"
+
+    else:
+        source = "PROFILE"
+        clean_cid = (candidate_id or "").strip()
+        if not clean_cid:
+            _raise_ats_error(
+                status.HTTP_400_BAD_REQUEST,
+                "ValidationError",
+                "Either 'file' or 'candidate_id' must be provided.",
+            )
+
+        try:
+            stored_doc = await get_parsed_resume_by_candidate_id(clean_cid)
+        except Exception as e:
+            logger.error(f"Error fetching stored resume for '{clean_cid}': {e}")
+            _raise_ats_error(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "DatabaseNotConnectedError",
+                "Database service unavailable. Cannot retrieve resume.",
+            )
+
+        if not stored_doc:
+            _raise_ats_error(
+                status.HTTP_404_NOT_FOUND,
+                "ResumeNotFoundError",
+                f"No stored resume found for candidate_id '{clean_cid}'.",
+            )
+
+        raw_text = stored_doc.get("raw_text", "")
+        filename = stored_doc.get("original_filename", "profile_resume.pdf")
+        parsed_dict = stored_doc.get("parsed_data")
+        parsed_resume_model = ParsedResume(**parsed_dict) if parsed_dict else None
+
+    # Job requirements extraction for JOB mode
+    job_reqs = None
+    ai_suggestions_unavailable = False
+
+    if mode_upper == "JOB":
+        clean_jd = (job_description or "").strip()
+        if not clean_jd:
+            _raise_ats_error(
+                status.HTTP_400_BAD_REQUEST,
+                "ValidationError",
+                "job_description is required for JOB mode.",
+            )
+
+        job_reqs, is_fallback = await extract_job_requirements(
+            job_description=clean_jd,
+            job_title=job_title.strip() if job_title else None,
+            job_id=job_id.strip() if job_id else None,
+        )
+        ai_suggestions_unavailable = is_fallback
+
+    # Run pure v2 analysis
+    result = analyze_v2(
+        text=raw_text,
+        file_bytes=content,
+        filename=filename,
+        job_requirements=job_reqs,
+        mode=mode_upper,
+        is_unreadable=is_unreadable,
+        unreadable_reason=unreadable_reason,
+        parsed_resume=parsed_resume_model,
+        candidate_id=candidate_id.strip() if candidate_id else None,
+        job_id=job_id.strip() if job_id else None,
+        source=source,
+        ai_suggestions_unavailable=ai_suggestions_unavailable,
+    )
+
+    return result
 
 
 @router.post(
