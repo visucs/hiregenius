@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Plus, RefreshCw, Briefcase, Users, Bot,
@@ -28,6 +29,8 @@ const RECOMMENDATION_THEMES = {
 };
 
 const RecruiterAIInterviewPage = () => {
+  const navigate = useNavigate();
+
   // Navigation & Filter state
   const [jobs, setJobs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState('');
@@ -64,15 +67,51 @@ const RecruiterAIInterviewPage = () => {
   const [isRetryingEval, setIsRetryingEval] = useState(false);
   const [isUpdatingAts, setIsUpdatingAts] = useState(false);
 
+  // Helper to load applications for a specific job
+  const loadAppsForJob = useCallback(async (jobId) => {
+    if (!jobId) {
+      setApplications([]);
+      setSelectedAppId('');
+      return;
+    }
+    setLoadingApps(true);
+    try {
+      const res = await applicationsService.getJobApplications(jobId);
+      const list = Array.isArray(res?.data)
+        ? res.data
+        : (Array.isArray(res?.data?.applications)
+            ? res.data.applications
+            : (Array.isArray(res) ? res : []));
+      setApplications(list);
+      if (list.length > 0) {
+        setSelectedAppId(String(list[0].id));
+      } else {
+        setSelectedAppId('');
+      }
+    } catch (err) {
+      console.error('[RecruiterAIInterview] Error loading applications:', err);
+      toast.error('Failed to load candidate applications.');
+    } finally {
+      setLoadingApps(false);
+    }
+  }, []);
+
   // 1. Fetch Recruiter Jobs
   const fetchJobs = useCallback(async () => {
     setLoadingJobs(true);
     try {
-      const res = await jobsService.getRecruiterJobs();
-      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const res = await jobsService.getMyJobs({ limit: 100 });
+      const list = res?.data?.jobs || (Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []));
       setJobs(list);
-      if (list.length > 0 && !selectedJobId) {
-        setSelectedJobId(String(list[0].id));
+      if (list.length > 0) {
+        setSelectedJobId((prev) => {
+          if (prev && list.some((j) => String(j.id) === String(prev))) {
+            return prev;
+          }
+          return String(list[0].id);
+        });
+      } else {
+        setSelectedJobId('');
       }
     } catch (err) {
       console.error('[RecruiterAIInterview] Error loading jobs:', err);
@@ -80,7 +119,7 @@ const RecruiterAIInterviewPage = () => {
     } finally {
       setLoadingJobs(false);
     }
-  }, [selectedJobId]);
+  }, []);
 
   useEffect(() => {
     fetchJobs();
@@ -88,7 +127,10 @@ const RecruiterAIInterviewPage = () => {
 
   // 2. Fetch AI Interviews for selected Job
   const fetchJobInterviews = useCallback(async () => {
-    if (!selectedJobId) return;
+    if (!selectedJobId) {
+      setInterviews([]);
+      return;
+    }
     setLoadingInterviews(true);
     try {
       const res = await aiInterviewsService.getJobAiInterviews(selectedJobId);
@@ -106,26 +148,19 @@ const RecruiterAIInterviewPage = () => {
     fetchJobInterviews();
   }, [fetchJobInterviews]);
 
-  // 3. Fetch applications when opening New Assessment modal
+  // 3. Open New Assessment modal and load applications
   const handleOpenGenModal = async () => {
-    setShowGenModal(true);
-    setSelectedAppId('');
-    if (!selectedJobId) return;
-    setLoadingApps(true);
-    try {
-      const res = await applicationsService.getJobApplications(selectedJobId);
-      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-      // Filter out rejected or hired if needed, or show all
-      setApplications(list);
-      if (list.length > 0) {
-        setSelectedAppId(String(list[0].id));
-      }
-    } catch (err) {
-      console.error('[RecruiterAIInterview] Error loading applications:', err);
-      toast.error('Failed to load candidate applications.');
-    } finally {
-      setLoadingApps(false);
+    if (jobs.length === 0) {
+      toast.error('No jobs posted yet. Please create a job position first.');
+      navigate('/recruiter/jobs');
+      return;
     }
+    const targetJobId = selectedJobId || String(jobs[0].id);
+    if (!selectedJobId) {
+      setSelectedJobId(targetJobId);
+    }
+    setShowGenModal(true);
+    await loadAppsForJob(targetJobId);
   };
 
   // 4. Generate AI Interview
@@ -324,7 +359,7 @@ const RecruiterAIInterviewPage = () => {
             {/* Top Action: New Assessment Button */}
             <button
               onClick={handleOpenGenModal}
-              disabled={!selectedJobId || loadingJobs}
+              disabled={loadingJobs}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -336,7 +371,7 @@ const RecruiterAIInterviewPage = () => {
                 fontSize: 13,
                 fontWeight: 700,
                 border: 'none',
-                cursor: !selectedJobId ? 'not-allowed' : 'pointer',
+                cursor: loadingJobs ? 'wait' : 'pointer',
                 boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
               }}
             >
@@ -429,13 +464,21 @@ const RecruiterAIInterviewPage = () => {
           <div style={{ padding: 60, textAlign: 'center', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--border)' }}>
             <Bot size={40} className="text-emerald-400 mx-auto mb-3 opacity-70" />
             <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
-              No AI Assessments Found
+              {jobs.length === 0 ? 'No Job Postings Found' : 'No AI Assessments Found'}
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto 20px', lineHeight: 1.6 }}>
-              There are no AI interview sessions created under this position yet. Select an applicant and generate tailored technical questions.
+              {jobs.length === 0
+                ? 'You have not created any job postings yet. Create a job first so candidates can apply and be assessed with AI.'
+                : 'There are no AI interview sessions created under this position yet. Select an applicant and generate tailored technical questions.'}
             </p>
             <button
-              onClick={handleOpenGenModal}
+              onClick={() => {
+                if (jobs.length === 0) {
+                  navigate('/recruiter/jobs');
+                } else {
+                  handleOpenGenModal();
+                }
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -450,7 +493,7 @@ const RecruiterAIInterviewPage = () => {
                 cursor: 'pointer',
               }}
             >
-              <Plus size={15} /> Create Assessment
+              <Plus size={15} /> {jobs.length === 0 ? 'Post a New Job' : 'Create Assessment'}
             </button>
           </div>
         ) : (
@@ -604,15 +647,46 @@ const RecruiterAIInterviewPage = () => {
                 </button>
               </div>
 
+              {/* Job Position Selector in Modal */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#cbd5e1', marginBottom: 6 }}>
+                  Job Position
+                </label>
+                <select
+                  value={selectedJobId}
+                  onChange={async (e) => {
+                    const newJobId = e.target.value;
+                    setSelectedJobId(newJobId);
+                    await loadAppsForJob(newJobId);
+                  }}
+                  style={{ width: '100%', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 12px', color: '#f8fafc', fontSize: 13, outline: 'none' }}
+                >
+                  {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                      {job.title} ({job.company || 'Direct'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Applicant Picker */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#cbd5e1', marginBottom: 6 }}>
                   Select Applicant
                 </label>
                 {loadingApps ? (
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Loading applicants...</div>
+                  <div style={{ padding: '10px 14px', background: '#1e293b', borderRadius: 8, fontSize: 13, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <RefreshCw size={14} className="animate-spin text-emerald-400" /> Loading applicants...
+                  </div>
                 ) : applications.length === 0 ? (
-                  <div style={{ fontSize: 12, color: '#f87171' }}>No candidate applications available on this job.</div>
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#fca5a5', lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <AlertCircle size={14} className="text-red-400" /> No candidates have applied to this position yet.
+                    </div>
+                    <div style={{ color: '#cbd5e1' }}>
+                      To generate tailored interview questions, candidates must apply to this job first. You can also select another job above that already has applicants.
+                    </div>
+                  </div>
                 ) : (
                   <select
                     value={selectedAppId}
@@ -621,7 +695,7 @@ const RecruiterAIInterviewPage = () => {
                   >
                     {applications.map((app) => (
                       <option key={app.id} value={app.id}>
-                        {app.candidate_name || `Applicant #${app.id}`} • Stage: {app.status}
+                        {app.candidate_name ? `${app.candidate_name} (${app.candidate_email || 'Applicant #' + app.id})` : `Applicant #${app.id}`} • Stage: {app.status}
                       </option>
                     ))}
                   </select>

@@ -18,6 +18,14 @@ export const jobsService = {
   },
 
   /**
+   * Alias for getMyJobs for recruiter views
+   */
+  getRecruiterJobs: async (params = {}) => {
+    const res = await api.get('/jobs/mine', { params });
+    return res.data;
+  },
+
+  /**
    * Fetch public open jobs
    * GET /api/jobs
    * @param {object} [params] - { page, limit, title, company, location }
