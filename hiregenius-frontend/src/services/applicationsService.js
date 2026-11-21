@@ -56,6 +56,17 @@ export const applicationsService = {
     const res = await api.get(`/applications/${id}`);
     return res.data;
   },
+
+  /**
+   * Get application ATS evaluation for recruiter
+   * GET /api/jobs/:jobId/applications/:applicationId/ats
+   * @param {number|string} jobId
+   * @param {number|string} applicationId
+   */
+  getApplicationAts: async (jobId, applicationId) => {
+    const res = await api.get(`/jobs/${jobId}/applications/${applicationId}/ats`);
+    return res.data;
+  },
 };
 
 export default applicationsService;

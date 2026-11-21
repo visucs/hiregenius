@@ -80,6 +80,29 @@ export const candidatesService = {
     const res = await api.get(`/candidates/${candidateId}/resume/parsed`);
     return res.data;
   },
+
+  /**
+   * Run general ATS check on candidate resume
+   * POST /api/candidates/me/ats-check
+   * @param {FormData} [formData] - Optional file upload ('resume')
+   */
+  checkGeneralAts: async (formData = null) => {
+    const config = formData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const res = await api.post('/candidates/me/ats-check', formData || {}, config);
+    return res.data;
+  },
+
+  /**
+   * Get candidate's own ATS result
+   * GET /api/candidates/me/ats
+   * @param {string|number} [jobId] - Optional job ID filter
+   */
+  getMyAts: async (jobId = null) => {
+    const res = await api.get('/candidates/me/ats', {
+      params: jobId ? { jobId } : {},
+    });
+    return res.data;
+  },
 };
 
 export default candidatesService;

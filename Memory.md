@@ -14,8 +14,8 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 ---
 
 ## Current Status
-- **Active Phase:** Phase 6 Part D complete (Resume Parsing Agent with LangChain + Google Gemini) | Core API deployed | Auth Service deployed | Frontend live
-- **Last Updated:** 2026-10-03
+- **Active Phase:** Phase 6 complete (AI Resume Parsing + ATS Checker Engine + Frontend ATS UI fully wired & verified) | Ready for Phase 7 (AI Interview Module)
+- **Last Updated:** 2026-11-21
 
 ## Repo / Service Locations
 - Frontend: hiregenius-frontend/ (live on Vercel)
@@ -2266,3 +2266,23 @@ pm run build completed successfully with 0 errors.
 - **Scope Boundaries Preserved**:
   - Touched **ONLY** `hiregenius-core-api/` and `Memory.md`.
   - Uncommitted files on `fix/prod-register-reset-timeout`, `hiregenius-auth-service/`, and `hiregenius-frontend/` were left completely untouched.
+
+
+### 2026-11-21 — Phase 6: Frontend ATS UI Wiring & Verification
+- **Scope**: Wired end-to-end frontend ATS scoring and resume screening capabilities across Candidate and Recruiter portals.
+- **Frontend Services Updated**:
+  - src/services/candidatesService.js: Added checkGeneralAts(formData) and getMyAts(jobId).
+  - src/services/jobsService.js: Added checkJobAts(jobId, formData).
+  - src/services/applicationsService.js: Added getApplicationAts(jobId, applicationId).
+- **Components & Pages Built / Updated**:
+  - src/components/Resume/AtsScoreCard.jsx: Comprehensive, reusable ATS evaluation component rendering circular/pill score gauge (0-100), rating badges, sub-score breakdown bars (keyword match, sections completeness, formatting, length), matched vs. missing JD keyword pills, detected standard sections checklist, formatting signals (bullet points, timeline dates, quantified metrics, action verbs), parsability density, and prioritized ATS optimization tips.
+  - src/pages/candidate/ResumeScorePage.jsx: Replaced placeholder state with tabbed UI allowing candidates to switch between ATS Optimization & Scoring and Extracted Skills & Profile. Supports running general benchmark scans or targeted comparisons against open jobs using either their saved profile resume or custom file upload.
+  - src/pages/recruiter/RecruiterResumeScreeningPage.jsx: Replaced ModulePendingState placeholder with full recruiter screening workflow. Recruiter can select from active job postings, view applicant lists with ATS score pills, expand candidates for side-by-side ATS keyword gap breakdown and parsed profile view, and filter by minimum match score (>=70%, All).
+  - src/components/Sidebar/Sidebar.jsx: Enabled live navigation routes for Jobs, Candidates, Resume Screening, Scheduler, and Settings in the recruiter and admin sidebars.
+- **Verification**:
+  - **Frontend Lint**: 0 errors (
+pm run lint --prefix hiregenius-frontend).
+  - **Frontend Production Build**: Vite build completed cleanly with 0 errors (
+pm run build --prefix hiregenius-frontend).
+  - **Core API Backend Tests**: 216 tests passing across 17 test suites (
+pm test --prefix hiregenius-core-api).

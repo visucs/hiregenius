@@ -30,21 +30,21 @@ import { selectUser } from '../../features/auth/authSlice';
 const NAV_CONFIG = {
   RECRUITER: [
     { to: '/recruiter/dashboard',        label: 'Dashboard',       icon: LayoutDashboard },
-    { to: '/recruiter/jobs',             label: 'Jobs',            icon: Briefcase,    disabled: true },
-    { to: '/recruiter/candidates',       label: 'Candidates',      icon: Users,        disabled: true },
-    { to: '/recruiter/resume-screening', label: 'Resume Screening',icon: FileSearch,   disabled: true },
-    { to: '/recruiter/ai-interview',     label: 'AI Interview',    icon: MessageSquare,disabled: true },
-    { to: '/recruiter/scheduler',        label: 'Scheduler',       icon: CalendarDays, disabled: true },
+    { to: '/recruiter/jobs',             label: 'Jobs',            icon: Briefcase },
+    { to: '/recruiter/candidates',       label: 'Candidates',      icon: Users },
+    { to: '/recruiter/resume-screening', label: 'Resume Screening',icon: FileSearch },
+    { to: '/recruiter/ai-interview',     label: 'AI Interview',    icon: MessageSquare, disabled: true },
+    { to: '/recruiter/scheduler',        label: 'Scheduler',       icon: CalendarDays },
     { to: '/recruiter/analytics',        label: 'Analytics',       icon: BarChart3 },
-    { to: '/recruiter/settings',         label: 'Settings',        icon: Settings,     disabled: true },
+    { to: '/recruiter/settings',         label: 'Settings',        icon: Settings },
   ],
   ADMIN: [
     { to: '/admin/dashboard', label: 'Dashboard',      icon: LayoutDashboard },
-    { to: '/admin/users',     label: 'User Management',icon: Users,       disabled: true },
+    { to: '/admin/users',     label: 'User Management',icon: Users },
     { to: '/admin/api-keys',  label: 'API Keys',       icon: Key,         disabled: true },
     { to: '/admin/audit',     label: 'Audit Logs',     icon: ShieldCheck, disabled: true },
     { to: '/admin/analytics', label: 'Analytics',      icon: BarChart3 },
-    { to: '/admin/settings',  label: 'Settings',       icon: Settings,    disabled: true },
+    { to: '/admin/settings',  label: 'Settings',       icon: Settings },
   ],
 };
 

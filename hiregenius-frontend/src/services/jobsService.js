@@ -78,6 +78,18 @@ export const jobsService = {
     const res = await api.delete(`/jobs/${id}`);
     return res.data;
   },
+
+  /**
+   * Run job-specific ATS check for open job (Candidate only)
+   * POST /api/jobs/:jobId/ats-check
+   * @param {string|number} jobId
+   * @param {FormData} [formData] - Optional file upload ('resume')
+   */
+  checkJobAts: async (jobId, formData = null) => {
+    const config = formData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const res = await api.post(`/jobs/${jobId}/ats-check`, formData || {}, config);
+    return res.data;
+  },
 };
 
 export default jobsService;
