@@ -332,6 +332,9 @@ class AIConfigRepository:
             },
         )
 
+        target_version["status"] = "ACTIVE"
+        target_version["activated_at"] = now
+        target_version["version"] = version_num
         return target_version
 
     async def rollback_to_version(

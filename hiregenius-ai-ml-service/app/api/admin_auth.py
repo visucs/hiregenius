@@ -2,11 +2,14 @@ import hashlib
 import hmac
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 from fastapi import Header, HTTPException, Request, status
 from pydantic import BaseModel
+from pymongo.errors import DuplicateKeyError
 
 from app.config import settings
+from app.db.mongodb import mongo_manager
 
 logger = logging.getLogger("hiregenius.ai_ml_service.api.admin_auth")
 
@@ -98,15 +101,31 @@ async def verify_signed_admin_request(
             detail=f"Unauthorized: Request timestamp expired or clock skew exceeded (> {int(max_skew)}s).",
         )
 
-    # 2. Replay attack check
+    # 2. Replay attack check (Distributed MongoDB with L1 In-Memory Fast Cache)
     if x_nonce in _NONCE_STORE:
-        logger.warning(f"[AdminAuth] Replay attack detected for nonce {x_nonce[:8]}...")
+        logger.warning(f"[AdminAuth] In-memory replay attack detected for nonce {x_nonce[:8]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: Replayed request nonce detected.",
         )
 
-    # Record nonce with TTL (valid for 120s past its timestamp)
+    # Distributed check in MongoDB across multi-instance cluster
+    mongo_coll = mongo_manager.get_collection("ai_config_nonces")
+    if mongo_coll is not None:
+        try:
+            exp_dt = datetime.now(timezone.utc) + timedelta(seconds=max_skew * 2)
+            await mongo_coll.insert_one({"nonce": x_nonce, "expires_at": exp_dt})
+        except DuplicateKeyError:
+            logger.warning(f"[AdminAuth] MongoDB distributed replay attack detected for nonce {x_nonce[:8]}...")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: Replayed request nonce detected.",
+            )
+        except Exception as e:
+            # When MongoDB is unavailable or running disconnected, document per-instance fallback
+            logger.warning(f"[AdminAuth] MongoDB nonce check unavailable (operating in single-instance memory mode): {e}")
+
+    # Record in L1 cache with TTL
     _NONCE_STORE[x_nonce] = now + (max_skew * 2)
 
     # 3. Read body bytes
@@ -130,5 +149,7 @@ async def verify_signed_admin_request(
             detail="Unauthorized: Invalid request signature.",
         )
 
-    client_ip = request.client.host if request.client else None
+    client_ip = None
+    if request.client and isinstance(getattr(request.client, "host", None), str):
+        client_ip = request.client.host
     return AdminRequestContext(acting_admin_id=x_acting_admin_id, client_ip=client_ip)

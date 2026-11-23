@@ -6,18 +6,20 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import SecretStr
 
 from app.providers.base import BaseProviderAdapter, KeyValidationResult
+from app.api.redaction import secret_registry
 
 logger = logging.getLogger("hiregenius.ai_ml_service.providers.gemini")
 
-# Sanitization regex to catch any accidental key in exceptions
-API_KEY_REGEX = re.compile(r"(AIza[0-9A-Za-z-_]{35}|AQ\.[0-9A-Za-z-_]{40,}|sk-[0-9A-Za-z-_]{20,})")
+# Sanitization regex to catch any accidental key in exceptions (including short canary tokens)
+API_KEY_REGEX = re.compile(r"(AIza[0-9A-Za-z-_]{30,}|AQ\.[0-9A-Za-z-_]{30,}|sk-[0-9A-Za-z-_]{6,})")
 
 
 def sanitize_error_message(msg: str) -> str:
     """Mask any credential-like string in an error message."""
     if not msg:
         return ""
-    return API_KEY_REGEX.sub("[REDACTED_API_KEY]", msg)
+    redacted = API_KEY_REGEX.sub("[REDACTED_KEY]", str(msg))
+    return secret_registry.redact(redacted)
 
 
 class GeminiProviderAdapter(BaseProviderAdapter):

@@ -14,6 +14,49 @@ CREDENTIAL_PATTERNS = [
 ]
 
 
+class SecretRegistry:
+    """Runtime registry of exact sensitive strings (master keys, internal keys, stored API keys) to mask."""
+
+    def __init__(self):
+        self._exact_secrets = set()
+
+    def register(self, secret: Any) -> None:
+        if not secret:
+            return
+        if hasattr(secret, "get_secret_value"):
+            s = secret.get_secret_value()
+        else:
+            s = str(secret)
+        s_clean = s.strip()
+        if len(s_clean) >= 4:
+            self._exact_secrets.add(s_clean)
+
+    def unregister(self, secret: Any) -> None:
+        if not secret:
+            return
+        if hasattr(secret, "get_secret_value"):
+            s = secret.get_secret_value()
+        else:
+            s = str(secret)
+        self._exact_secrets.discard(s.strip())
+
+    def redact(self, text: str) -> str:
+        if not isinstance(text, str):
+            return text
+        # 1. Mask exact registered secrets
+        for s in list(self._exact_secrets):
+            if s and s in text:
+                text = text.replace(s, "[REDACTED_SECRET]")
+        # 2. Mask pattern matches
+        for pattern in CREDENTIAL_PATTERNS:
+            text = pattern.sub("[REDACTED_SECRET]", text)
+        return text
+
+
+# Global secret registry singleton
+secret_registry = SecretRegistry()
+
+
 class LoggingRedactorFilter(logging.Filter):
     """
     Logging filter that intercepts log records and redacts any potential API keys,
@@ -22,26 +65,21 @@ class LoggingRedactorFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
-            msg = record.msg
-            for pattern in CREDENTIAL_PATTERNS:
-                msg = pattern.sub("[REDACTED_SECRET]", msg)
-            record.msg = msg
+            record.msg = secret_registry.redact(record.msg)
 
         if record.args:
             if isinstance(record.args, tuple):
                 new_args = []
                 for a in record.args:
                     if isinstance(a, str):
-                        for pattern in CREDENTIAL_PATTERNS:
-                            a = pattern.sub("[REDACTED_SECRET]", a)
+                        a = secret_registry.redact(a)
                     new_args.append(a)
                 record.args = tuple(new_args)
             elif isinstance(record.args, dict):
                 new_dict = {}
                 for k, v in record.args.items():
                     if isinstance(v, str):
-                        for pattern in CREDENTIAL_PATTERNS:
-                            v = pattern.sub("[REDACTED_SECRET]", v)
+                        v = secret_registry.redact(v)
                     new_dict[k] = v
                 record.args = new_dict
 

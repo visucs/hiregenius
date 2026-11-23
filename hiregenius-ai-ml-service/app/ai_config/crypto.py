@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.ai_config.secret_store import SecretStore, default_secret_store
+from app.api.redaction import secret_registry
 
 logger = logging.getLogger("hiregenius.ai_ml_service.ai_config.crypto")
 
@@ -78,6 +79,7 @@ def encrypt_api_key(
     raw_text = raw_text.strip()
     if not raw_text:
         raise CryptoError("Cannot encrypt empty API key.")
+    secret_registry.register(raw_text)
 
     nonce = os.urandom(12)  # 96 bits recommended for AES-GCM
     aad = build_aad(provider, master_key_id, record_version)
@@ -133,6 +135,7 @@ def decrypt_api_key(
         aesgcm = AESGCM(master_key_bytes)
         plain_bytes = aesgcm.decrypt(nonce, ciphertext_and_tag, aad)
         decrypted_str = plain_bytes.decode("utf-8")
+        secret_registry.register(decrypted_str)
         return SecretStr(decrypted_str)
     except Exception as e:
         # Never log raw data or ciphertext

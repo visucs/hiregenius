@@ -48,12 +48,14 @@ class CreateDraftRequest(BaseModel):
 class ActivateConfigRequest(BaseModel):
     version: int = Field(..., description="Target version number to activate")
     expected_active_version: int = Field(..., description="Current active version number for optimistic locking")
+    acknowledge_inconclusive: bool = Field(default=False, description="Explicit acknowledgement if test results were inconclusive due to 429 quota")
     note: str = Field(default="", description="Activation justification or release note")
 
 
 class RollbackConfigRequest(BaseModel):
     target_version: int = Field(..., description="Older version number to rollback to")
     expected_active_version: int = Field(..., description="Current active version number for optimistic locking")
+    confirmation_phrase: str = Field(..., description="Must match 'CONFIRM_ROLLBACK' to authorize emergency rollback")
     reason: str = Field(default="", description="Reason for rollback")
 
 
@@ -182,7 +184,23 @@ async def create_draft(
     body: CreateDraftRequest,
     admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
 ):
-    """Creates a new DRAFT configuration version."""
+    """Creates a new DRAFT configuration version. Validates model selectable status."""
+    catalog_items = [m for sublist in PROVIDER_MODEL_CATALOG.values() for m in sublist]
+    active_cfg = await config_repository.get_active_config()
+
+    for t_name, t_spec in body.tasks.items():
+        m_id = t_spec.get("model")
+        cat_match = next((m for m in catalog_items if m.model_id == m_id), None)
+        if cat_match and not cat_match.is_selectable:
+            currently_in_use = (
+                active_cfg and active_cfg.get("tasks", {}).get(t_name, {}).get("model") == m_id
+            )
+            if not currently_in_use:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Model '{m_id}' for task '{t_name}' cannot be newly selected (status: {cat_match.verification_status}). Only VERIFIED models are selectable.",
+                )
+
     draft_doc = await config_repository.create_draft_version(
         tasks=body.tasks,
         admin_id=admin_ctx.acting_admin_id,
@@ -230,8 +248,25 @@ async def activate_configuration(
 ):
     """
     Atomically activates a configuration version. Fails with 409 Conflict if expected_active_version
-    does not match current active_version.
+    does not match current active_version. Enforces activation test gating.
     """
+    target_ver = await config_repository.get_version(body.version)
+    if not target_ver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Version {body.version} not found.")
+
+    test_report = target_ver.get("test_results")
+    if test_report:
+        if test_report.get("has_failed"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Activation gated: Candidate draft has failed task validations. Resolve failures before activation.",
+            )
+        if test_report.get("has_inconclusive") and not body.acknowledge_inconclusive:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Activation gated: Validation results contain inconclusive provider tests (e.g. 429 quota/rate limit). Provide acknowledge_inconclusive=true to activate.",
+            )
+
     try:
         activated = await config_repository.activate_version(
             version_num=body.version,
@@ -268,6 +303,12 @@ async def rollback_configuration(
     """
     Rolls back by cloning the target version into a new version and activating it.
     """
+    if body.confirmation_phrase.strip() != "CONFIRM_ROLLBACK":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Emergency rollback requires exact typed confirmation phrase 'CONFIRM_ROLLBACK'.",
+        )
+
     try:
         new_active = await config_repository.rollback_to_version(
             target_version_num=body.target_version,

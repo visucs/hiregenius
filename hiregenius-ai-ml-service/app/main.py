@@ -10,8 +10,18 @@ from app.api.ats import router as ats_router
 from app.api.interview import router as interview_router
 from app.api.rag import router as rag_router
 from app.api.admin_config import router as admin_config_router
-from app.api.redaction import LoggingRedactorFilter, sanitized_validation_exception_handler
+from app.api.redaction import (
+    LoggingRedactorFilter,
+    sanitized_validation_exception_handler,
+    secret_registry,
+)
 from app.ai_config.repository import config_repository
+
+# Register initial server secrets with the redaction registry
+secret_registry.register(settings.GEMINI_API_KEY)
+secret_registry.register(settings.AI_CONFIG_MASTER_KEY)
+secret_registry.register(settings.AI_CONFIG_INTERNAL_KEY)
+secret_registry.register(settings.AI_ML_SERVICE_INTERNAL_KEY)
 
 # Attach global credential redaction filter to root logger
 root_logger = logging.getLogger()

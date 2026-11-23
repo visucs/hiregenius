@@ -18,10 +18,27 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 - **Last Updated:** 2026-11-21
 
 ## Repo / Service Locations
-- Frontend: hiregenius-frontend/ (live on Vercel)
-- Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
-- Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6, 7 & 8 complete)
+- Frontend: hiregenius-frontend/ (live on Vercel: https://hiregenius-delta.vercel.app)
+- Auth Service: hiregenius-auth-service/ (live on Render: https://hiregenius-auth-service.onrender.com)
+- Core API: hiregenius-core-api/ (live on Render: https://hiregenius-core-api.onrender.com)
+- AI/ML Service: hiregenius-ai-ml-service/ (live on Render: https://hiregenius-ai-ml-service.onrender.com)
+- Retired Infra: EC2 instance (13.203.243.162) was a September 2026 attempt and is currently inactive/offline. Production active deployment topology is Render (Singapore) + Vercel.
+
+## Current Status
+- **Active Phase:** Phase 8 Complete | AI Provider Settings (Admin Console) Part 1 & Part 1 Follow-Up Verified
+- **Branch:** `fix/phase8-verification`
+- **Last Updated:** 2026-11-23
+
+### 2026-11-23 — AI Provider Settings: Part 1 & Part 1 Follow-Up (AI Service Hardening)
+- **Built & Verified (AI Service Only — No Core API or Auth Service touched):**
+  1. *Fail-Closed Security Guards:* AI service strictly refuses to start if `AI_ML_SERVICE_INTERNAL_KEY` is missing or matches dev defaults unless explicitly running in non-prod (`ENV` in development/test/testing/dev).
+  2. *Cryptographic Admin API Authentication:* `verify_signed_admin_request` dependency enforcing mandatory `X-Acting-Admin-Id`, `X-Timestamp`, `X-Nonce`, and `X-Signature` (HMAC-SHA256 over canonical request string) using dedicated `AI_CONFIG_INTERNAL_KEY`. Max clock skew 60s. Distributed nonces backed by MongoDB `ai_config_nonces` with TTL and unique index (falling back cleanly to in-memory store if offline).
+  3. *Credential Encryption Vault:* AES-256-GCM encryption with 12-byte random IV per record, master key ID rotation header, masked last4, and truncated SHA-256 fingerprint. Secret values wrapped in `SecretStr` with stripped `__repr__`/`__str__`.
+  4. *Dynamic Config Resolver & Provenance:* Implemented 3-tier precedence (`db` -> `lkg` -> `env`) with provenance metadata (`provider`, `model`, `config_version`, `config_source`, `is_fallback`). Verified mid-operation immutability/pinning across workflows.
+  5. *Preserved Per-Task Parameters:* Codified non-editable execution contracts in `TASK_EXECUTION_SPECS`. Preserved RAG explainer fast-failover (`timeout=10, max_retries=0` from `b1a0e65`). Added `scripts/verify_task_params_before_after.py` proving 100% parameter equivalence.
+  6. *Runtime Secret Redaction:* Implemented `SecretRegistry` masking exact secrets (master keys, internal keys, stored keys) and canary tokens in all error handlers and logs.
+  7. *Test Suite:* 139/139 tests passing across all 12 test files (including 34 comprehensive `test_ai_config_suite.py` tests covering canary vectors, circuit breaker, optimistic locking, and rollback).
+- **Status:** Part 1 complete. Stopping for user approval before proceeding to Part 2 or Part 1b.
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).

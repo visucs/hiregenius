@@ -27,6 +27,45 @@ ALL_TASKS: List[TaskType] = [
     TaskType.RAG_EXPLAINER,
 ]
 
+# Non-editable execution parameters codified per task to preserve runtime contracts
+TASK_EXECUTION_SPECS: Dict[TaskType, Dict[str, Any]] = {
+    TaskType.RESUME_PARSER: {
+        "temperature": 0.0,
+        "timeout": 30,
+        "max_retries": 2,
+        "method": "with_structured_output",
+        "schema_name": "ParsedResume",
+    },
+    TaskType.ATS_JD_EXTRACTION: {
+        "temperature": 0.0,
+        "timeout": 30,
+        "max_retries": 2,
+        "method": "with_structured_output",
+        "schema_name": "JDExtractedRequirements",
+    },
+    TaskType.INTERVIEW_GENERATE: {
+        "temperature": 0.0,
+        "timeout": 30,
+        "max_retries": 2,
+        "method": "with_structured_output",
+        "schema_name": "LLMQuestionList",
+    },
+    TaskType.INTERVIEW_EVALUATE: {
+        "temperature": 0.0,
+        "timeout": 30,
+        "max_retries": 2,
+        "method": "with_structured_output",
+        "schema_name": "LLMEvaluationReport",
+    },
+    TaskType.RAG_EXPLAINER: {
+        "temperature": 0.0,
+        "timeout": 10,
+        "max_retries": 0,
+        "method": "with_structured_output",
+        "schema_name": "GroundedExplanation",
+    },
+}
+
 
 class ModelCatalogItem(BaseModel):
     model_id: str = Field(..., description="Canonical provider model identifier")
@@ -34,8 +73,10 @@ class ModelCatalogItem(BaseModel):
     provider: str = Field(..., description="Provider identifier (e.g. 'gemini')")
     capabilities: List[str] = Field(default_factory=list, description="Supported features: chat, structured_output, embeddings")
     verified_on: str = Field(..., description="UTC timestamp of committed live verification script run")
-    verification_status: str = Field(..., description="VERIFIED_PASSED, RATE_LIMITED_DIAGNOSTIC, or DEPRECATED")
+    verification_status: str = Field(..., description="VERIFIED (selectable), UNVERIFIED (429/quota), or UNAVAILABLE (404)")
     dimension: Optional[int] = Field(None, description="Vector embedding dimension if applicable")
+    is_selectable: bool = Field(default=False, description="Whether this model can be newly selected in drafts")
+    in_use_warning: Optional[str] = Field(None, description="Warning if model is currently active but unverified")
     notes: Optional[str] = Field(None, description="Diagnostic notes or provider constraints")
 
 
@@ -48,7 +89,8 @@ PROVIDER_MODEL_CATALOG: Dict[str, List[ModelCatalogItem]] = {
             provider="gemini",
             capabilities=["chat", "structured_output"],
             verified_on="2026-11-23 07:46:31 UTC",
-            verification_status="VERIFIED_PASSED",
+            verification_status="VERIFIED",
+            is_selectable=True,
             notes="Passed live structured output benchmark in 18.5s.",
         ),
         ModelCatalogItem(
@@ -57,7 +99,9 @@ PROVIDER_MODEL_CATALOG: Dict[str, List[ModelCatalogItem]] = {
             provider="gemini",
             capabilities=["chat", "structured_output"],
             verified_on="2026-11-23 07:46:31 UTC",
-            verification_status="RATE_LIMITED_DIAGNOSTIC",
+            verification_status="UNVERIFIED",
+            is_selectable=False,
+            in_use_warning="In use, unverified: currently powers active baseline tasks. Cannot be newly selected for other tasks until live verification passes.",
             notes="Current environment baseline model. Live verification encountered free-tier 20 req/day quota limit.",
         ),
         ModelCatalogItem(
@@ -66,8 +110,9 @@ PROVIDER_MODEL_CATALOG: Dict[str, List[ModelCatalogItem]] = {
             provider="gemini",
             capabilities=["chat", "structured_output"],
             verified_on="2026-11-23 07:46:31 UTC",
-            verification_status="RATE_LIMITED_DIAGNOSTIC",
-            notes="Available in list_models(); rate-limited during verification benchmark.",
+            verification_status="UNVERIFIED",
+            is_selectable=False,
+            notes="Available in list_models(); rate-limited during verification benchmark (429).",
         ),
         ModelCatalogItem(
             model_id="gemini-embedding-001",
@@ -75,8 +120,9 @@ PROVIDER_MODEL_CATALOG: Dict[str, List[ModelCatalogItem]] = {
             provider="gemini",
             capabilities=["embeddings"],
             verified_on="2026-11-23 07:46:31 UTC",
-            verification_status="VERIFIED_PASSED",
+            verification_status="VERIFIED",
             dimension=768,
+            is_selectable=False,  # Embeddings are read-only in v1
             notes="Passed live embedding test in 486ms (768 dimensions). Read-only in v1.",
         ),
         ModelCatalogItem(
@@ -85,8 +131,9 @@ PROVIDER_MODEL_CATALOG: Dict[str, List[ModelCatalogItem]] = {
             provider="gemini",
             capabilities=["embeddings"],
             verified_on="2026-11-23 07:46:31 UTC",
-            verification_status="VERIFIED_PASSED",
+            verification_status="VERIFIED",
             dimension=3072,
+            is_selectable=False,  # Embeddings are read-only in v1
             notes="Passed live embedding test in 628ms (3072 dimensions). For future re-indexing workflow.",
         ),
     ]

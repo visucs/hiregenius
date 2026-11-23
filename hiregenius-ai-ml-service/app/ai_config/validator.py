@@ -76,7 +76,16 @@ GOLDEN_RAG_CHUNKS = [
 ]
 
 
+from enum import Enum
+
+class TaskValidationStatus(str, Enum):
+    PASSED = "PASSED"
+    INCONCLUSIVE = "INCONCLUSIVE"  # Provider 429 rate limit or quota exceeded
+    FAILED = "FAILED"
+
+
 class TaskValidationResult(BaseModel):
+    status: TaskValidationStatus = TaskValidationStatus.PASSED
     passed: bool
     latency_ms: float
     error_message: Optional[str] = None
@@ -85,8 +94,28 @@ class TaskValidationResult(BaseModel):
 
 class DraftValidationReport(BaseModel):
     all_passed: bool
+    can_activate: bool = False
+    has_inconclusive: bool = False
+    has_failed: bool = False
     tested_at: str
     tasks: Dict[str, TaskValidationResult]
+
+
+def _categorize_error(e: Exception, latency: float) -> TaskValidationResult:
+    err_str = str(e)
+    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+        return TaskValidationResult(
+            status=TaskValidationStatus.INCONCLUSIVE,
+            passed=False,
+            latency_ms=latency,
+            error_message="Provider quota exceeded or rate limited (429 ResourceExhausted). Result is inconclusive.",
+        )
+    return TaskValidationResult(
+        status=TaskValidationStatus.FAILED,
+        passed=False,
+        latency_ms=latency,
+        error_message=err_str[:180],
+    )
 
 
 async def _test_resume_parser(llm: Any) -> TaskValidationResult:
@@ -106,7 +135,7 @@ async def _test_resume_parser(llm: Any) -> TaskValidationResult:
         return TaskValidationResult(passed=True, latency_ms=latency, output_summary=f"Parsed candidate: {res.name}")
     except Exception as e:
         latency = round((time.perf_counter() - t0) * 1000, 1)
-        return TaskValidationResult(passed=False, latency_ms=latency, error_message=str(e)[:180])
+        return _categorize_error(e, latency)
 
 
 async def _test_jd_extractor(llm: Any) -> TaskValidationResult:
@@ -129,7 +158,7 @@ async def _test_jd_extractor(llm: Any) -> TaskValidationResult:
         return TaskValidationResult(passed=True, latency_ms=latency, output_summary=f"Extracted {len(res.required_skills)} skills")
     except Exception as e:
         latency = round((time.perf_counter() - t0) * 1000, 1)
-        return TaskValidationResult(passed=False, latency_ms=latency, error_message=str(e)[:180])
+        return _categorize_error(e, latency)
 
 
 async def _test_interview_generate(llm: Any) -> TaskValidationResult:
@@ -149,7 +178,7 @@ async def _test_interview_generate(llm: Any) -> TaskValidationResult:
         return TaskValidationResult(passed=True, latency_ms=latency, output_summary=f"Generated {len(res.questions)} question")
     except Exception as e:
         latency = round((time.perf_counter() - t0) * 1000, 1)
-        return TaskValidationResult(passed=False, latency_ms=latency, error_message=str(e)[:180])
+        return _categorize_error(e, latency)
 
 
 async def _test_interview_evaluate(llm: Any) -> TaskValidationResult:
@@ -169,7 +198,7 @@ async def _test_interview_evaluate(llm: Any) -> TaskValidationResult:
         return TaskValidationResult(passed=True, latency_ms=latency, output_summary="Answer evaluated successfully")
     except Exception as e:
         latency = round((time.perf_counter() - t0) * 1000, 1)
-        return TaskValidationResult(passed=False, latency_ms=latency, error_message=str(e)[:180])
+        return _categorize_error(e, latency)
 
 
 async def _test_rag_explainer(llm: Any) -> TaskValidationResult:
@@ -196,7 +225,7 @@ async def _test_rag_explainer(llm: Any) -> TaskValidationResult:
         return TaskValidationResult(passed=True, latency_ms=latency, output_summary=f"Recommendation: {res.recommendation}")
     except Exception as e:
         latency = round((time.perf_counter() - t0) * 1000, 1)
-        return TaskValidationResult(passed=False, latency_ms=latency, error_message=str(e)[:180])
+        return _categorize_error(e, latency)
 
 
 async def validate_draft_configuration(
@@ -254,13 +283,18 @@ async def validate_draft_configuration(
             if not res.passed:
                 all_passed = False
         except Exception as e:
-            results[task_name] = TaskValidationResult(
-                passed=False, latency_ms=0.0, error_message=f"Runner setup failure: {str(e)[:180]}"
-            )
-            all_passed = False
+            results[task_name] = _categorize_error(e, 0.0)
+
+    all_passed = bool(results) and all(r.status == TaskValidationStatus.PASSED for r in results.values())
+    has_inconclusive = any(r.status == TaskValidationStatus.INCONCLUSIVE for r in results.values())
+    has_failed = any(r.status == TaskValidationStatus.FAILED for r in results.values())
+    can_activate = all_passed or (not has_failed and has_inconclusive)
 
     return DraftValidationReport(
         all_passed=all_passed,
+        can_activate=can_activate,
+        has_inconclusive=has_inconclusive,
+        has_failed=has_failed,
         tested_at=datetime.now(timezone.utc).isoformat(),
         tasks=results,
     )

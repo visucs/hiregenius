@@ -142,8 +142,14 @@ class Settings:
     }
 
     def validate(self) -> None:
-        """Validate critical configuration variables based on active environment."""
-        if self.ENV == "production":
+        """Validate critical configuration variables based on active environment (Fail-Closed)."""
+        is_explicit_non_prod = (self.ENV or "").strip().lower() in {
+            "development",
+            "test",
+            "testing",
+            "dev",
+        }
+        if not is_explicit_non_prod:
             missing = []
             if not self.MONGODB_URI:
                 missing.append("MONGODB_URI")

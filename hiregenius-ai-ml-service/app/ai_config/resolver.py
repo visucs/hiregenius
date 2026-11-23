@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 from app.config import settings
-from app.ai_config.catalog import TaskType
+from app.ai_config.catalog import TASK_EXECUTION_SPECS, TaskType
 from app.ai_config.crypto import (
     DecryptionError,
     EncryptedCredentialPayload,
@@ -80,12 +80,23 @@ class AIConfigResolver:
                 logger.warning(f"[Resolver] Credential for {provider} is marked UNHEALTHY. Bypassing to fallback.")
                 return None
 
+            # Tolerant payload extraction (supports top-level fields or nested encrypted_payload)
+            c_b64 = cred_doc.get("ciphertext_b64") or (cred_doc.get("encrypted_payload") or {}).get("ciphertext_b64")
+            n_b64 = cred_doc.get("nonce_b64") or (cred_doc.get("encrypted_payload") or {}).get("nonce_b64")
+            m_id = cred_doc.get("master_key_id") or (cred_doc.get("encrypted_payload") or {}).get("master_key_id", "v1")
+            last4 = cred_doc.get("last4") or (cred_doc.get("encrypted_payload") or {}).get("last4", "****")
+            fp = cred_doc.get("fingerprint") or (cred_doc.get("encrypted_payload") or {}).get("fingerprint", "")
+
+            if not c_b64 or not n_b64:
+                logger.error(f"[Resolver] Incomplete encrypted credential payload for provider {provider}.")
+                return None
+
             payload = EncryptedCredentialPayload(
-                ciphertext_b64=cred_doc["ciphertext_b64"],
-                nonce_b64=cred_doc["nonce_b64"],
-                master_key_id=cred_doc["master_key_id"],
-                last4=cred_doc.get("last4", "****"),
-                fingerprint=cred_doc.get("fingerprint", ""),
+                ciphertext_b64=c_b64,
+                nonce_b64=n_b64,
+                master_key_id=m_id,
+                last4=last4,
+                fingerprint=fp,
             )
             return decrypt_api_key(
                 payload=payload,
@@ -150,9 +161,6 @@ class AIConfigResolver:
                     version_num = config_doc.get("version", 1)
 
                     plain_key = await self._resolve_provider_key(provider, version_num)
-                    # If provider is gemini and no custom DB key stored, use env key as backing credential
-                    if plain_key is None and provider == "gemini" and settings.GEMINI_API_KEY:
-                        plain_key = SecretStr(settings.GEMINI_API_KEY)
 
                     if plain_key is not None:
                         # Record into Last-Known-Good cache
@@ -214,14 +222,22 @@ class AIConfigResolver:
     ) -> Tuple[Any, ResolvedTaskConfig]:
         """
         Returns an initialized LangChain chat model along with its provenance metadata.
+        Enforces task-specific execution specifications (temperature, timeout, max_retries).
         Supports pinned configurations across multi-step user workflows.
         """
         config = pinned_config or await self.resolve_task(task_type)
+        spec = TASK_EXECUTION_SPECS.get(task_type, {})
+        task_temp = spec.get("temperature", temperature)
+        task_timeout = spec.get("timeout", 30)
+        task_retries = spec.get("max_retries", 2)
+
         adapter = get_provider_adapter(config.provider)
         llm = adapter.get_chat_llm(
             model_id=config.model,
             api_key=config.api_key,
-            temperature=temperature,
+            temperature=task_temp,
+            timeout=task_timeout,
+            max_retries=task_retries,
         )
         return llm, config
 
