@@ -95,7 +95,10 @@ class ParsedResumeResponse(BaseModel):
     original_filename: str = Field(..., description="Original filename of the uploaded resume")
     parsed_data: ParsedResume = Field(..., description="Structured parsed resume data")
     parsed_at: datetime = Field(..., description="Timestamp of when resume was parsed")
-    model_version: str = Field(..., description="Gemini model version used for parsing")
+    provider: str = Field(default="gemini", description="AI Provider used for parsing")
+    model_version: str = Field(..., description="Model version used for parsing")
+    config_version: int = Field(default=1, description="Active AI configuration version")
+    config_source: str = Field(default="db", description="Source of configuration: db, lkg, or env")
 
     @computed_field(alias="_id")
     @property
@@ -112,7 +115,10 @@ class SavedResumeResponse(BaseModel):
     raw_text: str = Field(..., description="Raw text extracted from the document")
     parsed_data: ParsedResume = Field(..., description="Structured parsed resume data")
     parsed_at: datetime = Field(..., description="Timestamp of when resume was parsed")
-    model_version: str = Field(..., description="Gemini model version used for parsing")
+    provider: str = Field(default="gemini", description="AI Provider used for parsing")
+    model_version: str = Field(..., description="Model version used for parsing")
+    config_version: int = Field(default=1, description="Active AI configuration version")
+    config_source: str = Field(default="db", description="Source of configuration: db, lkg, or env")
 
     @computed_field(alias="_id")
     @property

@@ -26,19 +26,12 @@ async def save_parsed_resume(
     parsed_data: ParsedResume,
     custom_collection: Optional[Any] = None,
     model_version: Optional[str] = None,
+    provider: Optional[str] = "gemini",
+    config_version: Optional[int] = 1,
+    config_source: Optional[str] = "db",
 ) -> str:
     """
-    Persist structured parsed resume data to MongoDB.
-    Performs an upsert based on candidate_id (replaces previous parse for this candidate,
-    matching Core API Phase 3's one-resume-per-candidate architecture).
-
-    :param candidate_id: Unique candidate identifier from Core API
-    :param filename: Original filename of the resume
-    :param raw_text: Full raw text extracted from the document
-    :param parsed_data: Validated ParsedResume domain object
-    :param custom_collection: Optional collection override for testing/mocking
-    :param model_version: Optional model identifier override
-    :return: String representation of MongoDB document _id
+    Persist structured parsed resume data with full provenance to MongoDB.
     """
     collection = custom_collection if custom_collection is not None else get_resumes_collection()
     if collection is None:
@@ -60,7 +53,10 @@ async def save_parsed_resume(
         "raw_text": raw_text,
         "parsed_data": parsed_data.model_dump(),
         "parsed_at": now_utc,
+        "provider": provider or "gemini",
         "model_version": active_model,
+        "config_version": config_version if config_version is not None else 1,
+        "config_source": config_source or "db",
     }
 
     try:

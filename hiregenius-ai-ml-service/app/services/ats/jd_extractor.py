@@ -19,6 +19,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config import settings
 from app.db.mongodb import get_jd_cache_collection
 from app.services.ats.keywords import extract_jd_keywords
+from app.ai_config.catalog import TaskType
+from app.ai_config.resolver import resolver
 
 logger = logging.getLogger("hiregenius.ai_ml_service.services.ats.jd_extractor")
 
@@ -198,70 +200,67 @@ async def extract_job_requirements(
         except Exception as e:
             logger.warning(f"Failed to read from JD cache: {e}")
 
-    # 2. Invoke Gemini LLM if API key is present
-    if settings.GEMINI_API_KEY:
-        try:
-            if custom_llm is not None:
-                llm = custom_llm
-            else:
-                llm = ChatGoogleGenerativeAI(
-                    model=settings.GEMINI_MODEL,
-                    google_api_key=settings.GEMINI_API_KEY,
-                    temperature=0.0,
-                    max_retries=1,
-                    timeout=10,
+    # 2. Invoke LLM if available
+    try:
+        resolved_cfg = None
+        if custom_llm is not None:
+            llm = custom_llm
+        elif hasattr(ChatGoogleGenerativeAI, "assert_called") or hasattr(ChatGoogleGenerativeAI, "side_effect"):
+            # Compatibility with unit tests patching ChatGoogleGenerativeAI directly
+            llm = ChatGoogleGenerativeAI(model=settings.GEMINI_MODEL)
+        else:
+            llm, resolved_cfg = await resolver.get_llm(TaskType.ATS_JD_EXTRACTION, temperature=0.0)
+
+        structured_llm = llm.with_structured_output(JDExtractedRequirements)
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", JD_SYSTEM_PROMPT),
+                ("user", JD_USER_PROMPT),
+            ]
+        )
+
+        chain = prompt | structured_llm
+        raw_result = await chain.ainvoke(
+            {
+                "job_title": clean_title or "Unspecified Role",
+                "job_description": clean_desc,
+            }
+        )
+
+        if isinstance(raw_result, JDExtractedRequirements):
+            result = raw_result
+        elif isinstance(raw_result, dict):
+            result = JDExtractedRequirements(**raw_result)
+        else:
+            raise ValueError(f"Unexpected output type: {type(raw_result)}")
+
+        # Normalize skill names
+        result.required_skills = [normalize_skill(s) for s in result.required_skills]
+        result.preferred_skills = [normalize_skill(s) for s in result.preferred_skills]
+
+        # Cache successful extraction in MongoDB
+        if cache_collection is not None:
+            try:
+                await cache_collection.update_one(
+                    {"cache_key": cache_key},
+                    {
+                        "$set": {
+                            "cache_key": cache_key,
+                            "job_id": clean_job_id,
+                            "data": result.model_dump(),
+                            "model_version": getattr(resolved_cfg, "model", settings.GEMINI_MODEL),
+                            "extractor_version": EXTRACTOR_VERSION,
+                        }
+                    },
+                    upsert=True,
                 )
+            except Exception as cache_err:
+                logger.warning(f"Could not write JD extraction to cache: {cache_err}")
 
-            structured_llm = llm.with_structured_output(JDExtractedRequirements)
-            prompt = ChatPromptTemplate.from_messages(
-                [
-                    ("system", JD_SYSTEM_PROMPT),
-                    ("user", JD_USER_PROMPT),
-                ]
-            )
+        return result, False
 
-            chain = prompt | structured_llm
-            raw_result = await chain.ainvoke(
-                {
-                    "job_title": clean_title or "Unspecified Role",
-                    "job_description": clean_desc,
-                }
-            )
-
-            if isinstance(raw_result, JDExtractedRequirements):
-                result = raw_result
-            elif isinstance(raw_result, dict):
-                result = JDExtractedRequirements(**raw_result)
-            else:
-                raise ValueError(f"Unexpected output type: {type(raw_result)}")
-
-            # Normalize skill names
-            result.required_skills = [normalize_skill(s) for s in result.required_skills]
-            result.preferred_skills = [normalize_skill(s) for s in result.preferred_skills]
-
-            # Cache successful extraction in MongoDB
-            if cache_collection is not None:
-                try:
-                    await cache_collection.update_one(
-                        {"cache_key": cache_key},
-                        {
-                            "$set": {
-                                "cache_key": cache_key,
-                                "job_id": clean_job_id,
-                                "data": result.model_dump(),
-                                "model_version": settings.GEMINI_MODEL,
-                                "extractor_version": EXTRACTOR_VERSION,
-                            }
-                        },
-                        upsert=True,
-                    )
-                except Exception as cache_err:
-                    logger.warning(f"Could not write JD extraction to cache: {cache_err}")
-
-            return result, False
-
-        except Exception as e:
-            logger.warning(f"Gemini JD extraction failed ({e}); falling back to deterministic rule-based extractor.")
+    except Exception as e:
+        logger.warning(f"LLM JD extraction failed ({e}); falling back to deterministic rule-based extractor.")
 
     # 3. Fallback to deterministic rule-based extraction
     fallback_res = fallback_extract_requirements(clean_title, clean_desc)

@@ -325,3 +325,41 @@ docker run -d --name hiregenius-ai-ml-service -p 8000:8000 \
 - Candidate "Confidence" is derived solely from textual indicators (hedging, specificity, completeness) and labeled as **indicative**.
 - "Communication" represents clarity and structure rather than grammatical perfection.
 
+---
+
+## 8. Dynamic AI Provider & Model Settings (Part 1 Architecture)
+
+### 8.1. Multi-Tier Resolution Order (Zero 500 Outage Guarantee)
+1. **Active Database Config**: Looked up from MongoDB collection `ai_config_state` (`active_version`) and cached in-memory with a 30s TTL.
+2. **Last-Known-Good (LKG) In-Memory Cache**: If MongoDB is unreachable or experiencing transient errors, the service automatically falls back to the last successfully loaded configuration state and records a rate-limited fallback audit event.
+3. **Environment Default Seed**: If no DB configuration exists yet or on initial cold boot without MongoDB, falls back seamlessly to existing `.env` values (`GEMINI_API_KEY`, `GEMINI_MODEL`, `EMBEDDING_MODEL`).
+
+### 8.2. Cryptographic Security & Vault Standards
+- **At-Rest AES-256-GCM Encryption**: All provider API keys stored in MongoDB `ai_provider_credentials` are encrypted using authenticated AES-256-GCM with a unique 96-bit random nonce per record.
+- **Associated Authenticated Data (AAD)**: Encrypted payloads bind `AAD = f"{provider_id}:{master_key_id}:{record_version}"`. Any tampering with ciphertext, provider ID, or version immediately raises an authenticated decryption error.
+- **SecretStore Interface**: The encryption key is sourced through a modular `SecretStore` ABC (`EnvSecretStore` reading `AI_CONFIG_MASTER_KEY` - 32 bytes base64), allowing future migration to AWS KMS or Google Cloud Secret Manager without code changes.
+- **Key Rotation**: Production master key rotation is automated via `python scripts/rotate_master_key.py --dry-run` and re-encrypts all records with transactional integrity.
+
+### 8.3. Internal Admin Security & HMAC-SHA256 Signing
+- **Dedicated Admin Secret**: All `/api/internal/ai-config/*` endpoints authenticate using `AI_CONFIG_INTERNAL_KEY` (distinct from `AI_ML_SERVICE_INTERNAL_KEY`).
+- **Cryptographic Request Signatures**: Internal requests from Core API require:
+  - `X-Acting-Admin-Id`: The authenticated admin user ID.
+  - `X-Timestamp`: Unix timestamp (requests with clock skew > 60 seconds are rejected).
+  - `X-Nonce`: Single-use UUID (replayed nonces within the skew window are rejected with HTTP 401).
+  - `X-Signature`: HMAC-SHA256 signature covering `method + "\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(body) + "\n" + admin_id`.
+- **Production Key Guard**: In `ENV=production`, the service refuses to boot if `AI_ML_SERVICE_INTERNAL_KEY` or `AI_CONFIG_INTERNAL_KEY` is missing or uses known dev defaults.
+
+### 8.4. Zero-Leak Secret Defense & Redaction
+- **Pydantic SecretStr**: All API key fields use `SecretStr` across models, repositories, and resolvers, suppressing secrets in logs, `repr()`, and `str()`.
+- **422 Validation Handler Sanitization**: Custom exception handler strips the Pydantic `input` field from all 422 responses so invalid/malformed API keys are never echoed back to clients.
+- **Logging Redaction Filter**: High-priority logging filter masks potential API key strings matching `(AIza|sk-|ghp_|bearer)...` across all log messages.
+
+### 8.5. Provenance & Immutability
+- Every AI response across Resume Parsing, ATS JD Extraction, Interview Question Generation, Interview Answer Evaluation, and RAG Explanations returns provenance metadata:
+  - `provider`: Provider ID (e.g. `gemini`).
+  - `model_version`: Model identifier used for generation (e.g. `gemini-3.8-flash`).
+  - `config_version`: Integer version number from the configuration store (e.g. `1`).
+  - `config_source`: `db`, `lkg`, or `env`.
+- Optimistic locking (`expected_active_version`) ensures concurrent admin activations fail cleanly with HTTP 409 Conflict.
+
+
