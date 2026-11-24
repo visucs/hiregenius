@@ -157,6 +157,72 @@ async def save_credential(
     }
 
 
+@router.post("/credentials/{provider}/recheck", summary="Manually re-check an UNHEALTHY credential and restore if valid")
+async def recheck_credential(
+    provider: str = Path(..., description="Provider identifier (e.g. 'gemini')"),
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """
+    Manually probes a stored provider API key using a zero-token validation call.
+    If valid, resets credential status from UNHEALTHY back to HEALTHY.
+    """
+    clean_provider = provider.lower().strip()
+    try:
+        adapter = get_provider_adapter(clean_provider)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    cred_doc = await config_repository.get_credential(clean_provider)
+    if not cred_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found.")
+
+    plain_key = await resolver._resolve_provider_key(clean_provider, cred_doc.get("record_version", 1))
+    if not plain_key:
+        # If decryption failed, try direct decrypt
+        try:
+            from app.ai_config.crypto import decrypt_api_key, EncryptedCredentialPayload
+            c_b64 = cred_doc.get("ciphertext_b64") or (cred_doc.get("encrypted_payload") or {}).get("ciphertext_b64")
+            n_b64 = cred_doc.get("nonce_b64") or (cred_doc.get("encrypted_payload") or {}).get("nonce_b64")
+            m_id = cred_doc.get("master_key_id") or (cred_doc.get("encrypted_payload") or {}).get("master_key_id", "v1")
+            last4 = cred_doc.get("last4") or (cred_doc.get("encrypted_payload") or {}).get("last4", "****")
+            fp = cred_doc.get("fingerprint") or (cred_doc.get("encrypted_payload") or {}).get("fingerprint", "")
+            payload = EncryptedCredentialPayload(
+                ciphertext_b64=c_b64,
+                nonce_b64=n_b64,
+                master_key_id=m_id,
+                last4=last4,
+                fingerprint=fp,
+            )
+            plain_key = decrypt_api_key(payload, clean_provider, cred_doc.get("record_version", 1))
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to decrypt credential: {e}")
+
+    try:
+        await adapter.validate_api_key(plain_key)
+        await config_repository.update_credential_status(clean_provider, "HEALTHY", None)
+        resolver.invalidate_cache()
+        await config_repository.record_audit_event(
+            event="CREDENTIAL_RECHECKED",
+            acting_admin_id=admin_ctx.acting_admin_id,
+            client_ip=admin_ctx.client_ip,
+            provider=clean_provider,
+            note="Manual probe succeeded. Status restored to HEALTHY.",
+        )
+        return {
+            "status": "SUCCESS",
+            "provider": clean_provider,
+            "credential_status": "HEALTHY",
+            "message": "Credential validated and restored to HEALTHY status.",
+        }
+    except Exception as e:
+        err_msg = str(e)
+        status_code = status.HTTP_502_BAD_GATEWAY
+        if "401" in err_msg or "403" in err_msg or "API key not valid" in err_msg:
+            status_code = status.HTTP_400_BAD_REQUEST
+            await config_repository.update_credential_status(clean_provider, "UNHEALTHY", "INVALID_KEY")
+        raise HTTPException(status_code=status_code, detail=f"Credential validation failed: {err_msg}")
+
+
 @router.delete("/credentials/{provider}", summary="Delete a stored provider API key")
 async def delete_credential(
     provider: str = Path(...),
@@ -317,18 +383,41 @@ async def rollback_configuration(
             reason=body.reason,
         )
         resolver.invalidate_cache()
+        # Check if rollback restores any unverified / unavailable models
+        catalog_items = [m for sublist in PROVIDER_MODEL_CATALOG.values() for m in sublist]
+        unavailable_models = []
+        for t_spec in (new_active.get("tasks") or {}).values():
+            m_id = t_spec.get("model")
+            cat_match = next((m for m in catalog_items if m.model_id == m_id), None)
+            if cat_match and not cat_match.is_selectable:
+                unavailable_models.append(f"{m_id} ({cat_match.verification_status})")
+            elif cat_match is None:
+                unavailable_models.append(f"{m_id} (UNAVAILABLE)")
+
+        warning_msg = None
+        if unavailable_models:
+            warning_msg = f"Rollback restored version containing unverified/unavailable model(s): {', '.join(unavailable_models)}"
+            logger.warning(f"[AdminConfig] {warning_msg}")
+
+        audit_note = f"Rolled back to v{body.target_version}. Reason: {body.reason}"
+        if warning_msg:
+            audit_note += f" | WARNING: {warning_msg}"
+
         await config_repository.record_audit_event(
             event="CONFIG_ROLLED_BACK",
             acting_admin_id=admin_ctx.acting_admin_id,
             client_ip=admin_ctx.client_ip,
             version=new_active["version"],
-            note=f"Rolled back to v{body.target_version}. Reason: {body.reason}",
+            note=audit_note,
         )
-        return {
+        resp = {
             "status": "SUCCESS",
             "active_version": new_active["version"],
             "config": new_active,
         }
+        if warning_msg:
+            resp["warning"] = warning_msg
+        return resp
     except OptimisticLockConflictError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except ConfigNotFoundError as e:

@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, SecretStr
 
@@ -77,8 +78,28 @@ class AIConfigResolver:
                 return None
 
             if cred_doc.get("status") == "UNHEALTHY":
-                logger.warning(f"[Resolver] Credential for {provider} is marked UNHEALTHY. Bypassing to fallback.")
-                return None
+                # Circuit breaker cooldown: 300s (5 minutes) before half-open probing
+                updated_at = cred_doc.get("updated_at")
+                is_cooldown_expired = False
+                if updated_at:
+                    if isinstance(updated_at, str):
+                        try:
+                            updated_dt = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+                            elapsed = (datetime.now(timezone.utc) - updated_dt).total_seconds()
+                            if elapsed > 300.0:
+                                is_cooldown_expired = True
+                        except Exception:
+                            pass
+                    elif isinstance(updated_at, datetime):
+                        dt = updated_at if updated_at.tzinfo else updated_at.replace(tzinfo=timezone.utc)
+                        if (datetime.now(timezone.utc) - dt).total_seconds() > 300.0:
+                            is_cooldown_expired = True
+
+                if not is_cooldown_expired:
+                    logger.warning(f"[Resolver] Credential for {provider} is marked UNHEALTHY (cooldown active). Bypassing to fallback.")
+                    return None
+                else:
+                    logger.info(f"[Resolver] Credential for {provider} cooldown expired (> 300s). Allowing half-open probe.")
 
             # Tolerant payload extraction (supports top-level fields or nested encrypted_payload)
             c_b64 = cred_doc.get("ciphertext_b64") or (cred_doc.get("encrypted_payload") or {}).get("ciphertext_b64")

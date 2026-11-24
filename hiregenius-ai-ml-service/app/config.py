@@ -26,7 +26,7 @@ class Settings:
     Mirrors the disciplined configuration loading and validation pattern of Core API's env.js.
     """
 
-    ENV: str = os.getenv("ENV", os.getenv("NODE_ENV", "development"))
+    ENV: str = os.getenv("ENV", os.getenv("NODE_ENV", "production"))
     PORT: int = int(os.getenv("PORT", "8000"))
 
     # MongoDB Configuration
@@ -36,6 +36,9 @@ class Settings:
     # Google Gemini Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    RESUME_PARSER_MODEL: str = os.getenv("RESUME_PARSER_MODEL", "gemini-3.8-flash")
+    RAG_EXPLAINER_MODEL: str = os.getenv("RAG_EXPLAINER_MODEL", "gemini-3.5-flash")
+    INTERVIEW_MODEL: str = os.getenv("INTERVIEW_MODEL", "gemini-3.8-flash")
 
     # Internal Service-to-Service Authentication
     AI_ML_SERVICE_INTERNAL_KEY: str = os.getenv(
@@ -140,6 +143,11 @@ class Settings:
         "secret",
         "changeme",
     }
+
+    @property
+    def is_production(self) -> bool:
+        """Fail-closed production check: returns True unless explicitly running in development or test."""
+        return (self.ENV or "").strip().lower() not in {"development", "test", "testing", "dev"}
 
     def validate(self) -> None:
         """Validate critical configuration variables based on active environment (Fail-Closed)."""

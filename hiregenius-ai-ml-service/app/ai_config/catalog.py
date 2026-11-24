@@ -38,8 +38,8 @@ TASK_EXECUTION_SPECS: Dict[TaskType, Dict[str, Any]] = {
     },
     TaskType.ATS_JD_EXTRACTION: {
         "temperature": 0.0,
-        "timeout": 30,
-        "max_retries": 2,
+        "timeout": 10,
+        "max_retries": 1,
         "method": "with_structured_output",
         "schema_name": "JDExtractedRequirements",
     },

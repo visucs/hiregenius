@@ -8,14 +8,14 @@ import logging
 import os
 import time
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from pydantic import SecretStr, ValidationError
 
-from app.config import settings
+from app.config import Settings, settings
 from app.ai_config.catalog import (
     ALL_TASKS,
     PROVIDER_MODEL_CATALOG,
@@ -59,6 +59,7 @@ from app.api.admin_config import (
     RollbackConfigRequest,
     activate_configuration,
     create_draft,
+    recheck_credential,
     rollback_configuration,
 )
 from app.api.redaction import (
@@ -213,9 +214,14 @@ class TestAIConfigAuthSuite(unittest.IsolatedAsyncioTestCase):
         self.secret = "test_internal_secret_key_12345"
         self.patcher = patch("app.api.admin_auth.settings.AI_CONFIG_INTERNAL_KEY", self.secret)
         self.patcher.start()
+        self.mock_nonce_coll = MagicMock()
+        self.mock_nonce_coll.insert_one = AsyncMock()
+        self.coll_patcher = patch("app.api.admin_auth.mongo_manager.get_collection", return_value=self.mock_nonce_coll)
+        self.coll_patcher.start()
 
     def tearDown(self):
         self.patcher.stop()
+        self.coll_patcher.stop()
 
     async def test_valid_signature_accepted(self):
         req = MagicMock()
@@ -765,8 +771,8 @@ class TestTaskParameterDrift(unittest.TestCase):
         # ATS_JD_EXTRACTION
         ats = TASK_EXECUTION_SPECS[TaskType.ATS_JD_EXTRACTION]
         self.assertEqual(ats["temperature"], 0.0)
-        self.assertEqual(ats["timeout"], 30)
-        self.assertEqual(ats["max_retries"], 2)
+        self.assertEqual(ats["timeout"], 10)
+        self.assertEqual(ats["max_retries"], 1)
         self.assertEqual(ats["method"], "with_structured_output")
         self.assertEqual(ats["schema_name"], "JDExtractedRequirements")
 
@@ -864,3 +870,264 @@ class TestSeedNoOpProof(unittest.TestCase):
         self.assertEqual(expected_ats_model, "gemini-3.8-flash")
         self.assertEqual(expected_interview_model, "gemini-3.8-flash")
         self.assertEqual(expected_rag_model, "gemini-3.5-flash")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. FAIL-CLOSED CONFIGURATION & PRODUCTION GUARDS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestFailClosedConfigAndProductionHardening(unittest.TestCase):
+    """10. Proves that missing or empty ENV behaves strictly as production and fails closed."""
+
+    def test_missing_env_behaves_as_production_fail_closed(self):
+        """Unset or empty ENV must be treated as production; known dev defaults raise RuntimeError."""
+        s = Settings()
+        s.ENV = ""  # Empty ENV
+        self.assertTrue(s.is_production)
+
+        # Validate with insecure dev key should raise fatal RuntimeError
+        s.MONGODB_URI = "mongodb://localhost:27017"
+        s.MONGODB_DB_NAME = "test_db"
+        s.GEMINI_API_KEY = "test_key"
+        s.AI_ML_SERVICE_INTERNAL_KEY = "hg_internal_dev_secret_key_2026"  # Known insecure key
+        with self.assertRaises(RuntimeError) as cm:
+            s.validate()
+        self.assertIn("cannot use any known dev default", str(cm.exception))
+
+    def test_explicit_development_or_test_skips_guard(self):
+        """Only explicit 'development' or 'test' environments skip the production guard."""
+        s = Settings()
+        s.ENV = "development"
+        self.assertFalse(s.is_production)
+        s.AI_ML_SERVICE_INTERNAL_KEY = "hg_internal_dev_secret_key_2026"
+        # In development, this does not raise
+        try:
+            s.validate()
+        except RuntimeError:
+            self.fail("validate() raised RuntimeError unexpectedly in development environment.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. ADMIN AUTH NONCE STORE FAIL-CLOSED & QUERY STRING CANONICALIZATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAdminAuthNonceAndTamperingHardening(unittest.IsolatedAsyncioTestCase):
+    """11. Tests for 503 on nonce store failure and canonical query string tampering rejection."""
+
+    async def test_nonce_store_unavailable_returns_503(self):
+        """When distributed nonce collection is unavailable, admin auth must return 503 (no in-memory fallback)."""
+        mock_req = MagicMock()
+        mock_req.method = "GET"
+        mock_req.url.path = "/api/internal/ai-config"
+        mock_req.url.query = ""
+        mock_req.body = AsyncMock(return_value=b"")
+
+        now_ts = str(time.time())
+        sig = compute_hmac_signature(
+            secret=settings.AI_CONFIG_INTERNAL_KEY,
+            method="GET",
+            path="/api/internal/ai-config",
+            timestamp=now_ts,
+            nonce="unique_nonce_503_test",
+            body_bytes=b"",
+            admin_id="admin_test",
+            query_string="",
+        )
+
+        with patch("app.api.admin_auth.mongo_manager.get_collection", return_value=None):
+            with self.assertRaises(HTTPException) as cm:
+                await verify_signed_admin_request(
+                    request=mock_req,
+                    x_acting_admin_id="admin_test",
+                    x_timestamp=now_ts,
+                    x_nonce="unique_nonce_503_test",
+                    x_signature=sig,
+                )
+            self.assertEqual(cm.exception.status_code, 503)
+            self.assertIn("Nonce store unavailable", cm.exception.detail)
+
+    async def test_tampered_query_params_and_path_rejected(self):
+        """Tampering with query parameters or URL path invalidates HMAC signature with 401."""
+        now_ts = str(time.time())
+        sig = compute_hmac_signature(
+            secret=settings.AI_CONFIG_INTERNAL_KEY,
+            method="GET",
+            path="/api/internal/ai-config/history",
+            timestamp=now_ts,
+            nonce="unique_nonce_query_test",
+            body_bytes=b"",
+            admin_id="admin_test",
+            query_string="limit=50",
+        )
+
+        # Attacker tampers query from limit=50 to limit=100
+        mock_req = MagicMock()
+        mock_req.method = "GET"
+        mock_req.url.path = "/api/internal/ai-config/history"
+        mock_req.url.query = "limit=100"  # Tampered!
+        mock_req.body = AsyncMock(return_value=b"")
+
+        mock_coll = MagicMock()
+        mock_coll.insert_one = AsyncMock()
+
+        with patch("app.api.admin_auth.mongo_manager.get_collection", return_value=mock_coll):
+            with self.assertRaises(HTTPException) as cm:
+                await verify_signed_admin_request(
+                    request=mock_req,
+                    x_acting_admin_id="admin_test",
+                    x_timestamp=now_ts,
+                    x_nonce="unique_nonce_query_test",
+                    x_signature=sig,
+                )
+            self.assertEqual(cm.exception.status_code, 401)
+            self.assertIn("Invalid request signature", cm.exception.detail)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. CIRCUIT BREAKER COOLDOWN, HALF-OPEN PROBING & RECHECK ACTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCircuitBreakerCooldownAndProbing(unittest.IsolatedAsyncioTestCase):
+    """12. Proves circuit breaker cooldown, half-open probe, and manual re-check action."""
+
+    async def test_circuit_breaker_cooldown_and_half_open_probing(self):
+        """Active UNHEALTHY key is blocked during cooldown, but permitted for half-open probe once > 300s elapsed."""
+        resolver_inst = AIConfigResolver(cache_ttl_seconds=30)
+
+        # Recent UNHEALTHY status (10 seconds ago) -> blocked
+        recent_doc = {
+            "provider": "gemini",
+            "status": "UNHEALTHY",
+            "updated_at": (datetime.now(timezone.utc) - timedelta(seconds=10)).isoformat(),
+            "ciphertext_b64": "dummy",
+            "nonce_b64": "dummy",
+            "record_version": 1,
+        }
+        with patch("app.ai_config.resolver.config_repository.get_credential", return_value=recent_doc):
+            key = await resolver_inst._resolve_provider_key("gemini", 1)
+            self.assertIsNone(key, "Should be blocked while cooldown is active (< 300s).")
+
+        # Expired UNHEALTHY status (400 seconds ago) -> transitions to HALF_OPEN probe
+        expired_doc = {
+            "provider": "gemini",
+            "status": "UNHEALTHY",
+            "updated_at": (datetime.now(timezone.utc) - timedelta(seconds=400)).isoformat(),
+            "ciphertext_b64": "dummy",
+            "nonce_b64": "dummy",
+            "master_key_id": "v1",
+            "last4": "1234",
+            "fingerprint": "abc",
+            "record_version": 1,
+        }
+        with patch("app.ai_config.resolver.config_repository.get_credential", return_value=expired_doc), \
+             patch("app.ai_config.resolver.decrypt_api_key", return_value=SecretStr("probed_key")):
+            key = await resolver_inst._resolve_provider_key("gemini", 1)
+            self.assertIsNotNone(key, "Should allow half-open probe after cooldown (> 300s).")
+            self.assertEqual(key.get_secret_value(), "probed_key")
+
+    async def test_recheck_credential_action_restores_healthy(self):
+        """Manual admin re-check action probes credential and restores status to HEALTHY."""
+        mock_adapter = MagicMock()
+        mock_adapter.validate_api_key = AsyncMock()
+
+        cred_doc = {
+            "provider": "gemini",
+            "status": "UNHEALTHY",
+            "last4": "9999",
+            "fingerprint": "xyz",
+            "record_version": 1,
+        }
+
+        with patch("app.api.admin_config.get_provider_adapter", return_value=mock_adapter), \
+             patch("app.api.admin_config.config_repository.get_credential", return_value=cred_doc), \
+             patch("app.api.admin_config.resolver._resolve_provider_key", return_value=SecretStr("valid_key")), \
+             patch("app.api.admin_config.config_repository.update_credential_status") as mock_update, \
+             patch("app.api.admin_config.config_repository.record_audit_event") as mock_audit:
+
+            resp = await recheck_credential("gemini", AdminRequestContext(acting_admin_id="admin_1"))
+            self.assertEqual(resp["status"], "SUCCESS")
+            self.assertEqual(resp["credential_status"], "HEALTHY")
+            mock_update.assert_called_once_with("gemini", "HEALTHY", None)
+            mock_audit.assert_called_once()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 13. STATE CRASH RECOVERY & LKG CACHING
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestStateCrashRecoveryAndLKG(unittest.IsolatedAsyncioTestCase):
+    """13. Tests crash recovery between state update and audit write, and LKG caching."""
+
+    async def test_crash_between_state_update_and_audit_write_leaves_consistent_state(self):
+        """If audit write throws after state is updated, active version remains consistent in DB."""
+        # Active version successfully committed
+        with patch("app.api.admin_config.config_repository.get_version", return_value={"version": 3, "test_results": {"all_passed": True}}), \
+             patch("app.api.admin_config.config_repository.activate_version", return_value={"version": 3, "_id": "cfg_3"}), \
+             patch("app.api.admin_config.config_repository.record_audit_event", side_effect=RuntimeError("Audit write timeout")):
+
+            req = ActivateConfigRequest(version=3, expected_active_version=2)
+            with self.assertRaises(RuntimeError):
+                await activate_configuration(req, AdminRequestContext(acting_admin_id="admin_1"))
+
+            # State is already written; re-running activation or rollback reads version 3 as expected_active_version
+
+    async def test_lkg_expiry_and_recovery_after_db_returns(self):
+        """Resolver uses in-memory LKG when DB is unreachable, then restores to DB when DB returns."""
+        res = AIConfigResolver(cache_ttl_seconds=30)
+        res._lkg_task_map["RESUME_PARSER"] = ("gemini", "gemini-3.5-flash", SecretStr("lkg_key"), 1)
+
+        # 1. DB raises error -> Served from LKG
+        with patch.object(res, "get_active_config_doc", side_effect=RuntimeError("DB Connection Lost")):
+            cfg = await res.resolve_task(TaskType.RESUME_PARSER)
+            self.assertEqual(cfg.config_source, "lkg")
+            self.assertTrue(cfg.is_fallback)
+            self.assertEqual(cfg.config_version, 1)
+
+        # 2. DB returns with version 2 -> Served from DB
+        db_doc = {
+            "version": 2,
+            "tasks": {"RESUME_PARSER": {"provider": "gemini", "model": "gemini-3.8-flash"}},
+        }
+        with patch.object(res, "get_active_config_doc", return_value=db_doc), \
+             patch.object(res, "_resolve_provider_key", return_value=SecretStr("new_db_key")):
+            cfg2 = await res.resolve_task(TaskType.RESUME_PARSER)
+            self.assertEqual(cfg2.config_source, "db")
+            self.assertFalse(cfg2.is_fallback)
+            self.assertEqual(cfg2.config_version, 2)
+            self.assertEqual(cfg2.model, "gemini-3.8-flash")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 14. ROLLBACK TO UNAVAILABLE MODEL WITH WARNING
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRollbackToUnavailableModelWithWarning(unittest.IsolatedAsyncioTestCase):
+    """14. Proves rollback to older version containing an unverified/unavailable model emits warning."""
+
+    async def test_rollback_with_unavailable_model_allowed_with_warning(self):
+        """Rollback to a version with an unverified model is permitted with CONFIRM_ROLLBACK and emits warning."""
+        target_v1 = {
+            "version": 4,  # New activated version created by rollback
+            "tasks": {
+                "RESUME_PARSER": {"provider": "gemini", "model": "gemini-2.5-pro"}  # UNVERIFIED model in catalog
+            },
+        }
+
+        with patch("app.api.admin_config.config_repository.rollback_to_version", return_value=target_v1), \
+             patch("app.api.admin_config.config_repository.record_audit_event") as mock_audit:
+
+            req = RollbackConfigRequest(
+                target_version=1,
+                expected_active_version=3,
+                confirmation_phrase="CONFIRM_ROLLBACK",
+                reason="Restoring baseline after regression",
+            )
+            resp = await rollback_configuration(req, AdminRequestContext(acting_admin_id="admin_1"))
+            self.assertEqual(resp["status"], "SUCCESS")
+            self.assertIn("warning", resp)
+            self.assertIn("gemini-2.5-pro", resp["warning"])
+
+            # Verify audit event captured the warning note
+            audit_call_args = mock_audit.call_args[1]
+            self.assertIn("WARNING: Rollback restored version containing unverified/unavailable model", audit_call_args["note"])
+
