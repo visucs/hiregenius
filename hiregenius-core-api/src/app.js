@@ -10,6 +10,8 @@ const analyticsRouter = require('./modules/analytics/analytics.routes');
 const settingsRouter = require('./modules/admin/settings/settings.routes');
 const adminHealthRouter = require('./modules/admin/health/health.routes');
 const adminUsersRouter = require('./modules/admin/users/users.routes');
+const stepUpRouter = require('./modules/admin/stepUp/stepUp.routes');
+const aiConfigRouter = require('./modules/admin/aiConfig/aiConfig.routes');
 const atsRouter = require('./modules/ats/ats.routes');
 const aiInterviewsRouter = require('./modules/aiInterviews/aiInterviews.routes');
 const rankingsRouter = require('./modules/rankings/rankings.routes');
@@ -122,6 +124,8 @@ app.use('/api/ats', atsRouter);
 app.use('/api/admin/settings', settingsRouter);
 app.use('/api/admin/health', adminHealthRouter);
 app.use('/api/admin/users', adminUsersRouter);
+app.use('/api/admin/step-up', stepUpRouter);
+app.use('/api/admin/ai-config', aiConfigRouter);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

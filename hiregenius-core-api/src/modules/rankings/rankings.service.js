@@ -122,6 +122,10 @@ class RankingsService {
       ranked_count: aiResult.ranked_count ?? (aiResult.rankings?.length || 0),
       unrankable_count: aiResult.unrankable_count ?? (aiResult.not_rankable?.length || 0),
       semantic_unavailable: Boolean(aiResult.semantic_unavailable),
+      provider: aiResult.provider || 'gemini',
+      model_version: aiResult.model_version || 'gemini-3.5-flash',
+      config_version: aiResult.config_version || 1,
+      config_source: aiResult.config_source || 'db',
       created_at: new Date(),
     };
 

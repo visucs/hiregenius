@@ -113,6 +113,10 @@ class AiInterviewsService {
         difficulty: q.difficulty || 'MEDIUM',
         expected_points: JSON.stringify(q.expected_points || []),
         max_score: q.max_score || 10,
+        provider: aiGenResponse.provider || 'gemini',
+        model_version: aiGenResponse.model_version || aiGenResponse.modelVersion || 'gemini-3.8-flash',
+        config_version: aiGenResponse.config_version || aiGenResponse.configVersion || 1,
+        config_source: aiGenResponse.config_source || aiGenResponse.configSource || 'db',
         created_at: new Date(),
       }));
 
@@ -414,7 +418,10 @@ class AiInterviewsService {
       confidence_score: aggregate.indicative_confidence ?? aggregate.confidence_indicative ?? 0,
       recommendation: aggregate.recommendation || 'CONSIDER',
       rubric_version: aggregate.rubric_version || 'rubric-v1-untuned',
-      model_version: aggregate.model_version || null,
+      model_version: aggregate.model_version || 'gemini-3.8-flash',
+      provider: aggregate.provider || 'gemini',
+      config_version: aggregate.config_version || 1,
+      config_source: aggregate.config_source || 'db',
       result_json: evalResponse?.evaluations || [],
       evaluated_at: new Date(),
     });
@@ -697,7 +704,10 @@ class AiInterviewsService {
         confidence_score: aggregate.indicative_confidence ?? aggregate.confidence_indicative ?? 0,
         recommendation: aggregate.recommendation || 'CONSIDER',
         rubric_version: aggregate.rubric_version || 'rubric-v1-untuned',
-        model_version: aggregate.model_version || null,
+        model_version: aggregate.model_version || 'gemini-3.8-flash',
+        provider: aggregate.provider || 'gemini',
+        config_version: aggregate.config_version || 1,
+        config_source: aggregate.config_source || 'db',
         result_json: evalResponse?.evaluations || [],
         evaluated_at: new Date(),
       });

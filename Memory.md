@@ -2340,3 +2340,30 @@ pm test --prefix hiregenius-core-api).
     - Verification 2: Privacy rule — non-applicants strictly excluded from ranking queries.
     - Verification 3: Live Gemini embedding API token test — `gemini-embedding-001`, 768 dimensions, 418.8 ms latency.
     - Verification 4: Benchmark — 100 applicants ranked in 0.457s (218.6 applicants/second throughput).
+
+
+## 2026-11-24: AI Provider & Model Settings - Part 1c Completion & Hardening
+- **Branch Hygiene**:
+  - Forked `feature/ai-provider-settings` from `dev` (`b76a9b2`).
+  - Cherry-picked `a785c0b` -> `a81d3a9`, `24b3b7b` -> `c3b7653`.
+  - Committed Part 1c hardening -> `dbc6a0c`.
+  - Reset `fix/phase8-verification` to Phase 8 commit `7804ad6`.
+  - Ran full test suite on `fix/phase8-verification`: 105/105 passed.
+  - Ran full test suite on `feature/ai-provider-settings`: 145/145 passed in 7.715s.
+- **Fail-Closed Configuration & Security**:
+  - `ENV` default set to `production` via `os.getenv("ENV", os.getenv("NODE_ENV", "production"))`.
+  - Any unset or empty `ENV` enforces production security: known dev keys raise `RuntimeError`.
+  - Disabled `/docs`, `/redoc`, and `/openapi.json` in production in `app/main.py`.
+  - Distributed nonce store strictly fails closed with HTTP 503 if MongoDB is down (zero in-memory fallback).
+  - Canonical query string included in HMAC-SHA256 signature verification.
+  - Circuit breaker: 300s cooldown with half-open probing; added `POST /api/internal/ai-config/credentials/{provider}/recheck` manual action.
+  - Rollback to versions with unverified/unavailable models permitted with `CONFIRM_ROLLBACK` phrase, emitting audit warnings.
+- **Task Parameter Preservation**:
+  - `scripts/verify_task_params_before_after.py` dynamically extracts legacy constructor kwargs from base commit `b76a9b2` via `git show`.
+  - Discovered legacy `ATS_JD_EXTRACTION` had `timeout=10, max_retries=1`; synchronized `TASK_EXECUTION_SPECS`. Passed 100%.
+- **Empirical Latency & Quota Benchmark**:
+  - `scripts/benchmark_model_latency.py`: measured `gemini-3.5-flash` cold start at 35,020.41 ms (exceeds 10s budget); warm calls averaged ~20,000 ms.
+  - 75% of calls exceed 10s timeout, triggering fast failover to deterministic grounded summary on explainer.
+  - Free Tier quota limit (20 req/day) exhausted during run 4 & 6+. Saved to `scratch/model_latency_benchmark.json`.
+- **Provenance Responses**:
+  - `scripts/generate_sample_provenance_responses.py`: generated real responses for `/api/resume/parse`, `/api/interview/generate`, and `/api/interview/evaluate` demonstrating `provider`, `model_version`, `config_version`, and `config_source` for both `db` and `env`. Saved to `scratch/provenance_sample_responses.json`.
