@@ -41,7 +41,7 @@ const NAV_CONFIG = {
   ADMIN: [
     { to: '/admin/dashboard', label: 'Dashboard',      icon: LayoutDashboard },
     { to: '/admin/users',     label: 'User Management',icon: Users },
-    { to: '/admin/api-keys',  label: 'API Keys',       icon: Key,         disabled: true },
+    { to: '/admin/api-keys',  label: 'AI Provider Keys', icon: Key },
     { to: '/admin/audit',     label: 'Audit Logs',     icon: ShieldCheck, disabled: true },
     { to: '/admin/analytics', label: 'Analytics',      icon: BarChart3 },
     { to: '/admin/settings',  label: 'Settings',       icon: Settings },

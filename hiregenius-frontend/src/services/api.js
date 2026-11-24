@@ -46,6 +46,8 @@ api.interceptors.request.use(
       config.url.startsWith('/analytics') || config.url.startsWith('analytics') ||
       config.url.startsWith('/admin/settings') || config.url.startsWith('admin/settings') ||
       config.url.startsWith('/admin/health') || config.url.startsWith('admin/health') ||
+      config.url.startsWith('/admin/step-up') || config.url.startsWith('admin/step-up') ||
+      config.url.startsWith('/admin/ai-config') || config.url.startsWith('admin/ai-config') ||
       ((['get', 'delete'].includes(config.method?.toLowerCase())) && /^\/?admin\/users\/\d+/.test(config.url))
     );
     if (isCoreRequest) {
