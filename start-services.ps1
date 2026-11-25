@@ -14,7 +14,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$ROOT_DIR\hir
 
 # 2. Auth Service (Spring Boot Java 21 on Port 8080)
 Write-Host "[2/4] Starting Auth Service (port 8080)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Users\visuc\.tools\jdk-21.0.6+7'; `$env:SPRING_DATASOURCE_URL='jdbc:mysql://bypmcpyebenomi3pdtis-mysql.services.clever-cloud.com:3306/bypmcpyebenomi3pdtis?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true'; `$env:SPRING_DATASOURCE_USERNAME='ujh47p04xlqsiqbc'; `$env:SPRING_DATASOURCE_PASSWORD='KlztJEUdmkxx3A5yO62Q'; `$env:JWT_SIGNING_KEY='YxLwDO5k9msT158PxUDcIX+pOJXEkcsD2I8V3Hp/gSU='; cd '$ROOT_DIR\hiregenius-auth-service'; .\mvnw.cmd spring-boot:run"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Users\visuc\.tools\jdk-21.0.6+7'; `$env:SPRING_DATASOURCE_URL='jdbc:mysql://bypmcpyebenomi3pdtis-mysql.services.clever-cloud.com:3306/bypmcpyebenomi3pdtis?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true'; `$env:SPRING_DATASOURCE_USERNAME='ujh47p04xlqsiqbc'; `$env:SPRING_DATASOURCE_PASSWORD='KlztJEUdmkxx3A5yO62Q'; `$env:ADMIN_PASSWORD='Admin123!'; `$env:JWT_SIGNING_KEY='YxLwDO5k9msT158PxUDcIX+pOJXEkcsD2I8V3Hp/gSU='; cd '$ROOT_DIR\hiregenius-auth-service'; .\mvnw.cmd spring-boot:run"
 
 # 3. Core API (Node.js / Express on Port 4000)
 Write-Host "[3/4] Starting Core API Service (port 4000)..." -ForegroundColor Yellow
