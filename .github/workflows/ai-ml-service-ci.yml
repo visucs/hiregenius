@@ -19,6 +19,14 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      ENV: test
+      AI_ML_SERVICE_INTERNAL_KEY: ci_test_internal_key_mock_secret_2026
+      AI_CONFIG_INTERNAL_KEY: ci_test_config_key_mock_secret_2026
+      AI_CONFIG_MASTER_KEY: bW9ja19tYXN0ZXJfa2V5XzMyX2J5dGVzX2Jhc2U2NF9vaw==
+      MONGODB_URI: mongodb://localhost:27017
+      MONGODB_DB_NAME: hiregenius_ai_ci_test
+      GEMINI_API_KEY: ci_test_mock_gemini_api_key_valid
     defaults:
       run:
         working-directory: ./hiregenius-ai-ml-service
