@@ -81,6 +81,15 @@ class MongoDBManager:
             except Exception as idx_err:
                 logger.warning(f"[MongoDB] Notice: Could not create indexes on resume_chunks: {idx_err}")
 
+            # Ensure TTL and uniqueness indexes on ai_config_nonces for distributed replay protection
+            try:
+                nonces_coll = self.db["ai_config_nonces"]
+                await nonces_coll.create_index("nonce", unique=True)
+                await nonces_coll.create_index("expires_at", expireAfterSeconds=0)
+                logger.info("[MongoDB] Ensured TTL and unique indexes on 'ai_config_nonces'.")
+            except Exception as idx_err:
+                logger.warning(f"[MongoDB] Notice: Could not create indexes on ai_config_nonces: {idx_err}")
+
         except Exception as e:
             logger.error(f"[MongoDB] Failed to connect to MongoDB: {e}")
             if settings.ENV == "production":

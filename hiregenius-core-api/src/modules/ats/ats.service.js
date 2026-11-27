@@ -245,6 +245,10 @@ class AtsService {
           overall_score: sanitizedAiResponse.overallScore || 0,
           scoring_version: sanitizedAiResponse.scoringVersion || 'ats-v2-untuned',
           result_json: sanitizedAiResponse,
+          provider: sanitizedAiResponse.provider || 'gemini',
+          model_version: sanitizedAiResponse.modelVersion || sanitizedAiResponse.model || 'gemini-3.8-flash',
+          config_version: sanitizedAiResponse.configVersion || sanitizedAiResponse.config_version || 1,
+          config_source: sanitizedAiResponse.configSource || sanitizedAiResponse.config_source || 'db',
         },
         trx
       );

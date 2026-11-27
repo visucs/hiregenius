@@ -18,10 +18,27 @@ Purpose: keep the AI coding assistant updated on real progress so it doesn't re-
 - **Last Updated:** 2026-11-21
 
 ## Repo / Service Locations
-- Frontend: hiregenius-frontend/ (live on Vercel)
-- Auth Service: hiregenius-auth-service/ (live on EC2 / 8080)
-- Core API: hiregenius-core-api/ (live on EC2 / 4000)
-- AI/ML Service: hiregenius-ai-ml-service/ (Phase 6, 7 & 8 complete)
+- Frontend: hiregenius-frontend/ (live on Vercel: https://hiregenius-delta.vercel.app)
+- Auth Service: hiregenius-auth-service/ (live on Render: https://hiregenius-auth-service.onrender.com)
+- Core API: hiregenius-core-api/ (live on Render: https://hiregenius-core-api.onrender.com)
+- AI/ML Service: hiregenius-ai-ml-service/ (live on Render: https://hiregenius-ai-ml-service.onrender.com)
+- Retired Infra: EC2 instance (13.203.243.162) was a September 2026 attempt and is currently inactive/offline. Production active deployment topology is Render (Singapore) + Vercel.
+
+## Current Status
+- **Active Phase:** Phase 8 Complete | AI Provider Settings (Admin Console) Part 1 & Part 1 Follow-Up Verified
+- **Branch:** `fix/phase8-verification`
+- **Last Updated:** 2026-11-23
+
+### 2026-11-23 — AI Provider Settings: Part 1 & Part 1 Follow-Up (AI Service Hardening)
+- **Built & Verified (AI Service Only — No Core API or Auth Service touched):**
+  1. *Fail-Closed Security Guards:* AI service strictly refuses to start if `AI_ML_SERVICE_INTERNAL_KEY` is missing or matches dev defaults unless explicitly running in non-prod (`ENV` in development/test/testing/dev).
+  2. *Cryptographic Admin API Authentication:* `verify_signed_admin_request` dependency enforcing mandatory `X-Acting-Admin-Id`, `X-Timestamp`, `X-Nonce`, and `X-Signature` (HMAC-SHA256 over canonical request string) using dedicated `AI_CONFIG_INTERNAL_KEY`. Max clock skew 60s. Distributed nonces backed by MongoDB `ai_config_nonces` with TTL and unique index (falling back cleanly to in-memory store if offline).
+  3. *Credential Encryption Vault:* AES-256-GCM encryption with 12-byte random IV per record, master key ID rotation header, masked last4, and truncated SHA-256 fingerprint. Secret values wrapped in `SecretStr` with stripped `__repr__`/`__str__`.
+  4. *Dynamic Config Resolver & Provenance:* Implemented 3-tier precedence (`db` -> `lkg` -> `env`) with provenance metadata (`provider`, `model`, `config_version`, `config_source`, `is_fallback`). Verified mid-operation immutability/pinning across workflows.
+  5. *Preserved Per-Task Parameters:* Codified non-editable execution contracts in `TASK_EXECUTION_SPECS`. Preserved RAG explainer fast-failover (`timeout=10, max_retries=0` from `b1a0e65`). Added `scripts/verify_task_params_before_after.py` proving 100% parameter equivalence.
+  6. *Runtime Secret Redaction:* Implemented `SecretRegistry` masking exact secrets (master keys, internal keys, stored keys) and canary tokens in all error handlers and logs.
+  7. *Test Suite:* 139/139 tests passing across all 12 test files (including 34 comprehensive `test_ai_config_suite.py` tests covering canary vectors, circuit breaker, optimistic locking, and rollback).
+- **Status:** Part 1 complete. Stopping for user approval before proceeding to Part 2 or Part 1b.
 
 ## Key Decisions
 - **State management:** Redux Toolkit (chosen over Context API â€” more scalable for SaaS with auth, jobs, candidates, interviews in later phases).
@@ -2323,3 +2340,30 @@ pm test --prefix hiregenius-core-api).
     - Verification 2: Privacy rule — non-applicants strictly excluded from ranking queries.
     - Verification 3: Live Gemini embedding API token test — `gemini-embedding-001`, 768 dimensions, 418.8 ms latency.
     - Verification 4: Benchmark — 100 applicants ranked in 0.457s (218.6 applicants/second throughput).
+
+
+## 2026-11-24: AI Provider & Model Settings - Part 1c Completion & Hardening
+- **Branch Hygiene**:
+  - Forked `feature/ai-provider-settings` from `dev` (`b76a9b2`).
+  - Cherry-picked `a785c0b` -> `a81d3a9`, `24b3b7b` -> `c3b7653`.
+  - Committed Part 1c hardening -> `dbc6a0c`.
+  - Reset `fix/phase8-verification` to Phase 8 commit `7804ad6`.
+  - Ran full test suite on `fix/phase8-verification`: 105/105 passed.
+  - Ran full test suite on `feature/ai-provider-settings`: 145/145 passed in 7.715s.
+- **Fail-Closed Configuration & Security**:
+  - `ENV` default set to `production` via `os.getenv("ENV", os.getenv("NODE_ENV", "production"))`.
+  - Any unset or empty `ENV` enforces production security: known dev keys raise `RuntimeError`.
+  - Disabled `/docs`, `/redoc`, and `/openapi.json` in production in `app/main.py`.
+  - Distributed nonce store strictly fails closed with HTTP 503 if MongoDB is down (zero in-memory fallback).
+  - Canonical query string included in HMAC-SHA256 signature verification.
+  - Circuit breaker: 300s cooldown with half-open probing; added `POST /api/internal/ai-config/credentials/{provider}/recheck` manual action.
+  - Rollback to versions with unverified/unavailable models permitted with `CONFIRM_ROLLBACK` phrase, emitting audit warnings.
+- **Task Parameter Preservation**:
+  - `scripts/verify_task_params_before_after.py` dynamically extracts legacy constructor kwargs from base commit `b76a9b2` via `git show`.
+  - Discovered legacy `ATS_JD_EXTRACTION` had `timeout=10, max_retries=1`; synchronized `TASK_EXECUTION_SPECS`. Passed 100%.
+- **Empirical Latency & Quota Benchmark**:
+  - `scripts/benchmark_model_latency.py`: measured `gemini-3.5-flash` cold start at 35,020.41 ms (exceeds 10s budget); warm calls averaged ~20,000 ms.
+  - 75% of calls exceed 10s timeout, triggering fast failover to deterministic grounded summary on explainer.
+  - Free Tier quota limit (20 req/day) exhausted during run 4 & 6+. Saved to `scratch/model_latency_benchmark.json`.
+- **Provenance Responses**:
+  - `scripts/generate_sample_provenance_responses.py`: generated real responses for `/api/resume/parse`, `/api/interview/generate`, and `/api/interview/evaluate` demonstrating `provider`, `model_version`, `config_version`, and `config_source` for both `db` and `env`. Saved to `scratch/provenance_sample_responses.json`.

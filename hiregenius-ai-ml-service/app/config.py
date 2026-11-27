@@ -26,7 +26,7 @@ class Settings:
     Mirrors the disciplined configuration loading and validation pattern of Core API's env.js.
     """
 
-    ENV: str = os.getenv("ENV", os.getenv("NODE_ENV", "development"))
+    ENV: str = os.getenv("ENV", os.getenv("NODE_ENV", "production"))
     PORT: int = int(os.getenv("PORT", "8000"))
 
     # MongoDB Configuration
@@ -36,10 +36,27 @@ class Settings:
     # Google Gemini Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    RESUME_PARSER_MODEL: str = os.getenv("RESUME_PARSER_MODEL", "gemini-3.8-flash")
+    RAG_EXPLAINER_MODEL: str = os.getenv("RAG_EXPLAINER_MODEL", "gemini-3.5-flash")
+    INTERVIEW_MODEL: str = os.getenv("INTERVIEW_MODEL", "gemini-3.8-flash")
 
     # Internal Service-to-Service Authentication
     AI_ML_SERVICE_INTERNAL_KEY: str = os.getenv(
         "AI_ML_SERVICE_INTERNAL_KEY", "hg_internal_dev_secret_key_2026"
+    )
+
+    # Dedicated Internal Secret for Admin AI Configuration Management
+    AI_CONFIG_INTERNAL_KEY: str = os.getenv(
+        "AI_CONFIG_INTERNAL_KEY", "hg_ai_config_dev_secret_2026"
+    )
+
+    # Master Key for At-Rest AES-256-GCM Credential Encryption (32 bytes base64-encoded)
+    AI_CONFIG_MASTER_KEY: str = os.getenv("AI_CONFIG_MASTER_KEY", "")
+
+    # Config Cache TTL and Signature Tolerance
+    AI_CONFIG_CACHE_TTL_SECONDS: int = int(os.getenv("AI_CONFIG_CACHE_TTL_SECONDS", "30"))
+    AI_CONFIG_SIGNATURE_MAX_SKEW_SECONDS: int = int(
+        os.getenv("AI_CONFIG_SIGNATURE_MAX_SKEW_SECONDS", "60")
     )
 
     # ── ATS Scoring Configuration (v2 Heuristic Engine) ──────────────────────────
@@ -113,9 +130,34 @@ class Settings:
         "No ground-truth ranking exists; weights are untuned estimates. This system never auto-rejects candidates."
     )
 
+    KNOWN_INSECURE_INTERNAL_KEYS = {
+        "hg_internal_dev_secret_key_2026",
+        "dev_secret_key",
+        "secret",
+        "changeme",
+        "123456",
+    }
+    KNOWN_INSECURE_CONFIG_KEYS = {
+        "hg_ai_config_dev_secret_2026",
+        "dev_config_secret",
+        "secret",
+        "changeme",
+    }
+
+    @property
+    def is_production(self) -> bool:
+        """Fail-closed production check: returns True unless explicitly running in development or test."""
+        return (self.ENV or "").strip().lower() not in {"development", "test", "testing", "dev"}
+
     def validate(self) -> None:
-        """Validate critical configuration variables based on active environment."""
-        if self.ENV == "production":
+        """Validate critical configuration variables based on active environment (Fail-Closed)."""
+        is_explicit_non_prod = (self.ENV or "").strip().lower() in {
+            "development",
+            "test",
+            "testing",
+            "dev",
+        }
+        if not is_explicit_non_prod:
             missing = []
             if not self.MONGODB_URI:
                 missing.append("MONGODB_URI")
@@ -128,6 +170,19 @@ class Settings:
             if missing:
                 raise RuntimeError(
                     f"FATAL: Missing required environment variables in production: {', '.join(missing)}"
+                )
+
+            # Security Hardening: Reject any known development default internal key in production
+            if self.AI_ML_SERVICE_INTERNAL_KEY.strip() in self.KNOWN_INSECURE_INTERNAL_KEYS:
+                raise RuntimeError(
+                    "FATAL: In production, AI_ML_SERVICE_INTERNAL_KEY cannot use any known dev default. "
+                    "A secure, randomly generated internal key must be provided."
+                )
+
+            if self.AI_CONFIG_INTERNAL_KEY.strip() in self.KNOWN_INSECURE_CONFIG_KEYS:
+                raise RuntimeError(
+                    "FATAL: In production, AI_CONFIG_INTERNAL_KEY cannot use any known dev default. "
+                    "A dedicated secure random key must be provided."
                 )
 
         else:

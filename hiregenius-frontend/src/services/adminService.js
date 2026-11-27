@@ -29,6 +29,37 @@ export const adminService = {
   getTrend: (params) => api.get('/analytics/admin/trend', { params }),
   getTopSkills: (params) => api.get('/analytics/admin/top-skills', { params }),
   getTopRecruiters: (params) => api.get('/analytics/admin/top-recruiters', { params }),
+
+  // Step-Up Authentication
+  createStepUpToken: (payload) => api.post('/admin/step-up', payload),
+
+  // AI Provider & Model Configuration
+  getAIConfig: () => api.get('/admin/ai-config'),
+  saveAICredential: (provider, apiKey, stepUpToken) =>
+    api.put(`/admin/ai-config/credentials/${encodeURIComponent(provider)}`, { api_key: apiKey }, {
+      headers: { 'X-Step-Up-Token': stepUpToken },
+    }),
+  deleteAICredential: (provider, confirmationPhrase, stepUpToken) =>
+    api.delete(`/admin/ai-config/credentials/${encodeURIComponent(provider)}`, {
+      data: { confirmation_phrase: confirmationPhrase },
+      headers: { 'X-Step-Up-Token': stepUpToken },
+    }),
+  recheckAICredential: (provider) =>
+    api.post(`/admin/ai-config/credentials/${encodeURIComponent(provider)}/recheck`),
+  createAIDraft: (tasks, note) =>
+    api.post('/admin/ai-config/drafts', { tasks, note }),
+  testAIDraft: (version) =>
+    api.post(`/admin/ai-config/drafts/${encodeURIComponent(version)}/test`),
+  activateAIConfig: (payload, stepUpToken) =>
+    api.post('/admin/ai-config/activate', payload, {
+      headers: { 'X-Step-Up-Token': stepUpToken },
+    }),
+  rollbackAIConfig: (payload, stepUpToken) =>
+    api.post('/admin/ai-config/rollback', payload, {
+      headers: { 'X-Step-Up-Token': stepUpToken },
+    }),
+  getAIConfigHistory: (limit = 50) =>
+    api.get('/admin/ai-config/history', { params: { limit } }),
 };
 
 export default adminService;

@@ -59,7 +59,10 @@ class GeneratedQuestion(BaseModel):
 
 class GenerateInterviewResponse(BaseModel):
     questions: List[GeneratedQuestion]
+    provider: str = Field(default="gemini", description="AI provider used")
     model_version: str
+    config_version: int = Field(default=1, description="AI configuration version")
+    config_source: str = Field(default="db", description="Configuration source: db, lkg, or env")
     generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -94,7 +97,10 @@ class AggregateEvaluation(BaseModel):
     overall: float = Field(..., ge=0.0, le=100.0, description="Overall weighted score out of 100 (UNTUNED)")
     recommendation: Recommendation = Field(..., description="Advisory hiring recommendation (PROCEED, CONSIDER, NOT_A_FIT)")
     rubric_version: str
+    provider: str = Field(default="gemini", description="AI provider used")
     model_version: str
+    config_version: int = Field(default=1, description="AI configuration version")
+    config_source: str = Field(default="db", description="Configuration source: db, lkg, or env")
     disclaimer: str = Field(
         default="AI output is advisory and indicative. The recruiter makes the final hiring decision.",
         description="Mandatory advisory disclaimer"

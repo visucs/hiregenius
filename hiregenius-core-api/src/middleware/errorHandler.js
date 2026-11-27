@@ -54,6 +54,10 @@ function errorHandler(err, req, res, next) {
     path: req.originalUrl || req.url,
   };
 
+  if (err.code) {
+    response.code = err.code;
+  }
+
   if (err.details) {
     response.details = err.details;
   }

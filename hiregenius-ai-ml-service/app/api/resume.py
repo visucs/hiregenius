@@ -180,9 +180,14 @@ async def parse_resume(
             ),
         )
 
-    # Step 3: Run Gemini AI parsing agent
+    # Step 3: Run AI parsing agent with provenance tracking
     try:
-        parsed_resume = await parse_resume_text(raw_text)
+        res = await parse_resume_text(raw_text, return_provenance=True)
+        if isinstance(res, tuple):
+            parsed_resume, resolved_cfg = res
+        else:
+            parsed_resume = res
+            resolved_cfg = None
     except ResumeParsingConfigError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -202,7 +207,10 @@ async def parse_resume(
             filename=extracted_res.filename,
             raw_text=raw_text,
             parsed_data=parsed_resume,
-            model_version=settings.GEMINI_MODEL,
+            provider=resolved_cfg.provider if resolved_cfg else "gemini",
+            model_version=resolved_cfg.model if resolved_cfg else settings.GEMINI_MODEL,
+            config_version=resolved_cfg.config_version if resolved_cfg else 1,
+            config_source=resolved_cfg.config_source if resolved_cfg else "db",
         )
     except DatabaseNotConnectedError as e:
         logger.error(f"Cannot save parsed resume for '{clean_candidate_id}': MongoDB not connected: {e}")
@@ -232,7 +240,10 @@ async def parse_resume(
         original_filename=extracted_res.filename,
         parsed_data=parsed_resume,
         parsed_at=now_utc,
-        model_version=settings.GEMINI_MODEL,
+        provider=resolved_cfg.provider if resolved_cfg else "gemini",
+        model_version=resolved_cfg.model if resolved_cfg else settings.GEMINI_MODEL,
+        config_version=resolved_cfg.config_version if resolved_cfg else 1,
+        config_source=resolved_cfg.config_source if resolved_cfg else "db",
     )
 
 

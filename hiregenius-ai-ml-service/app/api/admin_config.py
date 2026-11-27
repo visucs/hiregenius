@@ -1,0 +1,438 @@
+import logging
+from typing import Any, Dict, List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
+
+from app.ai_config.catalog import PROVIDER_MODEL_CATALOG, TaskType
+from app.ai_config.crypto import encrypt_api_key
+from app.ai_config.repository import (
+    ConfigNotFoundError,
+    OptimisticLockConflictError,
+    RepositoryError,
+    config_repository,
+)
+from app.ai_config.resolver import resolver
+from app.ai_config.validator import validate_draft_configuration
+from app.api.admin_auth import AdminRequestContext, verify_signed_admin_request
+from app.providers.gemini import get_provider_adapter
+
+logger = logging.getLogger("hiregenius.ai_ml_service.api.admin_config")
+
+router = APIRouter(
+    prefix="/api/internal/ai-config",
+    tags=["AI Configuration Management"],
+    dependencies=[Depends(verify_signed_admin_request)],
+)
+
+# ── Schemas ───────────────────────────────────────────────────────────────────
+
+class PutCredentialRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    api_key: SecretStr = Field(..., description="Provider API key to encrypt and store")
+
+    def __repr__(self) -> str:
+        return "<PutCredentialRequest api_key=***REDACTED***>"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+class CreateDraftRequest(BaseModel):
+    tasks: Dict[str, Dict[str, str]] = Field(
+        ...,
+        description="Task routing map: e.g. {'RESUME_PARSER': {'provider': 'gemini', 'model': 'gemini-3.5-flash'}}",
+    )
+    note: str = Field(default="", description="Description of the change")
+
+
+class ActivateConfigRequest(BaseModel):
+    version: int = Field(..., description="Target version number to activate")
+    expected_active_version: int = Field(..., description="Current active version number for optimistic locking")
+    acknowledge_inconclusive: bool = Field(default=False, description="Explicit acknowledgement if test results were inconclusive due to 429 quota")
+    note: str = Field(default="", description="Activation justification or release note")
+
+
+class RollbackConfigRequest(BaseModel):
+    target_version: int = Field(..., description="Older version number to rollback to")
+    expected_active_version: int = Field(..., description="Current active version number for optimistic locking")
+    confirmation_phrase: str = Field(..., description="Must match 'CONFIRM_ROLLBACK' to authorize emergency rollback")
+    reason: str = Field(default="", description="Reason for rollback")
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@router.get("", summary="Get global AI configuration, masked credentials, catalog and health")
+async def get_configuration():
+    """Returns active task routing, masked credentials, verified catalog, and fallback health."""
+    active_config = await config_repository.get_active_config()
+    if not active_config:
+        active_config = await config_repository.ensure_seeded_from_current_behavior()
+
+    credentials = await config_repository.get_all_credentials_masked()
+    state = await config_repository.get_state()
+
+    return {
+        "status": "UP",
+        "active_version": state.get("active_version") if state else 1,
+        "active_config": active_config,
+        "credentials": credentials,
+        "catalog": PROVIDER_MODEL_CATALOG,
+        "is_running_on_fallback": resolver.is_running_on_fallback,
+    }
+
+
+@router.put("/credentials/{provider}", summary="Validate, encrypt, and store a provider API key")
+async def save_credential(
+    body: PutCredentialRequest,
+    provider: str = Path(..., description="Provider identifier (e.g. 'gemini')"),
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """
+    Validates the submitted key with a zero-token call. If valid, encrypts at-rest
+    using AES-256-GCM and persists to MongoDB.
+    """
+    clean_provider = provider.lower().strip()
+    try:
+        adapter = get_provider_adapter(clean_provider)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # 1. Zero-token credential validation
+    val_result = adapter.validate_credential(body.api_key)
+    if not val_result.is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "Provider API key validation failed.",
+                "error_code": val_result.error_code,
+                "provider_error": val_result.error_message,
+            },
+        )
+
+    # 2. Encrypt at rest with AES-256-GCM
+    existing = await config_repository.get_credential(clean_provider)
+    next_record_version = (existing.get("record_version", 0) + 1) if existing else 1
+
+    try:
+        encrypted_payload = encrypt_api_key(
+            plain_key=body.api_key,
+            provider=clean_provider,
+            record_version=next_record_version,
+        )
+    except Exception as e:
+        logger.error(f"Encryption error for provider {clean_provider}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to encrypt API key. Ensure AI_CONFIG_MASTER_KEY is valid.",
+        )
+
+    # 3. Store encrypted record
+    await config_repository.upsert_credential(
+        provider=clean_provider,
+        encrypted_payload=encrypted_payload,
+        record_version=next_record_version,
+        admin_id=admin_ctx.acting_admin_id,
+        status="HEALTHY",
+    )
+
+    # 4. Invalidate resolver runtime cache
+    resolver.invalidate_cache()
+
+    # 5. Record audit trail
+    await config_repository.record_audit_event(
+        event="CREDENTIAL_UPDATED",
+        acting_admin_id=admin_ctx.acting_admin_id,
+        client_ip=admin_ctx.client_ip,
+        provider=clean_provider,
+        note=f"Credential updated for {clean_provider} (last4: ***{encrypted_payload.last4})",
+    )
+
+    return {
+        "status": "SUCCESS",
+        "provider": clean_provider,
+        "last4": encrypted_payload.last4,
+        "fingerprint": encrypted_payload.fingerprint,
+        "credential_status": "HEALTHY",
+        "record_version": next_record_version,
+    }
+
+
+@router.post("/credentials/{provider}/recheck", summary="Manually re-check an UNHEALTHY credential and restore if valid")
+async def recheck_credential(
+    provider: str = Path(..., description="Provider identifier (e.g. 'gemini')"),
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """
+    Manually probes a stored provider API key using a zero-token validation call.
+    If valid, resets credential status from UNHEALTHY back to HEALTHY.
+    """
+    clean_provider = provider.lower().strip()
+    try:
+        adapter = get_provider_adapter(clean_provider)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    cred_doc = await config_repository.get_credential(clean_provider)
+    if not cred_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found.")
+
+    plain_key = await resolver._resolve_provider_key(clean_provider, cred_doc.get("record_version", 1))
+    if not plain_key:
+        # If decryption failed, try direct decrypt
+        try:
+            from app.ai_config.crypto import decrypt_api_key, EncryptedCredentialPayload
+            c_b64 = cred_doc.get("ciphertext_b64") or (cred_doc.get("encrypted_payload") or {}).get("ciphertext_b64")
+            n_b64 = cred_doc.get("nonce_b64") or (cred_doc.get("encrypted_payload") or {}).get("nonce_b64")
+            m_id = cred_doc.get("master_key_id") or (cred_doc.get("encrypted_payload") or {}).get("master_key_id", "v1")
+            last4 = cred_doc.get("last4") or (cred_doc.get("encrypted_payload") or {}).get("last4", "****")
+            fp = cred_doc.get("fingerprint") or (cred_doc.get("encrypted_payload") or {}).get("fingerprint", "")
+            payload = EncryptedCredentialPayload(
+                ciphertext_b64=c_b64,
+                nonce_b64=n_b64,
+                master_key_id=m_id,
+                last4=last4,
+                fingerprint=fp,
+            )
+            plain_key = decrypt_api_key(payload, clean_provider, cred_doc.get("record_version", 1))
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to decrypt credential: {e}")
+
+    try:
+        await adapter.validate_api_key(plain_key)
+        await config_repository.update_credential_status(clean_provider, "HEALTHY", None)
+        resolver.invalidate_cache()
+        await config_repository.record_audit_event(
+            event="CREDENTIAL_RECHECKED",
+            acting_admin_id=admin_ctx.acting_admin_id,
+            client_ip=admin_ctx.client_ip,
+            provider=clean_provider,
+            note="Manual probe succeeded. Status restored to HEALTHY.",
+        )
+        return {
+            "status": "SUCCESS",
+            "provider": clean_provider,
+            "credential_status": "HEALTHY",
+            "message": "Credential validated and restored to HEALTHY status.",
+        }
+    except Exception as e:
+        err_msg = str(e)
+        status_code = status.HTTP_502_BAD_GATEWAY
+        if "401" in err_msg or "403" in err_msg or "API key not valid" in err_msg:
+            status_code = status.HTTP_400_BAD_REQUEST
+            await config_repository.update_credential_status(clean_provider, "UNHEALTHY", "INVALID_KEY")
+        raise HTTPException(status_code=status_code, detail=f"Credential validation failed: {err_msg}")
+
+
+@router.delete("/credentials/{provider}", summary="Delete a stored provider API key")
+async def delete_credential(
+    provider: str = Path(...),
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """Deletes stored credential record."""
+    clean_provider = provider.lower().strip()
+    deleted = await config_repository.delete_credential(clean_provider, admin_ctx.acting_admin_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Credential not found.")
+
+    resolver.invalidate_cache()
+    await config_repository.record_audit_event(
+        event="CREDENTIAL_DELETED",
+        acting_admin_id=admin_ctx.acting_admin_id,
+        client_ip=admin_ctx.client_ip,
+        provider=clean_provider,
+        note=f"Credential deleted for {clean_provider}",
+    )
+    return {"status": "SUCCESS", "message": f"Credential for {clean_provider} deleted."}
+
+
+@router.post("/drafts", summary="Create a new draft configuration version")
+async def create_draft(
+    body: CreateDraftRequest,
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """Creates a new DRAFT configuration version. Validates model selectable status."""
+    catalog_items = [m for sublist in PROVIDER_MODEL_CATALOG.values() for m in sublist]
+    active_cfg = await config_repository.get_active_config()
+
+    for t_name, t_spec in body.tasks.items():
+        m_id = t_spec.get("model")
+        cat_match = next((m for m in catalog_items if m.model_id == m_id), None)
+        if cat_match and not cat_match.is_selectable:
+            currently_in_use = (
+                active_cfg and active_cfg.get("tasks", {}).get(t_name, {}).get("model") == m_id
+            )
+            if not currently_in_use:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Model '{m_id}' for task '{t_name}' cannot be newly selected (status: {cat_match.verification_status}). Only VERIFIED models are selectable.",
+                )
+
+    draft_doc = await config_repository.create_draft_version(
+        tasks=body.tasks,
+        admin_id=admin_ctx.acting_admin_id,
+        note=body.note,
+    )
+    await config_repository.record_audit_event(
+        event="DRAFT_CREATED",
+        acting_admin_id=admin_ctx.acting_admin_id,
+        client_ip=admin_ctx.client_ip,
+        version=draft_doc["version"],
+        note=body.note,
+    )
+    return draft_doc
+
+
+@router.post("/drafts/{version}/test", summary="Run golden test fixtures on candidate draft")
+async def test_draft(
+    version: int = Path(...),
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """Runs golden test fixtures on candidate draft before activation."""
+    target_version = await config_repository.get_version(version)
+    if not target_version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Version {version} not found.")
+
+    tasks = target_version.get("tasks", {})
+    report = await validate_draft_configuration(tasks=tasks)
+
+    await config_repository.update_draft_test_results(version, report.model_dump())
+    await config_repository.record_audit_event(
+        event="DRAFT_TESTED",
+        acting_admin_id=admin_ctx.acting_admin_id,
+        client_ip=admin_ctx.client_ip,
+        version=version,
+        note=f"Draft v{version} testing: all_passed={report.all_passed}",
+    )
+
+    return report.model_dump()
+
+
+@router.post("/activate", summary="Atomically activate a configuration version (optimistic lock)")
+async def activate_configuration(
+    body: ActivateConfigRequest,
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """
+    Atomically activates a configuration version. Fails with 409 Conflict if expected_active_version
+    does not match current active_version. Enforces activation test gating.
+    """
+    target_ver = await config_repository.get_version(body.version)
+    if not target_ver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Version {body.version} not found.")
+
+    test_report = target_ver.get("test_results")
+    if test_report:
+        if test_report.get("has_failed"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Activation gated: Candidate draft has failed task validations. Resolve failures before activation.",
+            )
+        if test_report.get("has_inconclusive") and not body.acknowledge_inconclusive:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Activation gated: Validation results contain inconclusive provider tests (e.g. 429 quota/rate limit). Provide acknowledge_inconclusive=true to activate.",
+            )
+
+    try:
+        activated = await config_repository.activate_version(
+            version_num=body.version,
+            expected_active_version=body.expected_active_version,
+            admin_id=admin_ctx.acting_admin_id,
+            note=body.note,
+        )
+        resolver.invalidate_cache()
+        await config_repository.record_audit_event(
+            event="CONFIG_ACTIVATED",
+            acting_admin_id=admin_ctx.acting_admin_id,
+            client_ip=admin_ctx.client_ip,
+            version=body.version,
+            note=body.note,
+        )
+        return {
+            "status": "SUCCESS",
+            "active_version": body.version,
+            "activated_config": activated,
+        }
+    except OptimisticLockConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ConfigNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except RepositoryError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/rollback", summary="Rollback to an older configuration (creates and activates new version)")
+async def rollback_configuration(
+    body: RollbackConfigRequest,
+    admin_ctx: AdminRequestContext = Depends(verify_signed_admin_request),
+):
+    """
+    Rolls back by cloning the target version into a new version and activating it.
+    """
+    if body.confirmation_phrase.strip() != "CONFIRM_ROLLBACK":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Emergency rollback requires exact typed confirmation phrase 'CONFIRM_ROLLBACK'.",
+        )
+
+    try:
+        new_active = await config_repository.rollback_to_version(
+            target_version_num=body.target_version,
+            expected_active_version=body.expected_active_version,
+            admin_id=admin_ctx.acting_admin_id,
+            reason=body.reason,
+        )
+        resolver.invalidate_cache()
+        # Check if rollback restores any unverified / unavailable models
+        catalog_items = [m for sublist in PROVIDER_MODEL_CATALOG.values() for m in sublist]
+        unavailable_models = []
+        for t_spec in (new_active.get("tasks") or {}).values():
+            m_id = t_spec.get("model")
+            cat_match = next((m for m in catalog_items if m.model_id == m_id), None)
+            if cat_match and not cat_match.is_selectable:
+                unavailable_models.append(f"{m_id} ({cat_match.verification_status})")
+            elif cat_match is None:
+                unavailable_models.append(f"{m_id} (UNAVAILABLE)")
+
+        warning_msg = None
+        if unavailable_models:
+            warning_msg = f"Rollback restored version containing unverified/unavailable model(s): {', '.join(unavailable_models)}"
+            logger.warning(f"[AdminConfig] {warning_msg}")
+
+        audit_note = f"Rolled back to v{body.target_version}. Reason: {body.reason}"
+        if warning_msg:
+            audit_note += f" | WARNING: {warning_msg}"
+
+        await config_repository.record_audit_event(
+            event="CONFIG_ROLLED_BACK",
+            acting_admin_id=admin_ctx.acting_admin_id,
+            client_ip=admin_ctx.client_ip,
+            version=new_active["version"],
+            note=audit_note,
+        )
+        resp = {
+            "status": "SUCCESS",
+            "active_version": new_active["version"],
+            "config": new_active,
+        }
+        if warning_msg:
+            resp["warning"] = warning_msg
+        return resp
+    except OptimisticLockConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ConfigNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except RepositoryError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/history", summary="List configuration versions")
+async def get_history(limit: int = Query(50, ge=1, le=100)):
+    """Returns recent configuration versions."""
+    return await config_repository.list_versions(limit=limit)
+
+
+@router.get("/audit", summary="Get configuration audit trail (strictly zero secrets)")
+async def get_audit_trail(limit: int = Query(100, ge=1, le=500)):
+    """Returns recent audit trail events."""
+    return await config_repository.get_audit_trail(limit=limit)
